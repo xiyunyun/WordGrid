@@ -481,7 +481,8 @@ export default function About() {
             >
               <div className="mb-2 flex items-baseline gap-2">
                 <span className="font-display text-base font-medium text-ink">
-                  v{entry.version}
+                  <span className="font-mono text-xs text-ink-light">v</span>
+                  <span className="ml-0.5">{entry.version}</span>
                 </span>
                 <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
                   {entry.date}

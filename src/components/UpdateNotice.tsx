@@ -52,7 +52,8 @@ export default function UpdateNotice() {
               <div className="font-display text-lg font-medium text-ink">
                 WordGrid 更新了
                 <span className="ml-2 font-mono text-2xs text-ink-light">
-                  v{latest.version}
+                  <span className="text-ink-light/60">v</span>
+                  <span className="ml-0.5">{latest.version}</span>
                 </span>
               </div>
             </div>
