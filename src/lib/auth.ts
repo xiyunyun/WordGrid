@@ -4,7 +4,7 @@
  * 设计说明：
  * - GitHub Pages 是纯静态托管，无后端，认证只能在客户端完成
  * - 密码以 SHA-256 哈希存储，不是明文（但仍非绝对安全，代码公开可被逆向）
- * - 登录状态存 localStorage，7 天过期
+ * - 登录状态存 localStorage，永不过期（除非手动登出）
  * - 适用于"防陌生人"场景，不适合高安全需求
  *
  * 使用方法：
@@ -45,8 +45,8 @@ export const AUTH_USERS: AuthUser[] = [
   },
   {
     username: "hujie",
-    // 默认密码 "password123" 的哈希 —— 请务必修改！
-    passwordHash: "e72d5c9023bbfbf2db93db7f75c80d3f861cd984a58085a66c1b81b8a1853d34",
+    // 密码 "123456" 的哈希
+    passwordHash: "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
     displayName: "胡姐",
   },
   // 添加更多用户：
@@ -59,8 +59,6 @@ export const AUTH_USERS: AuthUser[] = [
 
 /** localStorage 存储登录状态的 key */
 const AUTH_STORAGE_KEY = "wordgrid-auth";
-/** 登录有效期：7 天 */
-const AUTH_EXPIRE_MS = 7 * 24 * 60 * 60 * 1000;
 
 /** 登录状态记录 */
 interface AuthSession {
@@ -78,18 +76,13 @@ async function sha256(text: string): Promise<string> {
     .join("");
 }
 
-/** 检查当前是否已登录（且未过期） */
+/** 检查当前是否已登录（永不过期，除非手动登出） */
 export function isAuthenticated(): boolean {
   try {
     const raw = localStorage.getItem(AUTH_STORAGE_KEY);
     if (!raw) return false;
     const session = JSON.parse(raw) as AuthSession;
-    if (!session?.username || !session?.loginAt) return false;
-    // 检查是否过期
-    if (Date.now() - session.loginAt > AUTH_EXPIRE_MS) {
-      localStorage.removeItem(AUTH_STORAGE_KEY);
-      return false;
-    }
+    if (!session?.username) return false;
     return true;
   } catch {
     return false;

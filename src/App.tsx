@@ -9,6 +9,7 @@ import DailyGrid from "@/pages/DailyGrid";
 import Wordbook from "@/pages/Wordbook";
 import ArticleBuilder from "@/pages/ArticleBuilder";
 import Stats from "@/pages/Stats";
+import About from "@/pages/About";
 import LoginPage from "@/pages/Login";
 import { useWordStore, selectDueWords, selectTomorrowWords } from "@/store/wordStore";
 import { buildSeedWords } from "@/store/seedData";
@@ -123,6 +124,7 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
           <Route path="/wordbook" element={<Wordbook />} />
           <Route path="/blocks" element={<ArticleBuilder />} />
           <Route path="/stats" element={<Stats />} />
+          <Route path="/about" element={<About />} />
         </Routes>
       </AppShell>
 
