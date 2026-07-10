@@ -10,6 +10,7 @@ import {
   Heart,
   Loader2,
   Trash2,
+  ScrollText,
 } from "lucide-react";
 import {
   exportAllData,
@@ -17,6 +18,7 @@ import {
   getDataStats,
   clearAllData,
 } from "@/lib/dataTransfer";
+import { CHANGELOG } from "@/lib/changelog";
 
 export default function About() {
   const [importing, setImporting] = useState(false);
@@ -461,6 +463,43 @@ export default function About() {
             </div>
           </div>
         )}
+      </section>
+
+      {/* 开发日志 */}
+      <section className="rounded-md border border-ink/15 bg-paper-card p-4 md:p-6 shadow-paper">
+        <div className="mb-4 flex items-center gap-2">
+          <ScrollText className="h-4 w-4 text-accent-gold" strokeWidth={1.5} />
+          <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
+            Changelog · 开发日志
+          </span>
+        </div>
+        <div className="space-y-4">
+          {CHANGELOG.map((entry) => (
+            <div
+              key={entry.version}
+              className="rounded-md border border-ink/10 bg-paper p-3 md:p-4"
+            >
+              <div className="mb-2 flex items-baseline gap-2">
+                <span className="font-display text-base font-medium text-ink">
+                  v{entry.version}
+                </span>
+                <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
+                  {entry.date}
+                </span>
+              </div>
+              <ul className="space-y-1.5">
+                {entry.items.map((item, idx) => (
+                  <li key={idx} className="flex items-start gap-2">
+                    <span className="mt-1.5 h-1 w-1 flex-shrink-0 rounded-full bg-accent-gold" />
+                    <span className="font-body text-sm leading-relaxed text-ink-soft">
+                      {item}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
       </section>
 
       {/* 技术信息 */}

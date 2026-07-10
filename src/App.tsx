@@ -5,6 +5,7 @@ import AddWordDrawer from "@/components/AddWordDrawer";
 import FloatingActions from "@/components/FloatingActions";
 import DueTodayModal from "@/components/DueTodayModal";
 import NoteModal from "@/components/NoteModal";
+import UpdateNotice from "@/components/UpdateNotice";
 import DailyGrid from "@/pages/DailyGrid";
 import Wordbook from "@/pages/Wordbook";
 import ArticleBuilder from "@/pages/ArticleBuilder";
@@ -177,6 +178,7 @@ export default function App() {
   return (
     <Router>
       <AppContent onLogout={handleLogout} />
+      <UpdateNotice />
     </Router>
   );
 }
