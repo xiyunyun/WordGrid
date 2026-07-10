@@ -25,7 +25,7 @@ export default function WordCell({
   return (
     <article
       className={cn(
-        "group relative flex min-w-[240px] flex-col rounded-md border bg-paper-card shadow-paper transition-all hover:shadow-card",
+        "group relative flex min-w-0 flex-col rounded-md border bg-paper-card shadow-paper transition-all hover:shadow-card",
         word.isDifficult
           ? "border-accent-red/40 border-l-[3px] border-l-accent-red"
           : word.isMastered
@@ -36,14 +36,14 @@ export default function WordCell({
       {/* 单词主体 - 单击切换生词 */}
       <button
         onClick={() => toggleDifficult(word.id)}
-        className="flex flex-col items-start gap-1 px-4 py-3 text-left"
+        className="flex flex-col items-start gap-1 px-3 py-2.5 text-left md:px-4 md:py-3"
         title={word.isDifficult ? "点击取消生词标记" : "点击标记为生词"}
       >
         {/* 单词行：单词 + 词性 */}
         <div className="flex w-full items-baseline justify-between gap-2">
           <span
             className={cn(
-              "min-w-0 flex-1 truncate font-serif text-xl font-medium leading-tight tracking-word",
+              "min-w-0 flex-1 truncate font-serif text-lg font-medium leading-tight tracking-word md:text-xl",
               word.isMastered ? "text-ink-muted" : "text-ink",
             )}
           >
@@ -102,8 +102,8 @@ export default function WordCell({
           )}
         </div>
 
-        {/* 悬浮操作 */}
-        <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+        {/* 悬浮操作 - 手机端始终显示，桌面端 hover 显示 */}
+        <div className="flex items-center gap-1 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
           <SpeakButton text={word.word} />
           {onRequestEdit && (
             <button

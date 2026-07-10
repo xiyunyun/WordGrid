@@ -124,12 +124,12 @@ export default function QuizPanel({
 
       {/* 批改结果汇总 */}
       {status === "graded" && (
-        <div className="rounded-md border border-ink/15 bg-paper-card p-6 shadow-paper animate-fade-in">
-          <div className="flex items-center justify-center gap-6">
+        <div className="rounded-md border border-ink/15 bg-paper-card p-4 shadow-paper animate-fade-in md:p-6">
+          <div className="flex items-center justify-center gap-4 md:gap-6">
             <div className="text-center">
               <Award
                 className={cn(
-                  "mx-auto mb-2 h-10 w-10",
+                  "mx-auto mb-2 h-8 w-8 md:h-10 md:w-10",
                   score >= 80
                     ? "text-accent-green"
                     : score >= 50
@@ -138,19 +138,19 @@ export default function QuizPanel({
                 )}
                 strokeWidth={1.5}
               />
-              <div className="font-display text-4xl font-medium text-ink">
+              <div className="font-display text-3xl font-medium text-ink md:text-4xl">
                 {score}
-                <span className="text-xl text-ink-light">分</span>
+                <span className="text-lg text-ink-light md:text-xl">分</span>
               </div>
               <div className="mt-1 font-mono text-2xs uppercase tracking-editorial text-ink-light">
                 Score
               </div>
             </div>
-            <div className="h-16 w-px bg-ink/15" />
+            <div className="h-12 w-px bg-ink/15 md:h-16" />
             <div className="text-center">
-              <div className="font-display text-4xl font-medium text-accent-green">
+              <div className="font-display text-3xl font-medium text-accent-green md:text-4xl">
                 {correctCount}
-                <span className="text-xl text-ink-light">/{total}</span>
+                <span className="text-lg text-ink-light md:text-xl">/{total}</span>
               </div>
               <div className="mt-1 font-mono text-2xs uppercase tracking-editorial text-ink-light">
                 Correct
@@ -184,7 +184,7 @@ function QuestionCard({
   return (
     <div
       className={cn(
-        "rounded-md border p-5 transition-colors",
+        "rounded-md border p-3 transition-colors md:p-5",
         graded
           ? result
             ? "border-accent-green/40 bg-accent-green/5"

@@ -105,7 +105,7 @@ export default function ExportModal({ open, onClose, words }: ExportModalProps) 
       {/* 弹窗 */}
       <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-ink/15 bg-paper-card shadow-deep animate-fade-in">
         {/* 头部 */}
-        <div className="flex items-center justify-between border-b border-ink/15 px-6 py-4">
+        <div className="flex items-center justify-between border-b border-ink/15 px-4 py-3 md:px-6 md:py-4">
           <div>
             <div className="eyebrow">Export · 导出单词本</div>
             <h2 className="font-display text-2xl font-semibold text-ink">
@@ -122,10 +122,10 @@ export default function ExportModal({ open, onClose, words }: ExportModalProps) 
         </div>
 
         {/* 内容 */}
-        <div className="flex-1 overflow-y-auto px-6 py-5">
+        <div className="flex-1 overflow-y-auto px-4 py-4 md:px-6 md:py-5">
           {/* 统计 */}
           <div className="mb-5 rounded-md border border-ink/10 bg-paper p-3 text-center">
-            <span className="font-display text-3xl font-medium text-ink">
+            <span className="font-display text-2xl font-medium text-ink md:text-3xl">
               {words.length}
             </span>
             <span className="ml-2 font-mono text-2xs uppercase tracking-editorial text-ink-light">
@@ -184,7 +184,7 @@ export default function ExportModal({ open, onClose, words }: ExportModalProps) 
                     key={opt.key}
                     onClick={() => setScope(opt.key)}
                     className={cn(
-                      "flex w-full items-center justify-between rounded-md border px-4 py-3 transition-all",
+                      "flex w-full flex-col gap-1 rounded-md border px-4 py-3 transition-all md:flex-row md:items-center md:justify-between",
                       active
                         ? "border-ink bg-ink/5"
                         : "border-ink/15 hover:border-ink/40",
@@ -198,7 +198,7 @@ export default function ExportModal({ open, onClose, words }: ExportModalProps) 
                         {opt.labelCN}
                       </div>
                     </div>
-                    <div className="font-body text-2xs text-ink-muted">
+                    <div className="font-body text-2xs text-ink-muted md:text-right">
                       {opt.desc}
                     </div>
                   </button>
@@ -232,7 +232,7 @@ export default function ExportModal({ open, onClose, words }: ExportModalProps) 
         </div>
 
         {/* 底部操作 */}
-        <div className="flex items-center justify-end gap-3 border-t border-ink/15 px-6 py-4">
+        <div className="flex items-center justify-end gap-3 border-t border-ink/15 px-4 py-3 md:px-6 md:py-4">
           <button onClick={onClose} className="btn-ghost">
             取消
           </button>

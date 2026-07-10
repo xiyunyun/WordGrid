@@ -58,7 +58,7 @@ export default function Wordbook() {
       <section className="border-b border-ink/15 pb-5">
         <div className="eyebrow mb-1">Wordbook · 生词本</div>
         <div className="flex flex-wrap items-end justify-between gap-4">
-          <h2 className="font-display text-3xl font-medium tracking-tightest text-ink lg:text-4xl">
+          <h2 className="font-display text-2xl md:text-3xl font-medium tracking-tightest text-ink lg:text-4xl">
             温故而知新
             <span className="ml-3 font-serif text-lg italic text-ink-light">
               {words.length} in archive
@@ -103,7 +103,7 @@ export default function Wordbook() {
               )}
             >
               <Icon className="h-3.5 w-3.5" strokeWidth={1.5} />
-              <span className="font-mono text-2xs uppercase tracking-editorial">
+              <span className="hidden sm:inline font-mono text-2xs uppercase tracking-editorial">
                 {m.label}
               </span>
               <span className="font-body text-xs">· {m.labelCN}</span>
@@ -278,7 +278,7 @@ function ListView({
                   accentClasses,
                 )}
               >
-                <span className="font-mono text-2xs uppercase tracking-editorial">
+                <span className="hidden sm:inline font-mono text-2xs uppercase tracking-editorial">
                   {t.label}
                 </span>
                 <span className="font-body text-xs">· {t.labelCN}</span>
@@ -335,12 +335,12 @@ function MinimalRow({
   return (
     <li
       className={cn(
-        "group flex items-center gap-4 px-2 py-3 transition-colors hover:bg-paper-warm/40",
+        "group flex items-center gap-2 px-2 py-2.5 md:gap-4 md:py-3 transition-colors hover:bg-paper-warm/40",
         highlighted && "bg-accent-red/5",
       )}
     >
       {/* 等级 - 已掌握显示加深颜色的对勾 */}
-      <div className="w-12 flex-shrink-0 text-center">
+      <div className="w-8 md:w-12 flex-shrink-0 text-center">
         {highlighted ? (
           <span className="font-mono text-2xs uppercase tracking-editorial text-accent-red">
             due
@@ -360,10 +360,10 @@ function MinimalRow({
       </div>
 
       {/* 单词 + 音标 - 不使用删除线，保持字形完整以加强记忆 */}
-      <div className="w-52 flex-shrink-0">
+      <div className="w-28 md:w-52 flex-shrink-0">
         <span
           className={cn(
-            "font-serif text-lg font-medium tracking-word",
+            "font-serif text-base md:text-lg font-medium tracking-word",
             word.isMastered ? "text-ink-soft" : "text-ink",
           )}
         >
@@ -377,7 +377,7 @@ function MinimalRow({
       </div>
 
       {/* 词性 */}
-      <div className="w-16 flex-shrink-0">
+      <div className="hidden sm:block w-12 md:w-16 flex-shrink-0">
         <span className="font-mono text-xs italic text-accent-gold">
           {word.pos}
         </span>
@@ -386,7 +386,7 @@ function MinimalRow({
       {/* 释义 - 复习标签下隐藏（点击显示），其余直接显示 */}
       <div className="min-w-0 flex-1">
         {showMeaning ? (
-          <span className="font-body text-sm text-ink-soft animate-fade-in">
+          <span className="font-body text-xs md:text-sm text-ink-soft animate-fade-in">
             {word.meaning}
           </span>
         ) : (
@@ -400,12 +400,12 @@ function MinimalRow({
       </div>
 
       {/* 语音播放按钮 */}
-      <div className="flex-shrink-0 opacity-0 transition-opacity group-hover:opacity-100">
+      <div className="flex-shrink-0 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
         <SpeakButton text={word.word} />
       </div>
 
       {/* 笔记按钮 - 点击打开二级菜单（NoteModal） */}
-      <div className="flex-shrink-0">
+      <div className="hidden sm:flex flex-shrink-0">
         {word.note ? (
           <button
             onClick={() => onRequestNote(word)}
@@ -426,7 +426,7 @@ function MinimalRow({
 
       {/* 操作 - 根据单词状态显示唯一按钮：
           已掌握 → 遗忘（回到生词）；非已掌握 → 标熟 */}
-      <div className="flex flex-shrink-0 items-center opacity-0 transition-opacity group-hover:opacity-100">
+      <div className="flex flex-shrink-0 items-center opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
         {word.isMastered ? (
           <button
             onClick={onForget}
@@ -458,7 +458,7 @@ function MinimalRow({
 /* ============ 自我检测模式 ============ */
 function SelfCheckView({ words }: { words: Word[] }) {
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="mx-auto max-w-2xl px-0">
       <SelfCheckFlow words={words} mode="self_check" />
     </div>
   );
@@ -578,9 +578,9 @@ function RandomView({ words }: { words: Word[] }) {
       </div>
 
       <div className="mx-auto max-w-2xl">
-        <div className="rounded-md border border-accent-gold/30 bg-paper-card p-12 text-center shadow-paper">
+        <div className="rounded-md border border-accent-gold/30 bg-paper-card p-6 md:p-12 text-center shadow-paper">
           <div className="eyebrow mb-4 text-accent-gold">Random Quiz</div>
-          <h3 className="font-serif text-5xl font-medium tracking-word text-ink">
+          <h3 className="font-serif text-3xl md:text-5xl font-medium tracking-word text-ink">
             {current.word}
           </h3>
           <div className="mt-2 font-mono text-sm italic text-accent-gold">
@@ -591,7 +591,7 @@ function RandomView({ words }: { words: Word[] }) {
           </div>
           <div className="my-8 border-t border-dashed border-ink/15" />
           {revealed ? (
-            <p className="font-body text-2xl text-ink-soft animate-ink-bloom">
+            <p className="font-body text-xl md:text-2xl text-ink-soft animate-ink-bloom">
               {current.meaning}
             </p>
           ) : (
@@ -762,7 +762,7 @@ function DictationView({ words }: { words: Word[] }) {
       <div className="mx-auto max-w-2xl">
         <div
           className={cn(
-            "rounded-md border bg-paper-card p-12 text-center shadow-paper transition-colors",
+            "rounded-md border bg-paper-card p-6 md:p-12 text-center shadow-paper transition-colors",
             result === "correct"
               ? "border-accent-green/50"
               : result === "wrong"
@@ -776,7 +776,7 @@ function DictationView({ words }: { words: Word[] }) {
           <div className="font-mono text-sm italic text-accent-gold">
             {current.pos}
           </div>
-          <h3 className="mt-3 font-body text-4xl font-medium text-ink">
+          <h3 className="mt-3 font-body text-2xl md:text-4xl font-medium text-ink">
             {current.meaning}
           </h3>
 
@@ -792,13 +792,13 @@ function DictationView({ words }: { words: Word[] }) {
                 if (e.key === "Enter") submit();
               }}
               placeholder="输入单词拼写..."
-              className="w-full rounded-md border border-ink/20 bg-paper px-4 py-3 text-center font-serif text-3xl tracking-word text-ink placeholder:text-ink-light/40 focus:border-ink focus:outline-none focus:ring-1 focus:ring-ink/20"
+              className="w-full rounded-md border border-ink/20 bg-paper px-4 py-2 md:py-3 text-center font-serif text-xl md:text-3xl tracking-word text-ink placeholder:text-ink-light/40 focus:border-ink focus:outline-none focus:ring-1 focus:ring-ink/20"
             />
           ) : (
             <div className="animate-fade-in">
               <div
                 className={cn(
-                  "font-serif text-4xl font-medium tracking-word",
+                  "font-serif text-2xl md:text-4xl font-medium tracking-word",
                   result === "correct" ? "text-accent-green" : "text-accent-red",
                 )}
               >

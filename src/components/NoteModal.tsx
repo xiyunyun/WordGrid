@@ -83,7 +83,7 @@ export default function NoteModal({ open, onClose, word }: NoteModalProps) {
 
         {/* 笔记正文 - 保留换行 */}
         <div
-          className="px-6 py-5"
+          className="px-4 py-4 md:px-6 md:py-5"
           style={{ minHeight: `${heightRem}rem`, maxHeight: "60vh" }}
         >
           <p className="whitespace-pre-wrap break-words font-body text-base leading-relaxed text-ink-soft">

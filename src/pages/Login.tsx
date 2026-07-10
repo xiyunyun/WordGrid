@@ -40,7 +40,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
         <div className="mb-8 text-center">
           <div className="mb-3 flex items-center justify-center gap-2">
             <BookOpen className="h-7 w-7 text-accent-gold" strokeWidth={1.5} />
-            <span className="font-display text-3xl font-medium tracking-tightest text-ink">
+            <span className="font-display text-2xl md:text-3xl font-medium tracking-tightest text-ink">
               WordGrid
             </span>
           </div>
@@ -52,7 +52,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
         {/* 登录卡片 */}
         <form
           onSubmit={handleSubmit}
-          className="space-y-5 rounded-lg border border-ink/15 bg-paper-card p-8 shadow-paper"
+          className="space-y-5 rounded-lg border border-ink/15 bg-paper-card p-6 md:p-8 shadow-paper"
         >
           {/* 用户名 */}
           <div>

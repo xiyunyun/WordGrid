@@ -141,7 +141,7 @@ export default function AddWordDrawer({
       {/* 抽屉 */}
       <aside className="relative flex h-full w-full max-w-md animate-slide-in-right flex-col border-l border-ink/15 bg-paper-card shadow-deep">
         {/* 抽屉头部 */}
-        <div className="flex items-center justify-between border-b border-ink/15 px-6 py-4">
+        <div className="flex items-center justify-between border-b border-ink/15 px-4 py-3 md:px-6 md:py-4">
           <div>
             <div className="eyebrow">{isEditing ? "Edit Entry" : "New Entry"}</div>
             <h2 className="font-display text-2xl font-semibold text-ink">
@@ -159,7 +159,7 @@ export default function AddWordDrawer({
 
         {/* Tab 切换 - 编辑模式隐藏 */}
         {!isEditing && (
-          <div className="flex border-b border-ink/10 px-6">
+          <div className="flex border-b border-ink/10 px-4 md:px-6">
             {[
               { key: "single" as Tab, label: "单个录入", icon: Plus },
               { key: "bulk" as Tab, label: "批量导入", icon: FileText },
@@ -185,7 +185,7 @@ export default function AddWordDrawer({
         )}
 
         {/* 表单内容 */}
-        <div className="flex-1 overflow-y-auto px-6 py-5">
+        <div className="flex-1 overflow-y-auto px-4 py-4 md:px-6 md:py-5">
           {/* 日期选择 */}
           <div className="mb-5">
             <label className="eyebrow mb-2 block">Date · 录入日期</label>

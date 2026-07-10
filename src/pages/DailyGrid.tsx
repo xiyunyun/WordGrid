@@ -199,14 +199,14 @@ export default function DailyGrid({
             >
               {/* 日期行头部 */}
               <header
-                className="flex cursor-pointer items-center gap-8 px-6 py-4 transition-colors hover:bg-paper-warm/40"
+                className="flex cursor-pointer items-center gap-3 px-3 py-3 transition-colors hover:bg-paper-warm/40 md:gap-8 md:px-6 md:py-4"
                 onClick={() => toggleCollapse(group.date)}
               >
                 {/* 区块 1：日期 + 今日标记 - 与行内其他元素水平对齐 */}
                 <div className="flex flex-shrink-0 items-baseline gap-2">
                   <div
                     className={cn(
-                      "font-serif text-xl font-medium leading-none tracking-tight",
+                      "font-serif text-base font-medium leading-none tracking-tight md:text-xl",
                       isToday ? "text-ink" : "text-ink-soft",
                     )}
                   >
@@ -219,8 +219,8 @@ export default function DailyGrid({
                   )}
                 </div>
 
-                {/* 区块 2：周几（中文 + 英文） */}
-                <div className="flex flex-shrink-0 flex-col justify-center border-l border-ink/10 pl-8">
+                {/* 区块 2：周几（中文 + 英文）- 手机端隐藏英文缩写 */}
+                <div className="flex flex-shrink-0 flex-col justify-center border-l border-ink/10 pl-3 md:pl-8">
                   <div
                     className={cn(
                       "font-mono text-2xs uppercase tracking-editorial",
@@ -229,25 +229,25 @@ export default function DailyGrid({
                   >
                     {weekdayCN(group.date)}
                   </div>
-                  <div className="mt-0.5 font-serif text-sm italic text-ink-light">
+                  <div className="mt-0.5 hidden font-serif text-sm italic text-ink-light md:block">
                     {weekdayEN(group.date)}
                   </div>
                 </div>
 
                 {/* 区块 3：统计（words + 生词） */}
-                <div className="flex flex-1 flex-wrap items-baseline gap-6 border-l border-ink/10 pl-8">
-                  <div className="flex items-baseline gap-2">
-                    <span className="font-serif text-xl font-medium text-ink">
+                <div className="flex flex-1 flex-wrap items-baseline gap-3 border-l border-ink/10 pl-3 md:gap-6 md:pl-8">
+                  <div className="flex items-baseline gap-1 md:gap-2">
+                    <span className="font-serif text-base font-medium text-ink md:text-xl">
                       {group.words.length}
                     </span>
                     <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
                       words
                     </span>
                   </div>
-                  <div className="flex items-baseline gap-2">
+                  <div className="flex items-baseline gap-1 md:gap-2">
                     <span
                       className={cn(
-                        "font-serif text-xl font-medium",
+                        "font-serif text-base font-medium md:text-xl",
                         difficultCount > 0 ? "text-accent-red" : "text-ink-light",
                       )}
                     >
@@ -299,12 +299,12 @@ export default function DailyGrid({
 
               {/* 单词单元格网格区 - 自适应多行排列 */}
               {!isCollapsed && (
-                <div className="border-t border-ink/8 px-4 py-3 animate-fade-in">
+                <div className="border-t border-ink/8 px-2 py-3 md:px-4 animate-fade-in">
                   <div
-                    className="grid gap-3"
+                    className="grid gap-2 md:gap-3"
                     style={{
                       gridTemplateColumns:
-                        "repeat(auto-fill, minmax(240px, 1fr))",
+                        "repeat(auto-fill, minmax(150px, 1fr))",
                     }}
                   >
                     {group.words.map((w) => (

@@ -34,7 +34,7 @@ export default function ArchiveListModal({
       />
       <div className="relative flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg border border-ink/15 bg-paper-card shadow-deep">
         {/* 头部 */}
-        <div className="flex items-center justify-between border-b border-ink/15 px-6 py-4">
+        <div className="flex items-center justify-between border-b border-ink/15 px-4 py-3 md:px-6 md:py-4">
           <div>
             <div className="eyebrow">Archive · 文章归档</div>
             <h2 className="font-display text-2xl font-semibold text-ink">
@@ -54,7 +54,7 @@ export default function ArchiveListModal({
         </div>
 
         {/* 列表 */}
-        <div className="flex-1 overflow-y-auto px-6 py-5">
+        <div className="flex-1 overflow-y-auto px-4 py-4 md:px-6 md:py-5">
           {archives.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <Archive
@@ -97,11 +97,11 @@ function ArchiveRow({
 
   return (
     <li
-      className="group flex items-center gap-4 rounded-md border border-ink/10 bg-paper p-4 transition-colors hover:border-ink/30 hover:bg-paper-warm/40"
+      className="group flex items-center gap-2 rounded-md border border-ink/10 bg-paper p-3 transition-colors hover:border-ink/30 hover:bg-paper-warm/40 md:gap-4 md:p-4"
     >
-      <button onClick={onOpen} className="flex flex-1 items-center gap-4 text-left">
+      <button onClick={onOpen} className="flex flex-1 items-center gap-2 text-left md:gap-4">
         {/* 日期块 */}
-        <div className="flex w-16 flex-shrink-0 flex-col items-center rounded-md border border-ink/10 bg-paper-card py-2">
+        <div className="flex w-14 flex-shrink-0 flex-col items-center rounded-md border border-ink/10 bg-paper-card py-2 md:w-16">
           <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
             {archive.date.slice(5).replace("-", "/")}
           </span>
@@ -167,7 +167,7 @@ function ArchiveRow({
           "flex-shrink-0 rounded p-1.5 transition-colors",
           confirmDel
             ? "bg-accent-red text-paper"
-            : "text-ink-light opacity-0 hover:bg-accent-red/10 hover:text-accent-red group-hover:opacity-100",
+            : "text-ink-light opacity-100 hover:bg-accent-red/10 hover:text-accent-red md:opacity-0 md:group-hover:opacity-100",
         )}
         title={confirmDel ? "再次点击确认删除" : "删除"}
       >

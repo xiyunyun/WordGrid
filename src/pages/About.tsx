@@ -125,7 +125,7 @@ export default function About() {
       {/* 头部 */}
       <section className="border-b border-ink/15 pb-5">
         <div className="eyebrow mb-1">About · 关于</div>
-        <h2 className="font-display text-3xl font-medium tracking-tightest text-ink lg:text-4xl">
+        <h2 className="font-display text-2xl md:text-3xl font-medium tracking-tightest text-ink lg:text-4xl">
           关于 WordGrid
           <span className="ml-3 font-serif text-lg italic text-ink-light">
             词汇网格
@@ -134,7 +134,7 @@ export default function About() {
       </section>
 
       {/* 软件介绍 */}
-      <section className="rounded-md border border-ink/15 bg-paper-card p-6 shadow-paper">
+      <section className="rounded-md border border-ink/15 bg-paper-card p-4 md:p-6 shadow-paper">
         <div className="mb-3 flex items-center gap-2">
           <BookOpen className="h-4 w-4 text-accent-gold" strokeWidth={1.5} />
           <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
@@ -158,7 +158,7 @@ export default function About() {
       </section>
 
       {/* 作者介绍 */}
-      <section className="rounded-md border border-ink/15 bg-paper-card p-6 shadow-paper">
+      <section className="rounded-md border border-ink/15 bg-paper-card p-4 md:p-6 shadow-paper">
         <div className="mb-3 flex items-center gap-2">
           <Heart className="h-4 w-4 text-accent-gold" strokeWidth={1.5} />
           <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
@@ -182,16 +182,16 @@ export default function About() {
       </section>
 
       {/* 数据统计 */}
-      <section className="rounded-md border border-ink/15 bg-paper-card p-6 shadow-paper">
+      <section className="rounded-md border border-ink/15 bg-paper-card p-4 md:p-6 shadow-paper">
         <div className="mb-4 flex items-center gap-2">
           <Database className="h-4 w-4 text-accent-gold" strokeWidth={1.5} />
           <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
             Data · 当前数据概况
           </span>
         </div>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-2 md:gap-4">
           <div className="rounded-md border border-ink/10 bg-paper p-4 text-center">
-            <div className="font-display text-3xl font-medium text-ink tabular-nums">
+            <div className="font-display text-xl md:text-3xl font-medium text-ink tabular-nums">
               {stats.wordCount}
             </div>
             <div className="mt-1 font-mono text-2xs uppercase tracking-editorial text-ink-light">
@@ -199,7 +199,7 @@ export default function About() {
             </div>
           </div>
           <div className="rounded-md border border-ink/10 bg-paper p-4 text-center">
-            <div className="font-display text-3xl font-medium text-ink tabular-nums">
+            <div className="font-display text-xl md:text-3xl font-medium text-ink tabular-nums">
               {stats.articleCount}
             </div>
             <div className="mt-1 font-mono text-2xs uppercase tracking-editorial text-ink-light">
@@ -207,7 +207,7 @@ export default function About() {
             </div>
           </div>
           <div className="rounded-md border border-ink/10 bg-paper p-4 text-center">
-            <div className="font-display text-3xl font-medium text-ink tabular-nums">
+            <div className="font-display text-xl md:text-3xl font-medium text-ink tabular-nums">
               {stats.totalSizeKB}
               <span className="text-base text-ink-light"> KB</span>
             </div>
@@ -219,7 +219,7 @@ export default function About() {
       </section>
 
       {/* 数据导入导出 */}
-      <section className="rounded-md border border-ink/15 bg-paper-card p-6 shadow-paper">
+      <section className="rounded-md border border-ink/15 bg-paper-card p-4 md:p-6 shadow-paper">
         <div className="mb-4 flex items-center gap-2">
           <Info className="h-4 w-4 text-accent-gold" strokeWidth={1.5} />
           <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
@@ -348,7 +348,7 @@ export default function About() {
       </section>
 
       {/* 危险操作区：删除所有数据 */}
-      <section className="rounded-md border border-accent-red/40 bg-accent-red/5 p-6">
+      <section className="rounded-md border border-accent-red/40 bg-accent-red/5 p-4 md:p-6">
         <div className="mb-4 flex items-center gap-2">
           <Trash2 className="h-4 w-4 text-accent-red" strokeWidth={1.5} />
           <span className="font-mono text-2xs uppercase tracking-editorial text-accent-red">
@@ -357,7 +357,7 @@ export default function About() {
         </div>
 
         {deleteStep === 0 && (
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-col items-start gap-3 md:flex-row md:items-center md:justify-between md:gap-4">
             <p className="font-body text-sm text-ink-soft">
               删除所有单词、复习记录、文章归档、题目作答等全部学习数据。
               此操作<strong className="text-accent-red">不可撤销</strong>，请务必先导出备份。

@@ -123,9 +123,9 @@ export default function SelfCheckFlow({
           复习完成
         </h3>
 
-        <div className="grid grid-cols-3 gap-6 rounded-md border border-ink/15 bg-paper-card p-6 shadow-paper">
+        <div className="grid grid-cols-3 gap-3 rounded-md border border-ink/15 bg-paper-card p-4 shadow-paper md:gap-6 md:p-6">
           <div>
-            <div className="font-display text-4xl font-medium text-ink">
+            <div className="font-display text-2xl font-medium text-ink md:text-4xl">
               {total}
             </div>
             <div className="mt-1 font-mono text-2xs uppercase tracking-editorial text-ink-light">
@@ -133,7 +133,7 @@ export default function SelfCheckFlow({
             </div>
           </div>
           <div>
-            <div className="font-display text-4xl font-medium text-accent-green">
+            <div className="font-display text-2xl font-medium text-accent-green md:text-4xl">
               {stats.correct}
             </div>
             <div className="mt-1 font-mono text-2xs uppercase tracking-editorial text-ink-light">
@@ -141,7 +141,7 @@ export default function SelfCheckFlow({
             </div>
           </div>
           <div>
-            <div className="font-display text-4xl font-medium text-accent-red">
+            <div className="font-display text-2xl font-medium text-accent-red md:text-4xl">
               {stats.wrong}
             </div>
             <div className="mt-1 font-mono text-2xs uppercase tracking-editorial text-ink-light">
@@ -185,7 +185,7 @@ export default function SelfCheckFlow({
   return (
     <div className="animate-fade-in">
       {/* 进度条 */}
-      <div className="mb-6 flex items-center gap-4">
+      <div className="mb-4 flex items-center gap-2 md:mb-6 md:gap-4">
         <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
           {idx + 1} / {queue.length}
           {queue.length > total && (
@@ -204,9 +204,9 @@ export default function SelfCheckFlow({
 
       {/* 单词卡片 */}
       <div>
-        <div className="rounded-md border border-ink/15 bg-paper-card p-10 text-center shadow-paper">
+        <div className="rounded-md border border-ink/15 bg-paper-card p-5 text-center shadow-paper md:p-10">
           <div className="eyebrow mb-4">Self-Check</div>
-          <h3 className="font-serif text-5xl font-medium tracking-word text-ink">
+          <h3 className="font-serif text-3xl font-medium tracking-word text-ink md:text-5xl">
             {current.word}
           </h3>
           {current.phonetic && (
@@ -223,10 +223,10 @@ export default function SelfCheckFlow({
             </div>
           )}
 
-          <div className="my-8 border-t border-dashed border-ink/15" />
+          <div className="my-5 border-t border-dashed border-ink/15 md:my-8" />
 
           {revealed ? (
-            <p className="font-body text-2xl text-ink-soft animate-ink-bloom">
+            <p className="font-body text-xl text-ink-soft animate-ink-bloom md:text-2xl">
               {current.meaning}
             </p>
           ) : (
@@ -243,17 +243,17 @@ export default function SelfCheckFlow({
         </div>
 
         {/* 判卷按钮 */}
-        <div className="mt-6 flex items-center justify-center gap-4">
+        <div className="mt-5 flex items-center justify-center gap-3 md:mt-6 md:gap-4">
           <button
             onClick={() => handle(false)}
-            className="flex items-center gap-2 rounded-md border border-accent-red/40 bg-accent-red/5 px-6 py-2.5 font-mono text-2xs uppercase tracking-editorial text-accent-red transition-colors hover:bg-accent-red hover:text-paper"
+            className="flex flex-1 items-center justify-center gap-2 rounded-md border border-accent-red/40 bg-accent-red/5 px-4 py-2.5 font-mono text-2xs uppercase tracking-editorial text-accent-red transition-colors hover:bg-accent-red hover:text-paper md:flex-none md:px-6"
           >
             <X className="h-4 w-4" strokeWidth={2} />
             不认识
           </button>
           <button
             onClick={() => handle(true)}
-            className="flex items-center gap-2 rounded-md border border-accent-green/40 bg-accent-green/5 px-6 py-2.5 font-mono text-2xs uppercase tracking-editorial text-accent-green transition-colors hover:bg-accent-green hover:text-paper"
+            className="flex flex-1 items-center justify-center gap-2 rounded-md border border-accent-green/40 bg-accent-green/5 px-4 py-2.5 font-mono text-2xs uppercase tracking-editorial text-accent-green transition-colors hover:bg-accent-green hover:text-paper md:flex-none md:px-6"
           >
             <Check className="h-4 w-4" strokeWidth={2} />
             认识

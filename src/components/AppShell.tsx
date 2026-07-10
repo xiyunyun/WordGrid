@@ -29,9 +29,9 @@ export default function AppShell({ children, onQuickAdd, onLogout }: AppShellPro
     <div className="flex h-full min-h-screen flex-col bg-paper">
       {/* 顶部导航 - 编辑杂志刊头 */}
       <header className="border-b border-ink/15 bg-paper/80 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-[1400px] items-center justify-between px-6 py-4 lg:px-10">
-          <div className="flex items-baseline gap-4">
-            <h1 className="font-display text-3xl font-semibold tracking-tightest text-ink lg:text-4xl">
+        <div className="mx-auto flex max-w-[1400px] items-center justify-between px-4 py-3 md:px-6 md:py-4 lg:px-10">
+          <div className="flex items-baseline gap-3 md:gap-4">
+            <h1 className="font-display text-2xl font-semibold tracking-tightest text-ink md:text-3xl lg:text-4xl">
               WordGrid
             </h1>
             <span className="hidden font-mono text-2xs uppercase tracking-editorial text-ink-light sm:inline">
@@ -39,7 +39,7 @@ export default function AppShell({ children, onQuickAdd, onLogout }: AppShellPro
             </span>
           </div>
 
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3 md:gap-6">
             <div className="hidden text-right md:block">
               <div className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
                 {weekdayCN(today)}
@@ -55,7 +55,7 @@ export default function AppShell({ children, onQuickAdd, onLogout }: AppShellPro
             {onLogout && (
               <button
                 onClick={onLogout}
-                className="btn-ghost ml-2"
+                className="btn-ghost ml-1 md:ml-2"
                 aria-label="登出"
                 title="退出登录"
               >
@@ -65,8 +65,8 @@ export default function AppShell({ children, onQuickAdd, onLogout }: AppShellPro
           </div>
         </div>
 
-        {/* 主导航标签栏 */}
-        <nav className="mx-auto flex max-w-[1400px] gap-0 px-6 lg:px-10">
+        {/* 主导航标签栏 - 仅桌面端显示（md+） */}
+        <nav className="mx-auto hidden max-w-[1400px] gap-0 px-6 lg:px-10 md:flex">
           {navItems.map((item) => {
             const Icon = item.icon;
             const active =
@@ -101,20 +101,61 @@ export default function AppShell({ children, onQuickAdd, onLogout }: AppShellPro
         </nav>
       </header>
 
-      {/* 主内容区 */}
+      {/* 主内容区 - 手机端减少 padding，底部留出导航栏空间 */}
       <main className="flex-1">
-        <div className="mx-auto max-w-[1400px] px-6 py-8 lg:px-10 lg:py-10">
+        <div className="mx-auto max-w-[1400px] px-4 py-5 pb-24 md:px-6 md:py-8 md:pb-8 lg:px-10 lg:py-10">
           {children}
         </div>
       </main>
 
-      {/* 页脚 */}
-      <footer className="border-t border-ink/15 bg-paper/60">
+      {/* 页脚 - 仅桌面端显示 */}
+      <footer className="hidden border-t border-ink/15 bg-paper/60 md:block">
         <div className="mx-auto flex max-w-[1400px] flex-col items-start justify-between gap-2 px-6 py-4 font-mono text-2xs uppercase tracking-editorial text-ink-light sm:flex-row sm:items-center lg:px-10">
           <span>WordGrid © 2026 · A Vocabulary Archive</span>
           <span>Ebbinghaus Review Engine · Local-First</span>
         </div>
       </footer>
+
+      {/* 手机端底部导航栏 - fixed 固定在屏幕底部 */}
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-ink/15 bg-paper/95 backdrop-blur-sm md:hidden">
+        <div className="flex items-stretch justify-around">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const active =
+              item.to === "/"
+                ? location.pathname === "/"
+                : location.pathname.startsWith(item.to);
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={cn(
+                  "relative flex flex-1 flex-col items-center gap-1 py-2.5 transition-colors",
+                  active ? "text-ink" : "text-ink-light",
+                )}
+              >
+                <Icon
+                  className="h-5 w-5"
+                  strokeWidth={active ? 2 : 1.5}
+                />
+                <span className="font-body text-[10px] leading-none">
+                  {item.labelCN}
+                </span>
+                {item.to === "/wordbook" && dueCount > 0 && (
+                  <span className="absolute right-1/4 top-1.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-accent-red px-1 font-mono text-[9px] text-paper">
+                    {dueCount}
+                  </span>
+                )}
+                {active && (
+                  <span className="absolute inset-x-2 top-0 h-0.5 rounded-full bg-ink" />
+                )}
+              </NavLink>
+            );
+          })}
+        </div>
+        {/* iOS safe area support */}
+        <div className="h-[env(safe-area-inset-bottom)]" />
+      </nav>
     </div>
   );
 }

@@ -158,7 +158,7 @@ export default function ArticleBuilder() {
       <section className="border-b border-ink/15 pb-5">
         <div className="eyebrow mb-1">Blocks · 单词积木</div>
         <div className="flex flex-wrap items-end justify-between gap-4">
-          <h2 className="font-display text-3xl font-medium tracking-tightest text-ink lg:text-4xl">
+          <h2 className="font-display text-2xl md:text-3xl font-medium tracking-tightest text-ink lg:text-4xl">
             积木造文
             <span className="ml-3 font-serif text-lg italic text-ink-light">
               {words.length} words available
@@ -274,7 +274,7 @@ function SelectPhase({
             Difficulty · 难度选择
           </span>
         </div>
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-2 md:gap-3">
           {DIFFICULTIES.map((d) => {
             const active = difficulty === d.key;
             return (
@@ -409,7 +409,7 @@ function SelectPhase({
 /* ============ 加载阶段 ============ */
 function LoadingPhase() {
   return (
-    <div className="flex flex-col items-center justify-center py-24 text-center animate-fade-in">
+    <div className="flex flex-col items-center justify-center py-16 md:py-24 text-center animate-fade-in">
       <Loader2
         className="mb-4 h-10 w-10 animate-spin text-accent-gold"
         strokeWidth={1.5}
@@ -483,7 +483,7 @@ function ReadingPhase({
     return paragraphs.map((para, pi) => {
       const tokens = para.split(/(\b)/);
       return (
-        <p key={pi} className="mb-5 font-body text-lg leading-relaxed text-ink-soft last:mb-0">
+        <p key={pi} className="mb-5 font-body text-base md:text-lg leading-relaxed text-ink-soft last:mb-0">
           {tokens.map((token, ti) => {
             const clean = token.toLowerCase().replace(/[^a-z'-]/g, "");
             const matched = clean && wordMap.has(clean);
@@ -532,12 +532,12 @@ function ReadingPhase({
       </div>
 
       {/* 文章阅读区 */}
-      <article className="rounded-md border border-ink/15 bg-paper-card p-8 shadow-paper lg:p-12">
+      <article className="rounded-md border border-ink/15 bg-paper-card p-4 shadow-paper md:p-8 lg:p-12">
         <div className="mx-auto max-w-2xl">{renderArticle()}</div>
       </article>
 
       {/* 高亮单词速查表 */}
-      <section className="rounded-md border border-ink/10 bg-paper-warm/40 p-5">
+      <section className="rounded-md border border-ink/10 bg-paper-warm/40 p-3 md:p-5">
         <div className="mb-3 flex items-center gap-2">
           <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
             Word List · 本文单词
@@ -560,7 +560,7 @@ function ReadingPhase({
       </section>
 
       {/* 题目区 */}
-      <section className="rounded-md border border-ink/15 bg-paper-warm/30 p-5">
+      <section className="rounded-md border border-ink/15 bg-paper-warm/30 p-3 md:p-5">
         {/* 题目区头部 */}
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">

@@ -143,7 +143,7 @@ export default function Stats() {
       <section className="border-b border-ink/15 pb-5">
         <div className="eyebrow mb-1">Statistics · 学习统计</div>
         <div className="flex flex-wrap items-end justify-between gap-4">
-          <h2 className="font-display text-3xl font-medium tracking-tightest text-ink lg:text-4xl">
+          <h2 className="font-display text-2xl md:text-3xl font-medium tracking-tightest text-ink lg:text-4xl">
             进度档案
             <span className="ml-3 font-serif text-lg italic text-ink-light">
               {words.length} total entries
@@ -178,7 +178,7 @@ export default function Stats() {
               </div>
               <div
                 className={cn(
-                  "font-display text-5xl font-medium leading-none",
+                  "font-display text-3xl md:text-5xl font-medium leading-none",
                   s.valueClass,
                 )}
               >
@@ -193,7 +193,7 @@ export default function Stats() {
       </section>
 
       {/* 每日新增柱状图 */}
-      <section className="rounded-md border border-ink/15 bg-paper-card p-6 shadow-paper">
+      <section className="rounded-md border border-ink/15 bg-paper-card p-4 md:p-6 shadow-paper">
         <div className="mb-5 flex items-center justify-between">
           <div>
             <div className="eyebrow mb-1">Daily New Words</div>
@@ -259,7 +259,7 @@ export default function Stats() {
       </section>
 
       {/* 累计折线图 */}
-      <section className="rounded-md border border-ink/15 bg-paper-card p-6 shadow-paper">
+      <section className="rounded-md border border-ink/15 bg-paper-card p-4 md:p-6 shadow-paper">
         <div className="mb-5 flex items-center justify-between">
           <div>
             <div className="eyebrow mb-1">Cumulative Growth</div>
@@ -345,7 +345,7 @@ export default function Stats() {
       <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <div className="rounded-md border border-ink/15 bg-paper-card p-5 shadow-paper">
           <div className="eyebrow mb-2">Today's Reviews</div>
-          <div className="font-display text-4xl font-medium text-ink">
+          <div className="font-display text-2xl md:text-4xl font-medium text-ink">
             {todayReviews.length}
           </div>
           <div className="mt-1 font-body text-xs text-ink-light">
@@ -354,7 +354,7 @@ export default function Stats() {
         </div>
         <div className="rounded-md border border-accent-green/30 bg-accent-green/5 p-5">
           <div className="eyebrow mb-2 text-accent-green">Correct</div>
-          <div className="font-display text-4xl font-medium text-accent-green">
+          <div className="font-display text-2xl md:text-4xl font-medium text-accent-green">
             {todayCorrect}
           </div>
           <div className="mt-1 font-body text-xs text-ink-light">
@@ -363,7 +363,7 @@ export default function Stats() {
         </div>
         <div className="rounded-md border border-accent-red/30 bg-accent-red/5 p-5">
           <div className="eyebrow mb-2 text-accent-red">Wrong</div>
-          <div className="font-display text-4xl font-medium text-accent-red">
+          <div className="font-display text-2xl md:text-4xl font-medium text-accent-red">
             {todayWrong}
           </div>
           <div className="mt-1 font-body text-xs text-ink-light">
@@ -373,7 +373,7 @@ export default function Stats() {
       </section>
 
       {/* 熟练度排行 - 错误最多 / 正确最多 */}
-      <section className="rounded-md border border-ink/15 bg-paper-card p-6 shadow-paper">
+      <section className="rounded-md border border-ink/15 bg-paper-card p-4 md:p-6 shadow-paper">
         <div className="mb-5 flex items-center justify-between">
           <div>
             <div className="eyebrow mb-1">Mastery Ranking</div>
@@ -495,10 +495,10 @@ function RankList({
               <span className="w-5 flex-shrink-0 text-center font-mono text-2xs text-ink-light tabular-nums">
                 {i + 1}
               </span>
-              <span className="w-28 flex-shrink-0 font-serif text-base font-medium tracking-word text-ink">
+              <span className="w-20 md:w-28 flex-shrink-0 font-serif text-base font-medium tracking-word text-ink">
                 {item.word.word}
               </span>
-              <span className="w-12 flex-shrink-0 font-mono text-xs italic text-accent-gold">
+              <span className="hidden sm:block w-12 flex-shrink-0 font-mono text-xs italic text-accent-gold">
                 {item.word.pos}
               </span>
               <span className="min-w-0 flex-1 truncate font-body text-sm text-ink-soft">

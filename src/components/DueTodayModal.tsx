@@ -56,7 +56,7 @@ export default function DueTodayModal({
       {/* 中央弹窗 */}
       <div className="relative z-10 mx-4 w-full max-w-2xl animate-slide-up overflow-hidden rounded-md border border-ink/15 bg-paper shadow-deep">
         {/* 头部 */}
-        <header className="flex items-center justify-between border-b border-ink/15 bg-paper-card px-6 py-4">
+        <header className="flex items-center justify-between border-b border-ink/15 bg-paper-card px-4 py-3 md:px-6 md:py-4">
           <div className="flex items-center gap-3">
             <div
               className={
@@ -96,7 +96,7 @@ export default function DueTodayModal({
 
         {/* 模式切换条 - 仅当有明日单词时显示 */}
         {hasTomorrow && (
-          <div className="flex items-center gap-2 border-b border-ink/10 bg-paper-warm/30 px-6 py-2">
+          <div className="flex items-center gap-2 border-b border-ink/10 bg-paper-warm/30 px-4 py-2 md:px-6">
             <button
               onClick={() => setMode("today")}
               className={
@@ -124,7 +124,7 @@ export default function DueTodayModal({
         )}
 
         {/* 流程主体 - key 随 mode 变化以重置 SelfCheckFlow 内部状态 */}
-        <div className="max-h-[70vh] overflow-y-auto px-6 py-6">
+        <div className="max-h-[70vh] overflow-y-auto px-4 py-4 md:px-6 md:py-6">
           <SelfCheckFlow
             key={mode}
             words={activeWords}
@@ -135,7 +135,7 @@ export default function DueTodayModal({
         </div>
 
         {/* 底部提示 */}
-        <footer className="border-t border-ink/10 bg-paper-warm/40 px-6 py-3 font-mono text-2xs uppercase tracking-editorial text-ink-light">
+        <footer className="border-t border-ink/10 bg-paper-warm/40 px-4 py-3 md:px-6 font-mono text-2xs uppercase tracking-editorial text-ink-light">
           按 ESC 关闭 ·{" "}
           {mode === "today"
             ? "答错的词汇将在明天再次出现"
