@@ -1,0 +1,120 @@
+@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Noto+Serif+SC:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: "Noto Serif SC", "Lora", serif;
+  /* 根字号从默认 16px 放大至 20px，整体字号 +2 级 */
+  font-size: 20px;
+  line-height: 1.6;
+  font-weight: 400;
+  color: #1a1a1a;
+  background-color: #f5f1e8;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background-color: #f5f1e8;
+  /* 纸张噪点纹理叠加 */
+  background-image:
+    radial-gradient(circle at 20% 10%, rgba(184, 134, 11, 0.04) 0%, transparent 40%),
+    radial-gradient(circle at 80% 80%, rgba(200, 84, 59, 0.03) 0%, transparent 45%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.4 0 0 0 0 0.36 0 0 0 0 0.3 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-attachment: fixed;
+}
+
+/* 滚动条样式 - 学术笔记本风 */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(139, 131, 120, 0.3);
+  border-radius: 0;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 131, 120, 0.5);
+  background-clip: content-box;
+}
+
+/* 选中文本 */
+::selection {
+  background: rgba(200, 84, 59, 0.18);
+  color: #1a1a1a;
+}
+
+@layer components {
+  /* 编辑风分隔线 */
+  .editorial-rule {
+    @apply border-t border-ink/15;
+  }
+
+  /* 章节小标题 */
+  .eyebrow {
+    @apply font-mono text-2xs uppercase tracking-editorial text-ink-light;
+  }
+
+  /* 主按钮 */
+  .btn-primary {
+    @apply inline-flex items-center gap-2 rounded-md border border-ink bg-ink px-4 py-2 font-mono text-2xs uppercase tracking-editorial text-paper transition-all hover:bg-ink-soft hover:shadow-paper active:translate-y-px;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 rounded-md border border-ink/20 bg-transparent px-4 py-2 font-mono text-2xs uppercase tracking-editorial text-ink transition-all hover:border-ink hover:bg-ink hover:text-paper;
+  }
+
+  .btn-gold {
+    @apply inline-flex items-center gap-2 rounded-md border border-accent-gold/50 bg-accent-gold/10 px-4 py-2 font-mono text-2xs uppercase tracking-editorial text-accent-gold transition-all hover:bg-accent-gold hover:text-paper;
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center gap-2 rounded-md border border-accent-red bg-accent-red px-4 py-2 font-mono text-2xs uppercase tracking-editorial text-paper transition-all hover:bg-accent-red/90 active:translate-y-px;
+  }
+
+  /* 输入框 */
+  .input-paper {
+    @apply w-full rounded-md border border-ink/20 bg-paper-card px-3 py-2 font-body text-ink placeholder:text-ink-light/60 focus:border-ink focus:outline-none focus:ring-1 focus:ring-ink/20;
+  }
+
+  /* 卡片 */
+  .paper-card {
+    @apply bg-paper-card border border-ink/10 shadow-paper;
+  }
+}
+
+@layer utilities {
+  /* 文字纵向排列 - 日期标签 */
+  .writing-vertical {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+  }
+
+  /* 翻转容器 */
+  .flip-container {
+    perspective: 1000px;
+  }
+
+  /* 隐藏滚动条但保留滚动功能 */
+  .scrollbar-thin::-webkit-scrollbar {
+    height: 6px;
+    width: 6px;
+  }
+}

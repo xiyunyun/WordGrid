@@ -1,0 +1,162 @@
+import { useState, useEffect, useCallback } from "react";
+import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import AppShell from "@/components/AppShell";
+import AddWordDrawer from "@/components/AddWordDrawer";
+import FloatingActions from "@/components/FloatingActions";
+import DueTodayModal from "@/components/DueTodayModal";
+import NoteModal from "@/components/NoteModal";
+import DailyGrid from "@/pages/DailyGrid";
+import Wordbook from "@/pages/Wordbook";
+import ArticleBuilder from "@/pages/ArticleBuilder";
+import Stats from "@/pages/Stats";
+import { useWordStore, selectDueWords, selectTomorrowWords } from "@/store/wordStore";
+import { buildSeedWords } from "@/store/seedData";
+import { useClipboardWord } from "@/hooks/useClipboardWord";
+import type { Word } from "@/types";
+
+const SEED_FLAG_KEY = "wordgrid-seeded";
+
+/** 跳转到指定日期行 - 平滑滚动 + 高亮闪烁 */
+function jumpToDate(date: string) {
+  const el = document.getElementById(`date-${date}`);
+  if (!el) return;
+  el.scrollIntoView({ behavior: "smooth", block: "start" });
+  // 短暂高亮提示
+  el.classList.add("ring-2", "ring-accent-gold", "ring-offset-2", "ring-offset-paper");
+  window.setTimeout(() => {
+    el.classList.remove(
+      "ring-2",
+      "ring-accent-gold",
+      "ring-offset-2",
+      "ring-offset-paper",
+    );
+  }, 1600);
+}
+
+/** 仅在主页显示浮动按钮组的内层组件 */
+function AppContent() {
+  const location = useLocation();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerDate, setDrawerDate] = useState<string | undefined>(undefined);
+  const [drawerClipboard, setDrawerClipboard] = useState<string | undefined>();
+  const [editWord, setEditWord] = useState<Word | null>(null);
+  const [noteModalOpen, setNoteModalOpen] = useState(false);
+  const [noteWord, setNoteWord] = useState<Word | null>(null);
+  const [dueModalOpen, setDueModalOpen] = useState(false);
+  // 弹窗打开瞬间锁定的待复习词快照 —— 复习过程中 store 更新不会改变此列表
+  const [dueModalWords, setDueModalWords] = useState<Word[]>([]);
+  // 明日到期词快照 —— 用于"提前复习明日"模式
+  const [dueModalTomorrowWords, setDueModalTomorrowWords] = useState<Word[]>(
+    [],
+  );
+
+  const words = useWordStore((s) => s.words);
+  const hydrated = useWordStore((s) => s.hydrated);
+
+  const clipboard = useClipboardWord();
+
+  // 首次启动注入示例数据
+  useEffect(() => {
+    if (!hydrated) return;
+    if (words.length === 0 && !localStorage.getItem(SEED_FLAG_KEY)) {
+      const seed = buildSeedWords();
+      useWordStore.setState({ words: seed });
+      localStorage.setItem(SEED_FLAG_KEY, "1");
+    }
+  }, [hydrated, words.length]);
+
+  const openDrawer = useCallback(
+    (date?: string, clip?: string) => {
+      setEditWord(null);
+      setDrawerDate(date);
+      setDrawerClipboard(clip ?? clipboard.text ?? undefined);
+      setDrawerOpen(true);
+    },
+    [clipboard.text],
+  );
+
+  const openEditDrawer = useCallback((word: Word) => {
+    setEditWord(word);
+    setDrawerClipboard(undefined);
+    setDrawerOpen(true);
+  }, []);
+
+  const openNoteModal = useCallback((word: Word) => {
+    setNoteWord(word);
+    setNoteModalOpen(true);
+  }, []);
+
+  const closeDrawer = useCallback(() => {
+    setDrawerOpen(false);
+    setDrawerClipboard(undefined);
+    setEditWord(null);
+  }, []);
+
+  // 打开 Due Today 弹窗时锁定当前待复习词快照 + 明日到期词快照
+  const openDueModal = useCallback(() => {
+    setDueModalWords(selectDueWords(words));
+    setDueModalTomorrowWords(selectTomorrowWords(words));
+    setDueModalOpen(true);
+  }, [words]);
+
+  const isHomePage = location.pathname === "/";
+
+  return (
+    <>
+      <AppShell onQuickAdd={() => openDrawer()}>
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <DailyGrid
+                onRequestAdd={openDrawer}
+                onReviewDue={openDueModal}
+                onRequestEdit={openEditDrawer}
+                onRequestNote={openNoteModal}
+                clipboardText={clipboard.text ?? undefined}
+                onConsumeClipboard={clipboard.clear}
+              />
+            }
+          />
+          <Route path="/wordbook" element={<Wordbook />} />
+          <Route path="/blocks" element={<ArticleBuilder />} />
+          <Route path="/stats" element={<Stats />} />
+        </Routes>
+      </AppShell>
+
+      {/* 浮动操作组 - 仅主页显示 */}
+      {isHomePage && <FloatingActions onJumpDate={jumpToDate} />}
+
+      {/* Due Today 复习弹窗 —— 即使复习后 due 数变为 0 也不自动关闭 */}
+      <DueTodayModal
+        open={dueModalOpen}
+        onClose={() => setDueModalOpen(false)}
+        words={dueModalWords}
+        tomorrowWords={dueModalTomorrowWords}
+      />
+
+      {/* 笔记查看弹窗 */}
+      <NoteModal
+        open={noteModalOpen}
+        onClose={() => setNoteModalOpen(false)}
+        word={noteWord}
+      />
+
+      <AddWordDrawer
+        open={drawerOpen}
+        onClose={closeDrawer}
+        defaultDate={drawerDate}
+        clipboardText={drawerClipboard}
+        editWord={editWord}
+      />
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <Router>
+      <AppContent />
+    </Router>
+  );
+}
