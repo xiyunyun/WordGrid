@@ -66,6 +66,8 @@ async function callDeepSeek(
       ],
       temperature,
       max_tokens: maxTokens,
+      // 关闭思考模式，避免推理 token 耗尽 max_tokens 预算
+      thinking: { type: "disabled" },
     }),
   });
 
