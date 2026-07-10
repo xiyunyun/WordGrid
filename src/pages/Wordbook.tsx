@@ -10,6 +10,8 @@ import {
   Bookmark,
   NotebookPen,
   Download,
+  Volume2,
+  Loader2,
 } from "lucide-react";
 import { useWordStore } from "@/store/wordStore";
 import {
@@ -22,6 +24,7 @@ import { shuffle, todayKey } from "@/lib/review";
 import { STAGE_LABELS } from "@/types";
 import type { Word } from "@/types";
 import { cn } from "@/lib/utils";
+import { speak } from "@/lib/tts";
 import SpeakButton from "@/components/SpeakButton";
 import SelfCheckFlow from "@/components/SelfCheckFlow";
 import NoteModal from "@/components/NoteModal";
@@ -666,6 +669,7 @@ function DictationView({ words }: { words: Word[] }) {
   const [result, setResult] = useState<"idle" | "correct" | "wrong">("idle");
   const [sessionCount, setSessionCount] = useState(0);
   const [stats, setStats] = useState<DictationStats>(loadDictationStats);
+  const [speaking, setSpeaking] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // 词库变化时重新洗牌
@@ -727,6 +731,14 @@ function DictationView({ words }: { words: Word[] }) {
     setResult("idle");
   };
 
+  // 听单词发音
+  const handleSpeak = async () => {
+    if (speaking) return;
+    setSpeaking(true);
+    await speak(current.word);
+    setSpeaking(false);
+  };
+
   return (
     <div className="animate-fade-in">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -770,7 +782,28 @@ function DictationView({ words }: { words: Word[] }) {
                 : "border-ink/15",
           )}
         >
-          <div className="eyebrow mb-4">根据释义拼写单词</div>
+          <div className="eyebrow mb-4">听发音拼写单词</div>
+
+          {/* 发音按钮 - 听写核心功能 */}
+          <div className="mb-4 flex justify-center">
+            <button
+              onClick={handleSpeak}
+              disabled={speaking}
+              className="flex items-center gap-2 rounded-md border border-accent-gold/50 bg-accent-gold/10 px-5 py-2.5 font-mono text-2xs uppercase tracking-editorial text-accent-gold transition-colors hover:bg-accent-gold hover:text-paper disabled:opacity-50"
+            >
+              {speaking ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.5} />
+                  正在朗读...
+                </>
+              ) : (
+                <>
+                  <Volume2 className="h-4 w-4" strokeWidth={1.5} />
+                  点击听单词
+                </>
+              )}
+            </button>
+          </div>
 
           {/* 显示词性与释义作为提示 */}
           <div className="font-mono text-sm italic text-accent-gold">
