@@ -43,11 +43,17 @@ export const AUTH_USERS: AuthUser[] = [
     passwordHash: "d8201ddbb8a2eac86d466c78cb9d8e4c2cd97172f4aec32bd99c4e27ff406526",
     displayName: "管理员熙云",
   },
+  {
+    username: "hujie",
+    // 默认密码 "password123" 的哈希 —— 请务必修改！
+    passwordHash: "e72d5c9023bbfbf2db93db7f75c80d3f861cd984a58085a66c1b81b8a1853d34",
+    displayName: "胡姐",
+  },
   // 添加更多用户：
   // {
-  //   username: "friend1",
-  //   passwordHash: "这里填哈希值",
-  //   displayName: "朋友A",
+  //   username: "hujie",
+  //   passwordHash: "",
+  //   displayName: "胡姐",
   // },
 ];
 
