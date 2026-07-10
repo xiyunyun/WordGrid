@@ -3,9 +3,11 @@ import type { Word } from "@/types";
 const API_KEY = import.meta.env.VITE_DEEPSEEK_API_KEY as string;
 const API_URL = "https://api.deepseek.com/chat/completions";
 
-export type Difficulty = "beginner" | "intermediate" | "advanced";
+export type Difficulty = "elementary" | "beginner" | "intermediate" | "advanced";
 
 const DIFFICULTY_DESC: Record<Difficulty, string> = {
+  elementary:
+    "适合小学生/零基础入门，使用最简单的常见词汇和极短句（主谓宾结构），时态仅一般现在时，每个句子不超过 8 个词",
   beginner:
     "适合初学者，使用简单句型和基础词汇，句子简短，时态以一般现在时为主",
   intermediate:
@@ -74,8 +76,12 @@ async function callDeepSeek(
 
   const data = await res.json();
   const content = data?.choices?.[0]?.message?.content;
+  const finishReason = data?.choices?.[0]?.finish_reason;
   if (!content || typeof content !== "string") {
-    throw new Error("API 返回内容为空或格式异常");
+    const usage = data?.usage;
+    throw new Error(
+      `API 返回内容为空或格式异常（finish_reason: ${finishReason || "unknown"}，usage: ${JSON.stringify(usage)}）`,
+    );
   }
 
   return content.trim();
@@ -84,10 +90,15 @@ async function callDeepSeek(
 /**
  * 调用 DeepSeek API，基于选中的单词生成一篇英文文章
  * 返回纯文本文章（可能包含段落）
+ *
+ * @param words 选中的单词列表
+ * @param difficulty 难度级别
+ * @param wordCount 目标文章字数（50-300）
  */
 export async function generateArticle(
   words: Word[],
   difficulty: Difficulty,
+  wordCount: number = 50,
 ): Promise<string> {
   const wordList = words.map((w) => w.word).join(", ");
   const wordMeanings = words
@@ -107,15 +118,19 @@ ${wordMeanings}
 【难度要求】
 ${DIFFICULTY_DESC[difficulty]}
 
+【字数要求】
+文章长度严格控制在 ${wordCount} 词左右（允许上下浮动 10%），不要过长也不要太短。
+
 【写作要求】
 1. 文章必须自然地使用上述所有单词，不要生硬堆砌
-2. 文章长度 150-300 词，分为 2-4 段
-3. 内容应有完整的情节或论述逻辑，可读性强
-4. 不要在文章中标注单词或加注中文
-5. 只输出文章正文，不要加标题、不要加任何说明文字
-6. 用换行符分隔段落`;
+2. 内容应有完整的情节或论述逻辑，可读性强
+3. 不要在文章中标注单词或加注中文
+4. 只输出文章正文，不要加标题、不要加任何说明文字
+5. 用换行符分隔段落`;
 
-  return callDeepSeek(systemPrompt, userPrompt, 0.8, 1200);
+  // 根据字数动态调整 max_tokens（留出余量）
+  const maxTokens = Math.min(Math.max(Math.round(wordCount * 3), 800), 4096);
+  return callDeepSeek(systemPrompt, userPrompt, 0.8, maxTokens);
 }
 
 /**
@@ -169,7 +184,7 @@ ${wordList}
   }
 ]`;
 
-  const raw = await callDeepSeek(systemPrompt, userPrompt, 0.5, 1500);
+  const raw = await callDeepSeek(systemPrompt, userPrompt, 0.5, 2048);
 
   // 清理可能存在的 markdown 代码块包裹
   const jsonStr = raw
@@ -251,5 +266,26 @@ export function gradeAnswer(
       ? `正确！${question.explanation ? question.explanation : ""}`
       : `不正确。正解：${question.answer}。${question.explanation ? question.explanation : ""}`,
   };
+}
+
+/**
+ * 调用 DeepSeek API 翻译英文文章为中文
+ * 逐段翻译，保留原文段落结构
+ */
+export async function translateArticle(article: string): Promise<string> {
+  const systemPrompt = `你是一位专业的英汉翻译专家，擅长将英语文章翻译成通顺自然的中文。`;
+
+  const userPrompt = `请将以下英文文章翻译成中文。
+
+【要求】
+1. 逐段翻译，保留原文的段落结构（用换行符分隔）
+2. 翻译要通顺自然，符合中文表达习惯
+3. 只输出翻译结果，不要加任何说明或标注
+4. 不要保留英文原文
+
+【文章】
+${article}`;
+
+  return callDeepSeek(systemPrompt, userPrompt, 0.3, 2048);
 }
 

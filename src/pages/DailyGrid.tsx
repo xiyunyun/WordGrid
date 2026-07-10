@@ -301,11 +301,7 @@ export default function DailyGrid({
               {!isCollapsed && (
                 <div className="border-t border-ink/8 px-2 py-3 md:px-4 animate-fade-in">
                   <div
-                    className="grid gap-2 md:gap-3"
-                    style={{
-                      gridTemplateColumns:
-                        "repeat(auto-fill, minmax(150px, 1fr))",
-                    }}
+                    className="grid gap-2 md:gap-3 grid-cols-[repeat(auto-fill,minmax(150px,1fr))] md:grid-cols-[repeat(auto-fill,minmax(240px,1fr))]"
                   >
                     {group.words.map((w) => (
                       <WordCell

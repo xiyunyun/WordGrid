@@ -1,11 +1,12 @@
 import { useState, useMemo, useCallback } from "react";
-import { Blocks, Check, Loader2, RotateCcw, BookOpen, AlertCircle, Archive, FileQuestion } from "lucide-react";
+import { Blocks, Check, Loader2, RotateCcw, BookOpen, AlertCircle, Archive, FileQuestion, Languages } from "lucide-react";
 import { useWordStore } from "@/store/wordStore";
 import { useArticleStore } from "@/store/articleStore";
 import type { ArticleArchive } from "@/store/articleStore";
 import {
   generateArticle,
   generateQuiz,
+  translateArticle,
   type Difficulty,
   type QuizQuestion,
 } from "@/lib/deepseek";
@@ -22,6 +23,7 @@ const DIFFICULTIES: Array<{
   labelCN: string;
   desc: string;
 }> = [
+  { key: "elementary", label: "Elementary", labelCN: "入门", desc: "极简词汇，小学生适用" },
   { key: "beginner", label: "Beginner", labelCN: "初级", desc: "简单句型，基础词汇" },
   { key: "intermediate", label: "Intermediate", labelCN: "中级", desc: "多样句型，从句复合句" },
   { key: "advanced", label: "Advanced", labelCN: "高级", desc: "复杂修辞，接近母语" },
@@ -37,7 +39,8 @@ export default function ArticleBuilder() {
 
   const [phase, setPhase] = useState<Phase>("select");
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [difficulty, setDifficulty] = useState<Difficulty>("intermediate");
+  const [difficulty, setDifficulty] = useState<Difficulty>("elementary");
+  const [wordCount, setWordCount] = useState(50);
   const [article, setArticle] = useState("");
   const [error, setError] = useState("");
   /** 当前阅读/出题对应的归档 id（生成文章后写入） */
@@ -52,6 +55,14 @@ export default function ArticleBuilder() {
   const [archiveModalOpen, setArchiveModalOpen] = useState(false);
   /** 正在查看的归档（archive_view 阶段） */
   const [viewingArchive, setViewingArchive] = useState<ArticleArchive | null>(null);
+  /** 翻译结果 */
+  const [translation, setTranslation] = useState("");
+  /** 翻译加载中 */
+  const [translating, setTranslating] = useState(false);
+  /** 翻译错误 */
+  const [translateError, setTranslateError] = useState("");
+  /** 是否显示翻译 */
+  const [showTranslation, setShowTranslation] = useState(false);
 
   const selectedWords = useMemo(
     () => words.filter((w) => selected.has(w.id)),
@@ -80,7 +91,7 @@ export default function ArticleBuilder() {
     setPhase("loading");
     setError("");
     try {
-      const text = await generateArticle(selectedWords, difficulty);
+      const text = await generateArticle(selectedWords, difficulty, wordCount);
       setArticle(text);
       // 写入归档
       const aid = addArchive({
@@ -91,6 +102,9 @@ export default function ArticleBuilder() {
       setCurrentArchiveId(aid);
       setQuestionsState([]);
       setQuizError("");
+      setTranslation("");
+      setShowTranslation(false);
+      setTranslateError("");
       setPhase("reading");
     } catch (e) {
       setError(e instanceof Error ? e.message : "生成失败，请稍后重试");
@@ -105,6 +119,30 @@ export default function ArticleBuilder() {
     setCurrentArchiveId(null);
     setQuestionsState([]);
     setQuizError("");
+    setTranslation("");
+    setShowTranslation(false);
+    setTranslateError("");
+  };
+
+  /** 翻译文章 */
+  const handleTranslate = async () => {
+    if (!article) return;
+    // 已有翻译则切换显示
+    if (translation) {
+      setShowTranslation((v) => !v);
+      return;
+    }
+    setTranslating(true);
+    setTranslateError("");
+    try {
+      const result = await translateArticle(article);
+      setTranslation(result);
+      setShowTranslation(true);
+    } catch (e) {
+      setTranslateError(e instanceof Error ? e.message : "翻译失败，请稍后重试");
+    } finally {
+      setTranslating(false);
+    }
   };
 
   /** 生成题目 */
@@ -191,11 +229,13 @@ export default function ArticleBuilder() {
           selected={selected}
           selectedCount={selectedWords.length}
           difficulty={difficulty}
+          wordCount={wordCount}
           error={error}
           onToggle={toggleSelect}
           onSelectAll={selectAll}
           onClearAll={clearAll}
           onDifficultyChange={setDifficulty}
+          onWordCountChange={setWordCount}
           onGenerate={handleGenerate}
         />
       )}
@@ -213,6 +253,11 @@ export default function ArticleBuilder() {
           questions={questions}
           onGenerateQuiz={handleGenerateQuiz}
           onAttempt={handleAttempt}
+          translation={translation}
+          translating={translating}
+          translateError={translateError}
+          showTranslation={showTranslation}
+          onTranslate={handleTranslate}
         />
       )}
 
@@ -246,35 +291,40 @@ function SelectPhase({
   selected,
   selectedCount,
   difficulty,
+  wordCount,
   error,
   onToggle,
   onSelectAll,
   onClearAll,
   onDifficultyChange,
+  onWordCountChange,
   onGenerate,
 }: {
   words: Word[];
   selected: Set<string>;
   selectedCount: number;
   difficulty: Difficulty;
+  wordCount: number;
   error: string;
   onToggle: (id: string) => void;
   onSelectAll: () => void;
   onClearAll: () => void;
   onDifficultyChange: (d: Difficulty) => void;
+  onWordCountChange: (n: number) => void;
   onGenerate: () => void;
 }) {
   return (
     <div className="space-y-5 animate-fade-in">
-      {/* 难度选择 */}
-      <section className="rounded-md border border-ink/15 bg-paper-card p-5 shadow-paper">
+      {/* 难度 + 字数设置 */}
+      <section className="rounded-md border border-ink/15 bg-paper-card p-3 shadow-paper md:p-5">
+        {/* 难度选择 */}
         <div className="mb-3 flex items-center gap-2">
           <Blocks className="h-4 w-4 text-accent-gold" strokeWidth={1.5} />
           <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
             Difficulty · 难度选择
           </span>
         </div>
-        <div className="flex flex-wrap gap-2 md:gap-3">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-4 md:gap-3">
           {DIFFICULTIES.map((d) => {
             const active = difficulty === d.key;
             return (
@@ -282,7 +332,7 @@ function SelectPhase({
                 key={d.key}
                 onClick={() => onDifficultyChange(d.key)}
                 className={cn(
-                  "flex flex-col items-start gap-0.5 rounded-md border px-4 py-2.5 text-left transition-all",
+                  "flex flex-col items-start gap-0.5 rounded-md border px-3 py-2.5 text-left transition-all md:px-4",
                   active
                     ? "border-accent-gold/50 bg-accent-gold/10"
                     : "border-ink/15 hover:border-accent-gold/30",
@@ -304,6 +354,38 @@ function SelectPhase({
               </button>
             );
           })}
+        </div>
+
+        {/* 字数滑块 */}
+        <div className="mt-4 border-t border-ink/10 pt-4">
+          <div className="mb-2 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
+                Length · 文章字数
+              </span>
+            </div>
+            <div className="flex items-baseline gap-1">
+              <span className="font-display text-lg font-medium text-accent-gold tabular-nums md:text-xl">
+                {wordCount}
+              </span>
+              <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
+                words
+              </span>
+            </div>
+          </div>
+          <input
+            type="range"
+            min={50}
+            max={300}
+            step={10}
+            value={wordCount}
+            onChange={(e) => onWordCountChange(Number(e.target.value))}
+            className="h-2 w-full cursor-pointer appearance-none rounded-full bg-ink/15 accent-accent-gold"
+          />
+          <div className="mt-1 flex justify-between font-mono text-2xs text-ink-light">
+            <span>50</span>
+            <span>300</span>
+          </div>
         </div>
       </section>
 
@@ -439,6 +521,11 @@ function ReadingPhase({
   onAttempt,
   initialQuestions,
   initialAttempt,
+  translation = "",
+  translating = false,
+  translateError = "",
+  showTranslation = false,
+  onTranslate,
 }: {
   article: string;
   selectedWords: Word[];
@@ -466,6 +553,16 @@ function ReadingPhase({
     correctCount: number;
     totalCount: number;
   } | null;
+  /** 翻译结果 */
+  translation?: string;
+  /** 翻译加载中 */
+  translating?: boolean;
+  /** 翻译错误 */
+  translateError?: string;
+  /** 是否显示翻译 */
+  showTranslation?: boolean;
+  /** 翻译/切换翻译显示 */
+  onTranslate?: () => void;
 }) {
   // 构建单词查找表（小写匹配）
   const wordMap = useMemo(() => {
@@ -510,12 +607,14 @@ function ReadingPhase({
     <div className="space-y-5 animate-fade-in">
       {/* 阅读工具栏 */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <BookOpen className="h-4 w-4 text-accent-gold" strokeWidth={1.5} />
-          <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
-            Reading Mode
-          </span>
-          <span className="flex items-center gap-1.5 border-l border-ink/15 pl-3 font-mono text-2xs uppercase tracking-editorial">
+        <div className="flex flex-wrap items-center gap-2 md:gap-3">
+          <div className="flex items-center gap-2">
+            <BookOpen className="h-4 w-4 text-accent-gold" strokeWidth={1.5} />
+            <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
+              Reading
+            </span>
+          </div>
+          <span className="flex items-center gap-1.5 border-l border-ink/15 pl-2 font-mono text-2xs uppercase tracking-editorial md:pl-3">
             <span className="text-ink-light">难度</span>
             <span className="text-accent-gold">{diffLabel?.labelCN}</span>
           </span>
@@ -525,16 +624,67 @@ function ReadingPhase({
             <span className="text-ink-light">词</span>
           </span>
         </div>
-        <button onClick={onReset} className="btn-ghost">
-          <RotateCcw className="h-3.5 w-3.5" strokeWidth={1.5} />
-          {resetLabel}
-        </button>
+        <div className="flex items-center gap-2">
+          {onTranslate && (
+            <button
+              onClick={onTranslate}
+              disabled={translating}
+              className={cn(
+                "btn-ghost disabled:opacity-40",
+                showTranslation && "border-accent-gold/50 bg-accent-gold/10 text-accent-gold",
+              )}
+              title="翻译文章"
+            >
+              {translating ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={1.5} />
+              ) : (
+                <Languages className="h-3.5 w-3.5" strokeWidth={1.5} />
+              )}
+              <span className="hidden sm:inline">
+                {translating ? "翻译中" : showTranslation ? "隐藏译文" : "翻译"}
+              </span>
+            </button>
+          )}
+          <button onClick={onReset} className="btn-ghost">
+            <RotateCcw className="h-3.5 w-3.5" strokeWidth={1.5} />
+            {resetLabel}
+          </button>
+        </div>
       </div>
 
       {/* 文章阅读区 */}
       <article className="rounded-md border border-ink/15 bg-paper-card p-4 shadow-paper md:p-8 lg:p-12">
         <div className="mx-auto max-w-2xl">{renderArticle()}</div>
       </article>
+
+      {/* 翻译区 */}
+      {showTranslation && translation && (
+        <article className="rounded-md border border-accent-gold/20 bg-accent-gold/5 p-4 shadow-paper animate-fade-in md:p-8 lg:p-12">
+          <div className="mx-auto max-w-2xl">
+            <div className="mb-4 flex items-center gap-2 border-b border-accent-gold/15 pb-2">
+              <Languages className="h-4 w-4 text-accent-gold" strokeWidth={1.5} />
+              <span className="font-mono text-2xs uppercase tracking-editorial text-accent-gold">
+                Translation · 中文译文
+              </span>
+            </div>
+            <div className="space-y-4">
+              {translation.split(/\n+/).filter((p) => p.trim()).map((para, pi) => (
+                <p key={pi} className="font-body text-base md:text-lg leading-relaxed text-ink-soft">
+                  {para}
+                </p>
+              ))}
+            </div>
+          </div>
+        </article>
+      )}
+
+      {/* 翻译错误提示 */}
+      {translateError && (
+        <div className="flex items-center gap-2 rounded-md border border-accent-red/30 bg-accent-red/5 px-4 py-3">
+          <AlertCircle className="h-4 w-4 flex-shrink-0 text-accent-red" strokeWidth={1.5} />
+          <span className="font-body text-sm text-accent-red">{translateError}</span>
+        </div>
+      )}
 
       {/* 高亮单词速查表 */}
       <section className="rounded-md border border-ink/10 bg-paper-warm/40 p-3 md:p-5">

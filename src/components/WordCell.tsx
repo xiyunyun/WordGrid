@@ -43,7 +43,7 @@ export default function WordCell({
         <div className="flex w-full items-baseline justify-between gap-2">
           <span
             className={cn(
-              "min-w-0 flex-1 truncate font-serif text-lg font-medium leading-tight tracking-word md:text-xl",
+              "min-w-0 flex-1 font-serif text-lg font-medium leading-tight tracking-word break-words md:text-xl",
               word.isMastered ? "text-ink-muted" : "text-ink",
             )}
           >
