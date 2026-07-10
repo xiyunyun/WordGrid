@@ -50,6 +50,7 @@ export default function AddWordDrawer({
 
   const [tab, setTab] = useState<Tab>("single");
   const [word, setWord] = useState("");
+  const [phonetic, setPhonetic] = useState("");
   const [pos, setPos] = useState("n.");
   const [meaning, setMeaning] = useState("");
   const [note, setNote] = useState("");
@@ -72,6 +73,7 @@ export default function AddWordDrawer({
       // 编辑模式：回填表单
       setTab("single");
       setWord(editWord.word);
+      setPhonetic(editWord.phonetic || "");
       setPos(editWord.pos);
       setMeaning(editWord.meaning);
       setNote(editWord.note);
@@ -81,6 +83,7 @@ export default function AddWordDrawer({
       // 新增模式：清空表单
       setTab("single");
       setWord("");
+      setPhonetic("");
       setMeaning("");
       setNote("");
       setBulkText("");
@@ -93,9 +96,10 @@ export default function AddWordDrawer({
 
   const handleAddSingle = () => {
     if (!word.trim()) return;
-    addWord({ word, pos, meaning, note, date });
+    addWord({ word, phonetic, pos, meaning, note, date });
     setJustAdded((n) => n + 1);
     setWord("");
+    setPhonetic("");
     setMeaning("");
     setNote("");
     // 保持 pos 与 date
@@ -105,6 +109,7 @@ export default function AddWordDrawer({
     if (!editWord || !word.trim()) return;
     updateWord(editWord.id, {
       word: word.trim(),
+      phonetic: phonetic.trim(),
       pos: pos.trim(),
       meaning: meaning.trim(),
       note: note.trim(),
@@ -232,6 +237,25 @@ export default function AddWordDrawer({
               </div>
 
               <div>
+                <label className="eyebrow mb-2 block">
+                  Phonetic · 音标 (可选)
+                </label>
+                <input
+                  value={phonetic}
+                  onChange={(e) => setPhonetic(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      if (isEditing) handleSaveEdit();
+                      else handleAddSingle();
+                    }
+                  }}
+                  placeholder="如 /əˈbændən/"
+                  className="input-paper font-mono text-sm"
+                />
+              </div>
+
+              <div>
                 <label className="eyebrow mb-2 block">POS · 词性</label>
                 <div className="flex flex-wrap gap-2">
                   {COMMON_POS.map((p) => (
@@ -322,13 +346,23 @@ export default function AddWordDrawer({
               <div>
                 <label className="eyebrow mb-2 block">Format · 格式说明</label>
                 <div className="rounded-md border border-ink/15 bg-paper p-3 font-mono text-2xs leading-relaxed text-ink-muted">
-                  每行一个，支持以下格式：
+                  推荐竖线分隔（AI 友好，5 字段）：
                   <br />
-                  <span className="text-accent-gold">word - pos. meaning</span>
+                  <span className="text-accent-gold">单词|音标|词性|词意|笔记</span>
                   <br />
-                  <span className="text-accent-gold">word pos. meaning</span>
+                  <span className="text-ink-light">示例：abandon|/əˈbændən/|v.|放弃；遗弃|派生：abandonment</span>
                   <br />
-                  <span className="text-accent-gold">word meaning</span>
+                  <br />
+                  也支持省略字段：
+                  <br />
+                  <span className="text-accent-gold">word|phonetic|pos|meaning</span>
+                  <span className="text-ink-light"> （无笔记）</span>
+                  <br />
+                  <span className="text-accent-gold">word|pos|meaning</span>
+                  <span className="text-ink-light"> （无音标/笔记）</span>
+                  <br />
+                  <span className="text-accent-gold">word|meaning</span>
+                  <span className="text-ink-light"> （仅单词+词意）</span>
                 </div>
               </div>
 
@@ -338,7 +372,7 @@ export default function AddWordDrawer({
                   value={bulkText}
                   onChange={(e) => setBulkText(e.target.value)}
                   placeholder={
-                    "abandon - v. 放弃\nbenefit - n. 利益\ncapable - adj. 有能力的"
+                    "abandon|/əˈbændən/|v.|放弃；遗弃|派生：abandonment\nbenefit|/ˈbenɪfɪt/|n.|利益；好处\ncapable|/ˈkeɪpəbl/|adj.|有能力的"
                   }
                   rows={10}
                   className="input-paper resize-none font-mono text-sm"

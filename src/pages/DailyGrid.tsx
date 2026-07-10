@@ -300,7 +300,13 @@ export default function DailyGrid({
               {/* 单词单元格网格区 - 自适应多行排列 */}
               {!isCollapsed && (
                 <div className="border-t border-ink/8 px-4 py-3 animate-fade-in">
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                  <div
+                    className="grid gap-3"
+                    style={{
+                      gridTemplateColumns:
+                        "repeat(auto-fill, minmax(240px, 1fr))",
+                    }}
+                  >
                     {group.words.map((w) => (
                       <WordCell
                         key={w.id}

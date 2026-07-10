@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Grid3x3, BookOpen, BarChart3, Blocks, Plus } from "lucide-react";
+import { Grid3x3, BookOpen, BarChart3, Blocks, Plus, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useWordStore } from "@/store/wordStore";
 import { selectDueWords } from "@/store/wordStore";
@@ -8,6 +8,7 @@ import { formatMDShort, weekdayCN, todayKey } from "@/lib/review";
 interface AppShellProps {
   children: React.ReactNode;
   onQuickAdd: () => void;
+  onLogout?: () => void;
 }
 
 const navItems = [
@@ -17,7 +18,7 @@ const navItems = [
   { to: "/stats", label: "Stats", labelCN: "统计", icon: BarChart3 },
 ];
 
-export default function AppShell({ children, onQuickAdd }: AppShellProps) {
+export default function AppShell({ children, onQuickAdd, onLogout }: AppShellProps) {
   const location = useLocation();
   const words = useWordStore((s) => s.words);
   const dueCount = selectDueWords(words).length;
@@ -50,6 +51,16 @@ export default function AppShell({ children, onQuickAdd }: AppShellProps) {
               <Plus className="h-3.5 w-3.5" strokeWidth={1.5} />
               <span>Add</span>
             </button>
+            {onLogout && (
+              <button
+                onClick={onLogout}
+                className="btn-ghost ml-2"
+                aria-label="登出"
+                title="退出登录"
+              >
+                <LogOut className="h-3.5 w-3.5" strokeWidth={1.5} />
+              </button>
+            )}
           </div>
         </div>
 

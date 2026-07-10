@@ -9,6 +9,7 @@ import {
   RotateCcw,
   Bookmark,
   NotebookPen,
+  Download,
 } from "lucide-react";
 import { useWordStore } from "@/store/wordStore";
 import {
@@ -24,6 +25,7 @@ import { cn } from "@/lib/utils";
 import SpeakButton from "@/components/SpeakButton";
 import SelfCheckFlow from "@/components/SelfCheckFlow";
 import NoteModal from "@/components/NoteModal";
+import ExportModal from "@/components/ExportModal";
 
 type ViewMode = "list" | "self_check" | "random" | "dictation";
 type ListTag = "due" | "difficult" | "mastered" | "recent7";
@@ -34,6 +36,8 @@ export default function Wordbook() {
   // 笔记查看弹窗
   const [noteModalOpen, setNoteModalOpen] = useState(false);
   const [noteWord, setNoteWord] = useState<Word | null>(null);
+  // 导出弹窗
+  const [exportModalOpen, setExportModalOpen] = useState(false);
 
   const difficultWords = selectDifficultWords(words);
   const dueWords = selectDueWords(words);
@@ -60,9 +64,20 @@ export default function Wordbook() {
               {words.length} in archive
             </span>
           </h2>
-          <p className="max-w-md font-serif text-sm italic text-ink-muted">
-            学而不思则罔，思而不学则殆。
-          </p>
+          <div className="flex items-center gap-3">
+            <p className="hidden max-w-md font-serif text-sm italic text-ink-muted sm:block">
+              学而不思则罔，思而不学则殆。
+            </p>
+            <button
+              onClick={() => setExportModalOpen(true)}
+              disabled={words.length === 0}
+              className="btn-ghost disabled:cursor-not-allowed disabled:opacity-40"
+              title="导出单词本"
+            >
+              <Download className="h-3.5 w-3.5" strokeWidth={1.5} />
+              导出
+            </button>
+          </div>
         </div>
       </section>
 
@@ -140,6 +155,13 @@ export default function Wordbook() {
         open={noteModalOpen}
         onClose={() => setNoteModalOpen(false)}
         word={noteWord}
+      />
+
+      {/* 导出弹窗 */}
+      <ExportModal
+        open={exportModalOpen}
+        onClose={() => setExportModalOpen(false)}
+        words={words}
       />
     </div>
   );
@@ -337,8 +359,8 @@ function MinimalRow({
         )}
       </div>
 
-      {/* 单词 - 不使用删除线，保持字形完整以加强记忆 */}
-      <div className="w-44 flex-shrink-0">
+      {/* 单词 + 音标 - 不使用删除线，保持字形完整以加强记忆 */}
+      <div className="w-52 flex-shrink-0">
         <span
           className={cn(
             "font-serif text-lg font-medium tracking-word",
@@ -347,6 +369,11 @@ function MinimalRow({
         >
           {word.word}
         </span>
+        {word.phonetic && (
+          <span className="ml-2 font-mono text-xs text-ink-light">
+            {word.phonetic}
+          </span>
+        )}
       </div>
 
       {/* 词性 */}

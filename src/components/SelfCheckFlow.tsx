@@ -209,6 +209,11 @@ export default function SelfCheckFlow({
           <h3 className="font-serif text-5xl font-medium tracking-word text-ink">
             {current.word}
           </h3>
+          {current.phonetic && (
+            <div className="mt-2 font-mono text-sm text-ink-light">
+              {current.phonetic}
+            </div>
+          )}
           <div className="mt-2 font-mono text-sm italic text-accent-gold">
             {current.pos}
           </div>

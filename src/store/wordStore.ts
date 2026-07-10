@@ -19,13 +19,20 @@ interface WordStore {
   // CRUD
   addWord: (input: {
     word: string;
+    phonetic?: string;
     pos: string;
     meaning: string;
     note?: string;
     date?: string;
   }) => Word;
   addWordsBulk: (
-    items: Array<{ word: string; pos: string; meaning: string; note?: string }>,
+    items: Array<{
+      word: string;
+      phonetic?: string;
+      pos: string;
+      meaning: string;
+      note?: string;
+    }>,
     date?: string,
   ) => number;
   updateWord: (id: string, patch: Partial<Word>) => void;
@@ -52,6 +59,7 @@ export const useWordStore = create<WordStore>()(
         const word: Word = {
           id: uid(),
           word: input.word.trim(),
+          phonetic: input.phonetic?.trim() || "",
           pos: input.pos.trim(),
           meaning: input.meaning.trim(),
           note: input.note?.trim() || "",
@@ -71,6 +79,7 @@ export const useWordStore = create<WordStore>()(
         const newWords: Word[] = items.map((item) => ({
           id: uid(),
           word: item.word.trim(),
+          phonetic: item.phonetic?.trim() || "",
           pos: item.pos.trim(),
           meaning: item.meaning.trim(),
           note: item.note?.trim() || "",

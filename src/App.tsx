@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import { HashRouter as Router, Routes, Route, useLocation } from "react-router-dom";
 import AppShell from "@/components/AppShell";
 import AddWordDrawer from "@/components/AddWordDrawer";
 import FloatingActions from "@/components/FloatingActions";
@@ -9,9 +9,11 @@ import DailyGrid from "@/pages/DailyGrid";
 import Wordbook from "@/pages/Wordbook";
 import ArticleBuilder from "@/pages/ArticleBuilder";
 import Stats from "@/pages/Stats";
+import LoginPage from "@/pages/Login";
 import { useWordStore, selectDueWords, selectTomorrowWords } from "@/store/wordStore";
 import { buildSeedWords } from "@/store/seedData";
 import { useClipboardWord } from "@/hooks/useClipboardWord";
+import { isAuthenticated, logout, getCurrentUser } from "@/lib/auth";
 import type { Word } from "@/types";
 
 const SEED_FLAG_KEY = "wordgrid-seeded";
@@ -34,7 +36,7 @@ function jumpToDate(date: string) {
 }
 
 /** 仅在主页显示浮动按钮组的内层组件 */
-function AppContent() {
+function AppContent({ onLogout }: { onLogout: () => void }) {
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerDate, setDrawerDate] = useState<string | undefined>(undefined);
@@ -103,7 +105,7 @@ function AppContent() {
 
   return (
     <>
-      <AppShell onQuickAdd={() => openDrawer()}>
+      <AppShell onQuickAdd={() => openDrawer()} onLogout={onLogout}>
         <Routes>
           <Route
             path="/"
@@ -154,9 +156,25 @@ function AppContent() {
 }
 
 export default function App() {
+  // 认证状态：首次从 localStorage 读取
+  const [authed, setAuthed] = useState(() => isAuthenticated());
+
+  const handleLoginSuccess = () => setAuthed(true);
+
+  const handleLogout = () => {
+    logout();
+    setAuthed(false);
+  };
+
+  // 未登录 → 显示登录页（不包含 Router，纯静态）
+  if (!authed) {
+    return <LoginPage onLoginSuccess={handleLoginSuccess} />;
+  }
+
+  // 已登录 → 显示主应用
   return (
     <Router>
-      <AppContent />
+      <AppContent onLogout={handleLogout} />
     </Router>
   );
 }

@@ -25,7 +25,7 @@ export default function WordCell({
   return (
     <article
       className={cn(
-        "group relative flex w-full flex-col rounded-md border bg-paper-card shadow-paper transition-all hover:shadow-card",
+        "group relative flex min-w-[240px] flex-col rounded-md border bg-paper-card shadow-paper transition-all hover:shadow-card",
         word.isDifficult
           ? "border-accent-red/40 border-l-[3px] border-l-accent-red"
           : word.isMastered
@@ -36,13 +36,14 @@ export default function WordCell({
       {/* 单词主体 - 单击切换生词 */}
       <button
         onClick={() => toggleDifficult(word.id)}
-        className="flex flex-col items-start gap-1 px-3 py-3 text-left"
+        className="flex flex-col items-start gap-1 px-4 py-3 text-left"
         title={word.isDifficult ? "点击取消生词标记" : "点击标记为生词"}
       >
+        {/* 单词行：单词 + 词性 */}
         <div className="flex w-full items-baseline justify-between gap-2">
           <span
             className={cn(
-              "min-w-0 flex-1 break-words font-serif text-lg font-medium leading-tight tracking-word",
+              "min-w-0 flex-1 truncate font-serif text-xl font-medium leading-tight tracking-word",
               word.isMastered ? "text-ink-muted" : "text-ink",
             )}
           >
@@ -54,6 +55,13 @@ export default function WordCell({
             </span>
           )}
         </div>
+        {/* 音标行 */}
+        {word.phonetic && (
+          <span className="font-mono text-xs text-ink-light">
+            {word.phonetic}
+          </span>
+        )}
+        {/* 释义行 */}
         <span
           className={cn(
             "font-body text-sm leading-snug",

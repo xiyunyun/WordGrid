@@ -94,23 +94,79 @@ export function formatMDShort(dateKey: string): string {
   return `${m}/${d}`;
 }
 
-/** 解析多行 "word - pos. meaning" 文本为词条数组 */
+/** 解析多行文本为词条数组
+ *
+ * 优先识别竖线分隔格式（AI 友好，5 字段）：
+ *   word|phonetic|pos|meaning|note
+ *   word|phonetic|pos|meaning
+ *   word|pos|meaning
+ *   word|meaning
+ *
+ * 向下兼容旧格式：
+ *   "word - pos. meaning" / "word pos. meaning" / "word meaning"
+ */
 export function parseBulkText(
   text: string,
   date: string,
-): Array<Pick<Word, "word" | "pos" | "meaning" | "note">> {
+): Array<Pick<Word, "word" | "phonetic" | "pos" | "meaning" | "note">> {
   return text
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean)
     .map((line) => {
-      // 支持 "word - pos. meaning" / "word pos. meaning" / "word meaning"
+      // 竖线分隔格式
+      if (line.includes("|")) {
+        const parts = line.split("|").map((s) => s.trim());
+        const word = parts[0] || "";
+        if (!word) return { word: "", phonetic: "", pos: "", meaning: "", note: "" };
+
+        // 根据字段数推断含义（向后兼容字段数变化）
+        if (parts.length >= 5) {
+          // word | phonetic | pos | meaning | note
+          return {
+            word,
+            phonetic: parts[1],
+            pos: parts[2],
+            meaning: parts[3],
+            note: parts[4],
+          };
+        }
+        if (parts.length === 4) {
+          // word | phonetic | pos | meaning
+          return {
+            word,
+            phonetic: parts[1],
+            pos: parts[2],
+            meaning: parts[3],
+            note: "",
+          };
+        }
+        if (parts.length === 3) {
+          // word | pos | meaning
+          return {
+            word,
+            phonetic: "",
+            pos: parts[1],
+            meaning: parts[2],
+            note: "",
+          };
+        }
+        // parts.length === 2: word | meaning
+        return {
+          word,
+          phonetic: "",
+          pos: "",
+          meaning: parts[1],
+          note: "",
+        };
+      }
+
+      // 旧格式：支持 "word - pos. meaning" / "word pos. meaning" / "word meaning"
       let rest = line;
       let word = "";
       let pos = "";
       let meaning = "";
 
-      // 提取 word
       const dashMatch = rest.match(/^([a-zA-Z][a-zA-Z'-]*)\s*[-—–]\s*(.+)$/);
       const spaceMatch = rest.match(/^([a-zA-Z][a-zA-Z'-]*)\s+(.+)$/);
 
@@ -122,10 +178,9 @@ export function parseBulkText(
         rest = spaceMatch[2];
       } else {
         word = rest;
-        return { word, pos: "", meaning: "", note: "" };
+        return { word, phonetic: "", pos: "", meaning: "", note: "" };
       }
 
-      // 提取词性 pos.
       const posMatch = rest.match(/^([a-zA-Z]+\.)\s*(.+)$/);
       if (posMatch) {
         pos = posMatch[1];
@@ -134,8 +189,9 @@ export function parseBulkText(
         meaning = rest.trim();
       }
 
-      return { word, pos, meaning, note: "" };
-    });
+      return { word, phonetic: "", pos, meaning, note: "" };
+    })
+    .filter((item) => item.word);
 }
 
 // 仅用于 parseBulkText 类型引用

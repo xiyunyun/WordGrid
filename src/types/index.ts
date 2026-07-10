@@ -3,6 +3,7 @@
 export interface Word {
   id: string;
   word: string;
+  phonetic?: string; // 音标，如 /həˈloʊ/
   pos: string; // 词性 n. v. adj. adv. ...
   meaning: string; // 中文释义
   note?: string; // 个人笔记

@@ -1,11 +1,20 @@
 import { useState, useMemo, useCallback } from "react";
-import { Blocks, Check, Loader2, RotateCcw, BookOpen, AlertCircle } from "lucide-react";
+import { Blocks, Check, Loader2, RotateCcw, BookOpen, AlertCircle, Archive, FileQuestion } from "lucide-react";
 import { useWordStore } from "@/store/wordStore";
-import { generateArticle, type Difficulty } from "@/lib/deepseek";
+import { useArticleStore } from "@/store/articleStore";
+import type { ArticleArchive } from "@/store/articleStore";
+import {
+  generateArticle,
+  generateQuiz,
+  type Difficulty,
+  type QuizQuestion,
+} from "@/lib/deepseek";
 import type { Word } from "@/types";
 import { cn } from "@/lib/utils";
+import QuizPanel, { QuizLoading } from "@/components/QuizPanel";
+import ArchiveListModal from "@/components/ArchiveListModal";
 
-type Phase = "select" | "loading" | "reading";
+type Phase = "select" | "loading" | "reading" | "archive_view";
 
 const DIFFICULTIES: Array<{
   key: Difficulty;
@@ -20,12 +29,29 @@ const DIFFICULTIES: Array<{
 
 export default function ArticleBuilder() {
   const words = useWordStore((s) => s.words);
+  const archives = useArticleStore((s) => s.archives);
+  const addArchive = useArticleStore((s) => s.addArchive);
+  const setQuestions = useArticleStore((s) => s.setQuestions);
+  const setAttempt = useArticleStore((s) => s.setAttempt);
+  const removeArchive = useArticleStore((s) => s.removeArchive);
 
   const [phase, setPhase] = useState<Phase>("select");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [difficulty, setDifficulty] = useState<Difficulty>("intermediate");
   const [article, setArticle] = useState("");
   const [error, setError] = useState("");
+  /** 当前阅读/出题对应的归档 id（生成文章后写入） */
+  const [currentArchiveId, setCurrentArchiveId] = useState<string | null>(null);
+  /** 当前题目（内存态，生成后同步到归档） */
+  const [questions, setQuestionsState] = useState<QuizQuestion[]>([]);
+  /** 题目生成中 */
+  const [quizLoading, setQuizLoading] = useState(false);
+  /** 题目生成错误 */
+  const [quizError, setQuizError] = useState("");
+  /** 归档列表弹窗 */
+  const [archiveModalOpen, setArchiveModalOpen] = useState(false);
+  /** 正在查看的归档（archive_view 阶段） */
+  const [viewingArchive, setViewingArchive] = useState<ArticleArchive | null>(null);
 
   const selectedWords = useMemo(
     () => words.filter((w) => selected.has(w.id)),
@@ -56,6 +82,15 @@ export default function ArticleBuilder() {
     try {
       const text = await generateArticle(selectedWords, difficulty);
       setArticle(text);
+      // 写入归档
+      const aid = addArchive({
+        article: text,
+        words: selectedWords,
+        difficulty,
+      });
+      setCurrentArchiveId(aid);
+      setQuestionsState([]);
+      setQuizError("");
       setPhase("reading");
     } catch (e) {
       setError(e instanceof Error ? e.message : "生成失败，请稍后重试");
@@ -67,6 +102,54 @@ export default function ArticleBuilder() {
     setPhase("select");
     setArticle("");
     setError("");
+    setCurrentArchiveId(null);
+    setQuestionsState([]);
+    setQuizError("");
+  };
+
+  /** 生成题目 */
+  const handleGenerateQuiz = async () => {
+    if (!article || selectedWords.length === 0) return;
+    setQuizLoading(true);
+    setQuizError("");
+    try {
+      const qs = await generateQuiz(article, selectedWords);
+      setQuestionsState(qs);
+      // 同步到归档
+      if (currentArchiveId) {
+        setQuestions(currentArchiveId, qs);
+      }
+    } catch (e) {
+      setQuizError(e instanceof Error ? e.message : "题目生成失败，请稍后重试");
+    } finally {
+      setQuizLoading(false);
+    }
+  };
+
+  /** 作答完成，持久化到归档 */
+  const handleAttempt = (attempt: {
+    answers: Record<string, string>;
+    results: Record<string, boolean>;
+    score: number;
+    correctCount: number;
+    totalCount: number;
+  }) => {
+    if (currentArchiveId) {
+      setAttempt(currentArchiveId, { attemptedAt: Date.now(), ...attempt });
+    }
+  };
+
+  /** 打开归档查看 */
+  const handleOpenArchive = (a: ArticleArchive) => {
+    setViewingArchive(a);
+    setArchiveModalOpen(false);
+    setPhase("archive_view");
+  };
+
+  /** 从归档返回选择页 */
+  const exitArchiveView = () => {
+    setViewingArchive(null);
+    setPhase("select");
   };
 
   return (
@@ -81,9 +164,24 @@ export default function ArticleBuilder() {
               {words.length} words available
             </span>
           </h2>
-          <p className="max-w-md font-serif text-sm italic text-ink-muted">
-            不积跬步，无以至千里。
-          </p>
+          <div className="flex items-center gap-3">
+            <p className="hidden max-w-md font-serif text-sm italic text-ink-muted sm:block">
+              不积跬步，无以至千里。
+            </p>
+            <button
+              onClick={() => setArchiveModalOpen(true)}
+              className="btn-ghost"
+              title="查看文章归档"
+            >
+              <Archive className="h-3.5 w-3.5" strokeWidth={1.5} />
+              归档
+              {archives.length > 0 && (
+                <span className="ml-1 font-mono text-2xs tabular-nums text-accent-gold">
+                  {archives.length}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
       </section>
 
@@ -110,8 +208,34 @@ export default function ArticleBuilder() {
           selectedWords={selectedWords}
           difficulty={difficulty}
           onReset={reset}
+          quizLoading={quizLoading}
+          quizError={quizError}
+          questions={questions}
+          onGenerateQuiz={handleGenerateQuiz}
+          onAttempt={handleAttempt}
         />
       )}
+
+      {phase === "archive_view" && viewingArchive && (
+        <ReadingPhase
+          article={viewingArchive.article}
+          selectedWords={viewingArchive.words as unknown as Word[]}
+          difficulty={viewingArchive.difficulty}
+          onReset={exitArchiveView}
+          resetLabel="返回选择"
+          initialQuestions={viewingArchive.questions}
+          initialAttempt={viewingArchive.attempt || null}
+        />
+      )}
+
+      {/* 归档列表弹窗 */}
+      <ArchiveListModal
+        open={archiveModalOpen}
+        onClose={() => setArchiveModalOpen(false)}
+        archives={archives}
+        onOpenArchive={handleOpenArchive}
+        onDeleteArchive={removeArchive}
+      />
     </div>
   );
 }
@@ -307,11 +431,41 @@ function ReadingPhase({
   selectedWords,
   difficulty,
   onReset,
+  resetLabel = "重新选择",
+  quizLoading = false,
+  quizError = "",
+  questions = [],
+  onGenerateQuiz,
+  onAttempt,
+  initialQuestions,
+  initialAttempt,
 }: {
   article: string;
   selectedWords: Word[];
   difficulty: Difficulty;
   onReset: () => void;
+  resetLabel?: string;
+  quizLoading?: boolean;
+  quizError?: string;
+  questions?: QuizQuestion[];
+  onGenerateQuiz?: () => void;
+  onAttempt?: (attempt: {
+    answers: Record<string, string>;
+    results: Record<string, boolean>;
+    score: number;
+    correctCount: number;
+    totalCount: number;
+  }) => void;
+  /** 从归档恢复时传入已有题目 */
+  initialQuestions?: QuizQuestion[];
+  /** 从归档恢复时传入已有作答记录 */
+  initialAttempt?: {
+    answers: Record<string, string>;
+    results: Record<string, boolean>;
+    score: number;
+    correctCount: number;
+    totalCount: number;
+  } | null;
 }) {
   // 构建单词查找表（小写匹配）
   const wordMap = useMemo(() => {
@@ -324,11 +478,9 @@ function ReadingPhase({
 
   // 将文章文本按词拆分，高亮选中的单词
   const renderArticle = useCallback(() => {
-    // 按段落分割
     const paragraphs = article.split(/\n+/).filter((p) => p.trim());
 
     return paragraphs.map((para, pi) => {
-      // 按单词边界拆分，保留标点和空格
       const tokens = para.split(/(\b)/);
       return (
         <p key={pi} className="mb-5 font-body text-lg leading-relaxed text-ink-soft last:mb-0">
@@ -349,6 +501,10 @@ function ReadingPhase({
   }, [article, wordMap]);
 
   const diffLabel = DIFFICULTIES.find((d) => d.key === difficulty);
+
+  // 使用已有题目（归档恢复优先，否则用新生成的）
+  const activeQuestions = initialQuestions && initialQuestions.length > 0 ? initialQuestions : questions;
+  const hasQuestions = activeQuestions.length > 0;
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -371,7 +527,7 @@ function ReadingPhase({
         </div>
         <button onClick={onReset} className="btn-ghost">
           <RotateCcw className="h-3.5 w-3.5" strokeWidth={1.5} />
-          重新选择
+          {resetLabel}
         </button>
       </div>
 
@@ -401,6 +557,49 @@ function ReadingPhase({
             </span>
           ))}
         </div>
+      </section>
+
+      {/* 题目区 */}
+      <section className="rounded-md border border-ink/15 bg-paper-warm/30 p-5">
+        {/* 题目区头部 */}
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <FileQuestion className="h-4 w-4 text-accent-gold" strokeWidth={1.5} />
+            <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
+              Quiz · 阅读理解
+            </span>
+          </div>
+          {!hasQuestions && onGenerateQuiz && (
+            <button
+              onClick={onGenerateQuiz}
+              disabled={quizLoading}
+              className="btn-gold disabled:opacity-40"
+            >
+              <FileQuestion className="h-3.5 w-3.5" strokeWidth={1.5} />
+              生成题目
+            </button>
+          )}
+        </div>
+
+        {/* 题目内容 */}
+        {quizLoading ? (
+          <QuizLoading />
+        ) : quizError ? (
+          <div className="flex items-center gap-2 rounded-md border border-accent-red/30 bg-accent-red/5 px-4 py-3">
+            <AlertCircle className="h-4 w-4 flex-shrink-0 text-accent-red" strokeWidth={1.5} />
+            <span className="font-body text-sm text-accent-red">{quizError}</span>
+          </div>
+        ) : hasQuestions ? (
+          <QuizPanel
+            questions={activeQuestions}
+            initialAttempt={initialAttempt}
+            onAttempt={onAttempt}
+          />
+        ) : (
+          <p className="py-6 text-center font-body text-sm text-ink-light">
+            点击「生成题目」让 AI 基于本文出 4 道题（填空 + 选择）
+          </p>
+        )}
       </section>
     </div>
   );
