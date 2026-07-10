@@ -23,6 +23,13 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.1.1",
+    date: "2026-07-10",
+    items: [
+      "修复了wordbook界面听写测试缺少发音功能的bug",
+    ],
+  },
+  {
     version: "1.1.0",
     date: "2026-07-10",
     items: [
