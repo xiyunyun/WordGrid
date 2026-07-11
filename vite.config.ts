@@ -31,7 +31,7 @@ export default defineConfig({
         name: 'WordGrid · 词汇网格',
         short_name: 'WordGrid',
         description: '以日历网格为核心交互形态的英语词汇学习软件，基于艾宾浩斯遗忘曲线',
-        theme_color: '#1A1A1A',
+        theme_color: '#F5F1E8',
         background_color: '#F5F1E8',
         display: 'standalone',
         orientation: 'portrait',

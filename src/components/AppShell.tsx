@@ -26,7 +26,7 @@ export default function AppShell({ children, onQuickAdd, onLogout }: AppShellPro
   const today = todayKey();
 
   return (
-    <div className="flex h-full min-h-screen flex-col bg-paper">
+    <div className="flex h-full min-h-screen flex-col bg-paper pt-[env(safe-area-inset-top)]">
       {/* 顶部导航 - 编辑杂志刊头 */}
       <header className="border-b border-ink/15 bg-paper/80 backdrop-blur-sm">
         <div className="mx-auto flex max-w-[1400px] items-center justify-between px-4 py-3 md:px-6 md:py-4 lg:px-10">
