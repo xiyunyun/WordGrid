@@ -159,6 +159,12 @@ export const LATEST_VERSION = CHANGELOG[0]?.version ?? "1.0.0";
 /** localStorage key：记录用户已读的最新版本号 */
 const READ_VERSION_KEY = "wordgrid-read-version";
 
+/** localStorage key：记录用户已关闭的重要更新浮窗版本号 */
+const DISMISSED_IMPORTANT_KEY = "wordgrid-dismissed-important";
+
+/** 重要更新的标识关键字（在 items 中包含此关键字即视为重要更新） */
+const IMPORTANT_KEYWORD = "重要更新⚠️⚠️⚠️";
+
 /** 检查是否有未读更新 */
 export function hasUnreadUpdate(): boolean {
   const readVersion = localStorage.getItem(READ_VERSION_KEY);
@@ -168,4 +174,38 @@ export function hasUnreadUpdate(): boolean {
 /** 标记当前版本为已读 */
 export function markUpdateRead(): void {
   localStorage.setItem(READ_VERSION_KEY, LATEST_VERSION);
+}
+
+/**
+ * 检查最新版本是否为"重要更新"
+ * 判定规则：最新 changelog 条目的 items 中任一条目包含 "重要更新⚠️⚠️⚠️"
+ */
+export function hasImportantNotice(): boolean {
+  const latest = CHANGELOG[0];
+  if (!latest) return false;
+  return latest.items.some((item) => item.includes(IMPORTANT_KEYWORD));
+}
+
+/**
+ * 获取最新版本的重要更新条目
+ * 返回包含 "重要更新⚠️⚠️⚠️" 关键字的所有 items
+ */
+export function getImportantNoticeItems(): string[] {
+  const latest = CHANGELOG[0];
+  if (!latest) return [];
+  return latest.items.filter((item) => item.includes(IMPORTANT_KEYWORD));
+}
+
+/**
+ * 检查重要更新浮窗是否已被用户关闭
+ * 关闭状态按版本号记录，新版本发布后会再次显示
+ */
+export function isImportantDismissed(): boolean {
+  const dismissed = localStorage.getItem(DISMISSED_IMPORTANT_KEY);
+  return dismissed === LATEST_VERSION;
+}
+
+/** 标记当前版本的重要更新浮窗为已关闭 */
+export function dismissImportantNotice(): void {
+  localStorage.setItem(DISMISSED_IMPORTANT_KEY, LATEST_VERSION);
 }

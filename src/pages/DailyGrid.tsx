@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ChevronDown, Plus, Inbox, ClipboardCheck, X } from "lucide-react";
+import { ChevronDown, Plus, Inbox } from "lucide-react";
 import { useWordStore } from "@/store/wordStore";
 import { selectDueWords } from "@/store/wordStore";
 import {
@@ -15,12 +15,10 @@ import { cn } from "@/lib/utils";
 import { useMidnightCountdown } from "@/hooks/useMidnightCountdown";
 
 interface DailyGridProps {
-  onRequestAdd: (date?: string, clipboard?: string) => void;
+  onRequestAdd: (date?: string) => void;
   onReviewDue?: () => void;
   onRequestEdit?: (word: Word) => void;
   onRequestNote?: (word: Word) => void;
-  clipboardText?: string;
-  onConsumeClipboard?: () => void;
 }
 
 interface DateGroup {
@@ -33,8 +31,6 @@ export default function DailyGrid({
   onReviewDue,
   onRequestEdit,
   onRequestNote,
-  clipboardText,
-  onConsumeClipboard,
 }: DailyGridProps) {
   const words = useWordStore((s) => s.words);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
@@ -65,13 +61,7 @@ export default function DailyGrid({
   };
 
   if (words.length === 0) {
-    return (
-      <EmptyState
-        onRequestAdd={() => onRequestAdd()}
-        clipboardText={clipboardText}
-        onConsumeClipboard={onConsumeClipboard}
-      />
-    );
+    return <EmptyState onRequestAdd={() => onRequestAdd()} />;
   }
 
   return (
@@ -133,48 +123,6 @@ export default function DailyGrid({
           </div>
         </div>
       </section>
-
-      {/* 剪贴板提示卡片 */}
-      {clipboardText && (
-        <div className="flex items-center justify-between gap-3 rounded-md border border-accent-gold/40 bg-accent-gold/10 px-4 py-3 animate-slide-up">
-          <div className="flex items-center gap-3">
-            <ClipboardCheck
-              className="h-5 w-5 text-accent-gold"
-              strokeWidth={1.5}
-            />
-            <div>
-              <div className="font-mono text-2xs uppercase tracking-editorial text-accent-gold">
-                Clipboard Detected
-              </div>
-              <div className="font-body text-sm text-ink">
-                检测到剪贴板内容：
-                <span className="font-serif italic text-accent-gold">
-                  "{clipboardText.slice(0, 40)}"
-                </span>
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => {
-                onRequestAdd(undefined, clipboardText);
-                onConsumeClipboard?.();
-              }}
-              className="btn-gold"
-            >
-              <Plus className="h-3.5 w-3.5" strokeWidth={1.5} />
-              添加
-            </button>
-            <button
-              onClick={onConsumeClipboard}
-              className="rounded-md p-2 text-ink-light hover:bg-ink/5 hover:text-ink"
-              aria-label="忽略"
-            >
-              <X className="h-4 w-4" strokeWidth={1.5} />
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* 日期行列表 */}
       <div className="space-y-3">
@@ -334,12 +282,8 @@ export default function DailyGrid({
 
 function EmptyState({
   onRequestAdd,
-  clipboardText,
-  onConsumeClipboard,
 }: {
   onRequestAdd: () => void;
-  clipboardText?: string;
-  onConsumeClipboard?: () => void;
 }) {
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
@@ -361,30 +305,6 @@ function EmptyState({
         点击下方按钮添加第一个单词，或使用批量导入快速录入。
         每一天都会成为网格中的一行，让积累可见。
       </p>
-
-      {clipboardText && (
-        <div className="mb-4 flex items-center gap-3 rounded-md border border-accent-gold/40 bg-accent-gold/10 px-4 py-2">
-          <ClipboardCheck
-            className="h-4 w-4 text-accent-gold"
-            strokeWidth={1.5}
-          />
-          <span className="font-body text-sm text-ink">
-            检测到剪贴板：
-            <span className="font-serif italic text-accent-gold">
-              "{clipboardText.slice(0, 30)}"
-            </span>
-          </span>
-          <button
-            onClick={() => {
-              onRequestAdd();
-              onConsumeClipboard?.();
-            }}
-            className="btn-gold"
-          >
-            一键添加
-          </button>
-        </div>
-      )}
 
       <button onClick={onRequestAdd} className="btn-primary">
         <Plus className="h-4 w-4" strokeWidth={1.5} />

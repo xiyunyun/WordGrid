@@ -9,7 +9,8 @@
   /* 根字号从默认 16px 放大至 20px，整体字号 +2 级 */
   font-size: 20px;
   line-height: 1.6;
-  font-weight: 400;
+  /* 字重从 400 提升至 500（medium），低分辨率屏上笔画更清晰 */
+  font-weight: 500;
   color: #1a1a1a;
   background-color: #f5f1e8;
 
@@ -23,18 +24,12 @@
 }
 
 /*
- * 低 DPR 屏幕（1x）字体加粗适配
- * Cormorant Garamond 等细衬线字体在低分辨率屏上笔画过细，
- * 通过媒体查询检测设备像素比，自动提升字重至 500（medium）。
- * 高 DPR 屏幕（Retina 等）保持原始 400 字重，维持设计原貌。
+ * font-display（Cormorant Garamond）笔画纤细，在低分辨率屏上发虚。
+ * 所有屏幕统一提升字重至 500（medium），笔画更厚实清晰。
+ * 显式使用 font-medium（500）的元素不受影响。
  */
-@media (max-resolution: 1dppx) {
-  :root {
-    font-weight: 500;
-  }
-  .font-display {
-    font-weight: 500 !important;
-  }
+.font-display {
+  font-weight: 500;
 }
 
 html,

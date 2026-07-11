@@ -24,7 +24,7 @@ import { shuffle, todayKey } from "@/lib/review";
 import { STAGE_LABELS } from "@/types";
 import type { Word } from "@/types";
 import { cn } from "@/lib/utils";
-import { speak } from "@/lib/tts";
+import { speakWord } from "@/lib/tts";
 import SpeakButton from "@/components/SpeakButton";
 import SelfCheckFlow from "@/components/SelfCheckFlow";
 import NoteModal from "@/components/NoteModal";
@@ -735,7 +735,7 @@ function DictationView({ words }: { words: Word[] }) {
   const handleSpeak = async () => {
     if (speaking) return;
     setSpeaking(true);
-    await speak(current.word);
+    await speakWord(current.word);
     setSpeaking(false);
   };
 

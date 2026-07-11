@@ -291,3 +291,61 @@ ${article}`;
   return callDeepSeek(systemPrompt, userPrompt, 0.3, 2048);
 }
 
+/** 中文释义条目 */
+export interface CnMeaning {
+  /** 词性（中文，如"名词"、"动词"） */
+  pos: string;
+  /** 中文释义（简短，1-2 句） */
+  meaning: string;
+}
+
+/**
+ * 调用 DeepSeek API 查询单词的中文释义
+ *
+ * 返回简短的中文释义，按词性分组，每个词性 1 条释义。
+ * 用于词典弹窗中补充中文意思。
+ */
+export async function lookupWordMeaning(word: string): Promise<CnMeaning[]> {
+  const systemPrompt = `你是一位专业的英汉词典编辑，擅长用简洁准确的中文解释英语单词。你必须严格按照 JSON 格式输出，不输出任何说明文字。`;
+
+  const userPrompt = `请查询单词 "${word}" 的中文释义。
+
+【要求】
+1. 按词性分组，每个词性给出 1 条简短中文释义（不超过 20 字）
+2. 只输出最常见的 1-3 个词性
+3. 释义要简洁准确，不要冗长
+
+【输出格式】
+只输出 JSON 数组，不要 markdown 代码块，不要任何说明文字。格式如下：
+[
+  { "pos": "名词", "meaning": "简短中文释义" },
+  { "pos": "动词", "meaning": "简短中文释义" }
+]`;
+
+  const raw = await callDeepSeek(systemPrompt, userPrompt, 0.3, 512);
+
+  const jsonStr = raw
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```\s*$/, "")
+    .trim();
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(jsonStr);
+  } catch {
+    return [];
+  }
+
+  if (!Array.isArray(parsed)) return [];
+
+  return parsed
+    .map((item) => {
+      const m = item as Partial<CnMeaning>;
+      return {
+        pos: m.pos || "",
+        meaning: m.meaning || "",
+      };
+    })
+    .filter((m) => m.pos && m.meaning);
+}
+

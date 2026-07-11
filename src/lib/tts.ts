@@ -1,13 +1,15 @@
 /**
- * 有道智云 TTS 语音合成
+ * 语音合成与播放
  *
- * 接口文档：https://ai.youdao.com/DOCSIRMA/html/tts/api/yyhc/index.html
- * 签名算法：signType=v3, sign=sha256(appKey + input + salt + curtime + appSecret)
- *   其中 input = q前10字符 + q长度 + q后10字符 (q长度>20) 或 q字符串 (q长度<=20)
+ * 单词朗读采用双源优先级策略：
+ *   1. Free Dictionary API (dictionaryapi.dev) - 免费，部分单词提供真人发音
+ *   2. 有道智云 TTS - 付费兜底，保证所有单词都能发音
  *
- * 三级缓存：内存 Map → IndexedDB（持久化）→ 远程 API
+ * 有道 TTS 内部三级缓存：内存 Map → IndexedDB（持久化）→ 远程 API
  * 已合成过的单词永不重复请求，节省额度。
  */
+
+import { lookupWord, getFirstAudio } from "@/lib/dictionary";
 
 const APP_KEY = import.meta.env.VITE_YOUDAO_APP_KEY as string;
 const APP_SECRET = import.meta.env.VITE_YOUDAO_APP_SECRET as string;
@@ -187,4 +189,57 @@ function playUrl(url: string): Promise<void> {
     audio.onerror = () => resolve();
     audio.play().catch(() => resolve());
   });
+}
+
+/* ============ 单词朗读：Free Dictionary API 优先 ============ */
+
+/**
+ * Free Dictionary API 音频 URL 缓存
+ * key: 单词（小写）  value: 音频 URL（空字符串表示已查询过但无音频）
+ */
+const dictAudioCache = new Map<string, string>();
+
+/**
+ * 朗读单个单词 - 双源优先级播放
+ *
+ * 查找顺序：
+ *   1. Free Dictionary API 的音频 URL（内存缓存避免重复查询）
+ *   2. 有道智云 TTS（三级缓存兜底）
+ *
+ * 设计意图：最大化使用免费词典音频以节省有道 API 额度，
+ * 同时保证所有单词（包括不在词典中的）都能发音。
+ *
+ * @param word 待朗读单词
+ * @returns 播放成功返回 true，失败返回 false
+ */
+export async function speakWord(word: string): Promise<boolean> {
+  const cleanWord = word.trim();
+  if (!cleanWord) return false;
+  const lower = cleanWord.toLowerCase();
+
+  // 1. 查询 Free Dictionary API（仅首次查询，之后走缓存）
+  let audioUrl = dictAudioCache.get(lower);
+  if (audioUrl === undefined) {
+    try {
+      const entry = await lookupWord(cleanWord);
+      audioUrl = getFirstAudio(entry) || "";
+    } catch {
+      // 网络错误或解析异常，标记为无音频，直接走 TTS
+      audioUrl = "";
+    }
+    dictAudioCache.set(lower, audioUrl);
+  }
+
+  // 2. 有词典音频 → 直接播放
+  if (audioUrl) {
+    try {
+      await playUrl(audioUrl);
+      return true;
+    } catch {
+      // 播放失败（如 URL 失效），回退到 TTS
+    }
+  }
+
+  // 3. 无词典音频或播放失败 → 有道 TTS 兜底
+  return speak(cleanWord);
 }

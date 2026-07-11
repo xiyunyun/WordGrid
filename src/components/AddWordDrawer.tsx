@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Plus, ClipboardPaste, FileText, Save } from "lucide-react";
+import { X, Plus, FileText, Save } from "lucide-react";
 import { useWordStore } from "@/store/wordStore";
 import { parseBulkText, todayKey } from "@/lib/review";
 import type { Word } from "@/types";
@@ -9,7 +9,6 @@ interface AddWordDrawerProps {
   open: boolean;
   onClose: () => void;
   defaultDate?: string;
-  clipboardText?: string;
   /** 传入则进入编辑模式，回填表单并改为更新 */
   editWord?: Word | null;
 }
@@ -39,7 +38,6 @@ export default function AddWordDrawer({
   open,
   onClose,
   defaultDate,
-  clipboardText,
   editWord,
 }: AddWordDrawerProps) {
   const addWord = useWordStore((s) => s.addWord);
@@ -58,13 +56,6 @@ export default function AddWordDrawer({
   const [bulkText, setBulkText] = useState("");
   const [justAdded, setJustAdded] = useState(0);
   const [justSaved, setJustSaved] = useState(false);
-
-  // 剪贴板内容自动填充（仅非编辑模式）
-  useEffect(() => {
-    if (open && !isEditing && clipboardText && tab === "single" && !word) {
-      setWord(clipboardText.trim());
-    }
-  }, [open, clipboardText, tab, word, isEditing]);
 
   // 抽屉重新打开时重置或回填
   useEffect(() => {
@@ -199,25 +190,6 @@ export default function AddWordDrawer({
 
           {isEditing || tab === "single" ? (
             <div className="space-y-4 animate-fade-in">
-              {/* 剪贴板提示 - 仅新增模式 */}
-              {!isEditing && clipboardText && (
-                <div className="flex items-start gap-2 rounded-md border border-accent-gold/40 bg-accent-gold/10 p-3">
-                  <ClipboardPaste
-                    className="mt-0.5 h-4 w-4 flex-shrink-0 text-accent-gold"
-                    strokeWidth={1.5}
-                  />
-                  <div className="text-sm text-ink">
-                    <div className="font-body">检测到剪贴板内容：</div>
-                    <div className="font-serif italic text-accent-gold">
-                      "{clipboardText.slice(0, 40)}"
-                    </div>
-                    <div className="font-mono text-2xs text-ink-light">
-                      已自动填入单词字段
-                    </div>
-                  </div>
-                </div>
-              )}
-
               <div>
                 <label className="eyebrow mb-2 block">Word · 单词</label>
                 <input

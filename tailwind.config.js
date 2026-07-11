@@ -35,7 +35,7 @@ export default {
         mono: ['"JetBrains Mono"', "ui-monospace", "monospace"],
       },
       fontSize: {
-        "2xs": ["0.75rem", { lineHeight: "1.1rem" }],
+        "2xs": ["0.8125rem", { lineHeight: "1.15rem" }],
       },
       letterSpacing: {
         tightest: "-0.04em",

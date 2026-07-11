@@ -46,6 +46,8 @@ export interface QuizAttempt {
 
 interface ArticleStore {
   archives: ArticleArchive[];
+  /** 最后阅读的归档 id（用于离开页面后恢复） */
+  lastReadArchiveId: string | null;
 
   /** 新建归档（生成文章后调用），返回新归档 id */
   addArchive: (input: {
@@ -60,11 +62,14 @@ interface ArticleStore {
   /** 记录一次作答 */
   setAttempt: (archiveId: string, attempt: QuizAttempt) => void;
 
-  /** 删除归档 */
+  /** 删除归档（若删除的是 lastReadArchiveId 则一并清除） */
   removeArchive: (id: string) => void;
 
   /** 清空全部归档 */
   clearAll: () => void;
+
+  /** 设置最后阅读的归档 id */
+  setLastReadArchiveId: (id: string | null) => void;
 }
 
 function genId(): string {
@@ -83,6 +88,7 @@ export const useArticleStore = create<ArticleStore>()(
   persist(
     (set) => ({
       archives: [],
+      lastReadArchiveId: null,
 
       addArchive: (input) => {
         const id = genId();
@@ -120,9 +126,16 @@ export const useArticleStore = create<ArticleStore>()(
         })),
 
       removeArchive: (id) =>
-        set((s) => ({ archives: s.archives.filter((a) => a.id !== id) })),
+        set((s) => ({
+          archives: s.archives.filter((a) => a.id !== id),
+          // 若删除的是最后阅读的归档，一并清除标记
+          lastReadArchiveId:
+            s.lastReadArchiveId === id ? null : s.lastReadArchiveId,
+        })),
 
-      clearAll: () => set({ archives: [] }),
+      clearAll: () => set({ archives: [], lastReadArchiveId: null }),
+
+      setLastReadArchiveId: (id) => set({ lastReadArchiveId: id }),
     }),
     {
       name: "wordgrid-article-archive",

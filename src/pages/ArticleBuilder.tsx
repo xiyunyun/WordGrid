@@ -1,5 +1,5 @@
-import { useState, useMemo, useCallback } from "react";
-import { Blocks, Check, Loader2, RotateCcw, BookOpen, AlertCircle, Archive, FileQuestion, Languages } from "lucide-react";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { Blocks, Check, Loader2, RotateCcw, BookOpen, AlertCircle, Archive, FileQuestion, Languages, Search } from "lucide-react";
 import { useWordStore } from "@/store/wordStore";
 import { useArticleStore } from "@/store/articleStore";
 import type { ArticleArchive } from "@/store/articleStore";
@@ -14,6 +14,7 @@ import type { Word } from "@/types";
 import { cn } from "@/lib/utils";
 import QuizPanel, { QuizLoading } from "@/components/QuizPanel";
 import ArchiveListModal from "@/components/ArchiveListModal";
+import DictionaryModal from "@/components/DictionaryModal";
 
 type Phase = "select" | "loading" | "reading" | "archive_view";
 
@@ -32,6 +33,8 @@ const DIFFICULTIES: Array<{
 export default function ArticleBuilder() {
   const words = useWordStore((s) => s.words);
   const archives = useArticleStore((s) => s.archives);
+  const lastReadArchiveId = useArticleStore((s) => s.lastReadArchiveId);
+  const setLastReadArchiveId = useArticleStore((s) => s.setLastReadArchiveId);
   const addArchive = useArticleStore((s) => s.addArchive);
   const setQuestions = useArticleStore((s) => s.setQuestions);
   const setAttempt = useArticleStore((s) => s.setAttempt);
@@ -63,6 +66,25 @@ export default function ArticleBuilder() {
   const [translateError, setTranslateError] = useState("");
   /** 是否显示翻译 */
   const [showTranslation, setShowTranslation] = useState(false);
+  /** 词典弹窗 */
+  const [dictOpen, setDictOpen] = useState(false);
+  /** 词典初始查询词 */
+  const [dictInitialWord, setDictInitialWord] = useState("");
+
+  /** 组件挂载时，恢复上次未关闭的阅读归档 */
+  useEffect(() => {
+    if (lastReadArchiveId) {
+      const found = archives.find((a) => a.id === lastReadArchiveId);
+      if (found) {
+        setViewingArchive(found);
+        setPhase("archive_view");
+      } else {
+        // 归档已被删除，清除标记
+        setLastReadArchiveId(null);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const selectedWords = useMemo(
     () => words.filter((w) => selected.has(w.id)),
@@ -100,6 +122,7 @@ export default function ArticleBuilder() {
         difficulty,
       });
       setCurrentArchiveId(aid);
+      setLastReadArchiveId(aid);
       setQuestionsState([]);
       setQuizError("");
       setTranslation("");
@@ -113,6 +136,7 @@ export default function ArticleBuilder() {
   };
 
   const reset = () => {
+    setLastReadArchiveId(null);
     setPhase("select");
     setArticle("");
     setError("");
@@ -124,9 +148,23 @@ export default function ArticleBuilder() {
     setTranslateError("");
   };
 
-  /** 翻译文章 */
+  /** 当前阶段的活跃归档 id（reading 用 currentArchiveId，archive_view 用 viewingArchive.id） */
+  const activeArchiveId =
+    phase === "archive_view" ? viewingArchive?.id ?? null : currentArchiveId;
+
+  /** 当前阶段的文章文本 */
+  const activeArticle =
+    phase === "archive_view" ? viewingArchive?.article ?? "" : article;
+
+  /** 当前阶段的单词列表 */
+  const activeWords =
+    phase === "archive_view"
+      ? (viewingArchive?.words as unknown as Word[]) ?? []
+      : selectedWords;
+
+  /** 翻译文章（支持 reading 和 archive_view 两个阶段） */
   const handleTranslate = async () => {
-    if (!article) return;
+    if (!activeArticle) return;
     // 已有翻译则切换显示
     if (translation) {
       setShowTranslation((v) => !v);
@@ -135,7 +173,7 @@ export default function ArticleBuilder() {
     setTranslating(true);
     setTranslateError("");
     try {
-      const result = await translateArticle(article);
+      const result = await translateArticle(activeArticle);
       setTranslation(result);
       setShowTranslation(true);
     } catch (e) {
@@ -145,17 +183,17 @@ export default function ArticleBuilder() {
     }
   };
 
-  /** 生成题目 */
+  /** 生成题目（支持 reading 和 archive_view 两个阶段） */
   const handleGenerateQuiz = async () => {
-    if (!article || selectedWords.length === 0) return;
+    if (!activeArticle || activeWords.length === 0) return;
     setQuizLoading(true);
     setQuizError("");
     try {
-      const qs = await generateQuiz(article, selectedWords);
+      const qs = await generateQuiz(activeArticle, activeWords);
       setQuestionsState(qs);
       // 同步到归档
-      if (currentArchiveId) {
-        setQuestions(currentArchiveId, qs);
+      if (activeArchiveId) {
+        setQuestions(activeArchiveId, qs);
       }
     } catch (e) {
       setQuizError(e instanceof Error ? e.message : "题目生成失败，请稍后重试");
@@ -172,23 +210,41 @@ export default function ArticleBuilder() {
     correctCount: number;
     totalCount: number;
   }) => {
-    if (currentArchiveId) {
-      setAttempt(currentArchiveId, { attemptedAt: Date.now(), ...attempt });
+    if (activeArchiveId) {
+      setAttempt(activeArchiveId, { attemptedAt: Date.now(), ...attempt });
     }
   };
 
   /** 打开归档查看 */
   const handleOpenArchive = (a: ArticleArchive) => {
     setViewingArchive(a);
+    setLastReadArchiveId(a.id);
+    setQuestionsState(a.questions);
+    setTranslation("");
+    setShowTranslation(false);
+    setTranslateError("");
+    setQuizError("");
     setArchiveModalOpen(false);
     setPhase("archive_view");
   };
 
   /** 从归档返回选择页 */
   const exitArchiveView = () => {
+    setLastReadArchiveId(null);
     setViewingArchive(null);
+    setQuestionsState([]);
+    setTranslation("");
+    setShowTranslation(false);
+    setTranslateError("");
+    setQuizError("");
     setPhase("select");
   };
+
+  /** 打开词典查询指定单词（为空时打开空词典） */
+  const openDictionary = useCallback((word?: string) => {
+    setDictInitialWord(word || "");
+    setDictOpen(true);
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -258,6 +314,7 @@ export default function ArticleBuilder() {
           translateError={translateError}
           showTranslation={showTranslation}
           onTranslate={handleTranslate}
+          onOpenDictionary={openDictionary}
         />
       )}
 
@@ -270,6 +327,17 @@ export default function ArticleBuilder() {
           resetLabel="返回选择"
           initialQuestions={viewingArchive.questions}
           initialAttempt={viewingArchive.attempt || null}
+          quizLoading={quizLoading}
+          quizError={quizError}
+          questions={questions}
+          onGenerateQuiz={handleGenerateQuiz}
+          onAttempt={handleAttempt}
+          translation={translation}
+          translating={translating}
+          translateError={translateError}
+          showTranslation={showTranslation}
+          onTranslate={handleTranslate}
+          onOpenDictionary={openDictionary}
         />
       )}
 
@@ -280,6 +348,13 @@ export default function ArticleBuilder() {
         archives={archives}
         onOpenArchive={handleOpenArchive}
         onDeleteArchive={removeArchive}
+      />
+
+      {/* 词典弹窗 */}
+      <DictionaryModal
+        open={dictOpen}
+        onClose={() => setDictOpen(false)}
+        initialWord={dictInitialWord}
       />
     </div>
   );
@@ -526,6 +601,7 @@ function ReadingPhase({
   translateError = "",
   showTranslation = false,
   onTranslate,
+  onOpenDictionary,
 }: {
   article: string;
   selectedWords: Word[];
@@ -563,6 +639,8 @@ function ReadingPhase({
   showTranslation?: boolean;
   /** 翻译/切换翻译显示 */
   onTranslate?: () => void;
+  /** 打开词典查询 */
+  onOpenDictionary?: (word?: string) => void;
 }) {
   // 构建单词查找表（小写匹配）
   const wordMap = useMemo(() => {
@@ -573,7 +651,7 @@ function ReadingPhase({
     return map;
   }, [selectedWords]);
 
-  // 将文章文本按词拆分，高亮选中的单词
+  // 将文章文本按词拆分，高亮选中的单词，所有英文单词均可点击查词
   const renderArticle = useCallback(() => {
     const paragraphs = article.split(/\n+/).filter((p) => p.trim());
 
@@ -583,19 +661,37 @@ function ReadingPhase({
         <p key={pi} className="mb-5 font-body text-base md:text-lg leading-relaxed text-ink-soft last:mb-0">
           {tokens.map((token, ti) => {
             const clean = token.toLowerCase().replace(/[^a-z'-]/g, "");
-            const matched = clean && wordMap.has(clean);
+            if (!clean) {
+              return <span key={ti}>{token}</span>;
+            }
+            const matched = wordMap.has(clean);
             if (matched) {
               const word = wordMap.get(clean)!;
               return (
-                <WordHighlight key={ti} token={token} word={word} />
+                <WordHighlight
+                  key={ti}
+                  token={token}
+                  word={word}
+                  onLookup={() => onOpenDictionary?.(clean)}
+                />
               );
             }
-            return <span key={ti}>{token}</span>;
+            // 非高亮的英文单词：可点击查词
+            return (
+              <span
+                key={ti}
+                className="cursor-pointer underline decoration-ink/20 decoration-dotted underline-offset-4 transition-colors hover:decoration-accent-gold hover:text-accent-gold"
+                onClick={() => onOpenDictionary?.(clean)}
+                title="点击查词"
+              >
+                {token}
+              </span>
+            );
           })}
         </p>
       );
     });
-  }, [article, wordMap]);
+  }, [article, wordMap, onOpenDictionary]);
 
   const diffLabel = DIFFICULTIES.find((d) => d.key === difficulty);
 
@@ -625,6 +721,16 @@ function ReadingPhase({
           </span>
         </div>
         <div className="flex items-center gap-2">
+          {onOpenDictionary && (
+            <button
+              onClick={() => onOpenDictionary()}
+              className="btn-ghost"
+              title="打开词典查词"
+            >
+              <Search className="h-3.5 w-3.5" strokeWidth={1.5} />
+              <span className="hidden sm:inline">查词</span>
+            </button>
+          )}
           {onTranslate && (
             <button
               onClick={onTranslate}
@@ -755,15 +861,34 @@ function ReadingPhase({
   );
 }
 
-/* ============ 高亮单词组件 - 悬浮显示释义 ============ */
-function WordHighlight({ token, word }: { token: string; word: Word }) {
+/* ============ 高亮单词组件 - 悬浮显示释义 + 点击查词 ============ */
+function WordHighlight({
+  token,
+  word,
+  onLookup,
+}: {
+  token: string;
+  word: Word;
+  onLookup?: () => void;
+}) {
   const [showTip, setShowTip] = useState(false);
+
+  // 点击行为：第一次显示提示，已显示时点击查词
+  const handleClick = () => {
+    if (showTip) {
+      // 提示已显示，再次点击 → 查词
+      onLookup?.();
+    } else {
+      setShowTip(true);
+    }
+  };
 
   return (
     <span
       className="relative inline cursor-pointer rounded-sm bg-accent-gold/20 px-0.5 font-medium text-ink underline decoration-accent-gold/40 decoration-dotted underline-offset-4 transition-colors hover:bg-accent-gold/30"
-      onClick={() => setShowTip((v) => !v)}
+      onClick={handleClick}
       onMouseLeave={() => setShowTip(false)}
+      title={onLookup ? "点击查看释义，再次点击查词" : "点击查看释义"}
     >
       {token}
       {showTip && (

@@ -6,6 +6,7 @@ import FloatingActions from "@/components/FloatingActions";
 import DueTodayModal from "@/components/DueTodayModal";
 import NoteModal from "@/components/NoteModal";
 import UpdateNotice from "@/components/UpdateNotice";
+import ImportantNoticeFloat from "@/components/ImportantNoticeFloat";
 import DailyGrid from "@/pages/DailyGrid";
 import Wordbook from "@/pages/Wordbook";
 import ArticleBuilder from "@/pages/ArticleBuilder";
@@ -14,7 +15,6 @@ import About from "@/pages/About";
 import LoginPage from "@/pages/Login";
 import { useWordStore, selectDueWords, selectTomorrowWords } from "@/store/wordStore";
 import { buildSeedWords } from "@/store/seedData";
-import { useClipboardWord } from "@/hooks/useClipboardWord";
 import { isAuthenticated, logout, getCurrentUser } from "@/lib/auth";
 import type { Word } from "@/types";
 
@@ -42,7 +42,6 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerDate, setDrawerDate] = useState<string | undefined>(undefined);
-  const [drawerClipboard, setDrawerClipboard] = useState<string | undefined>();
   const [editWord, setEditWord] = useState<Word | null>(null);
   const [noteModalOpen, setNoteModalOpen] = useState(false);
   const [noteWord, setNoteWord] = useState<Word | null>(null);
@@ -57,8 +56,6 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
   const words = useWordStore((s) => s.words);
   const hydrated = useWordStore((s) => s.hydrated);
 
-  const clipboard = useClipboardWord();
-
   // 首次启动注入示例数据
   useEffect(() => {
     if (!hydrated) return;
@@ -69,19 +66,14 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
     }
   }, [hydrated, words.length]);
 
-  const openDrawer = useCallback(
-    (date?: string, clip?: string) => {
-      setEditWord(null);
-      setDrawerDate(date);
-      setDrawerClipboard(clip ?? clipboard.text ?? undefined);
-      setDrawerOpen(true);
-    },
-    [clipboard.text],
-  );
+  const openDrawer = useCallback((date?: string) => {
+    setEditWord(null);
+    setDrawerDate(date);
+    setDrawerOpen(true);
+  }, []);
 
   const openEditDrawer = useCallback((word: Word) => {
     setEditWord(word);
-    setDrawerClipboard(undefined);
     setDrawerOpen(true);
   }, []);
 
@@ -92,7 +84,6 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
 
   const closeDrawer = useCallback(() => {
     setDrawerOpen(false);
-    setDrawerClipboard(undefined);
     setEditWord(null);
   }, []);
 
@@ -117,8 +108,6 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
                 onReviewDue={openDueModal}
                 onRequestEdit={openEditDrawer}
                 onRequestNote={openNoteModal}
-                clipboardText={clipboard.text ?? undefined}
-                onConsumeClipboard={clipboard.clear}
               />
             }
           />
@@ -131,6 +120,9 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
 
       {/* 浮动操作组 - 仅主页显示 */}
       {isHomePage && <FloatingActions onJumpDate={jumpToDate} />}
+
+      {/* 重要更新浮窗 - 仅主页显示 */}
+      {isHomePage && <ImportantNoticeFloat />}
 
       {/* Due Today 复习弹窗 —— 即使复习后 due 数变为 0 也不自动关闭 */}
       <DueTodayModal
@@ -151,7 +143,6 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
         open={drawerOpen}
         onClose={closeDrawer}
         defaultDate={drawerDate}
-        clipboardText={drawerClipboard}
         editWord={editWord}
       />
     </>

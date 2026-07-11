@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Volume2, Loader2 } from "lucide-react";
-import { speak } from "@/lib/tts";
+import { speakWord } from "@/lib/tts";
 import { cn } from "@/lib/utils";
 
 interface SpeakButtonProps {
@@ -12,7 +12,7 @@ interface SpeakButtonProps {
 }
 
 /**
- * 语音播放按钮 - 调用有道智云 TTS 合成并播放
+ * 语音播放按钮 - 优先使用 Free Dictionary API 真人发音，无音频时回退到有道 TTS
  * 点击后显示加载状态，播放完毕恢复
  */
 export default function SpeakButton({
@@ -26,7 +26,7 @@ export default function SpeakButton({
     e.stopPropagation();
     if (loading) return;
     setLoading(true);
-    await speak(text);
+    await speakWord(text);
     setLoading(false);
   };
 
