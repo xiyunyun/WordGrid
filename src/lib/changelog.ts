@@ -23,6 +23,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.2.0",
+    date: "2026-07-11",
+    items: [
+      "【重要更新⚠️⚠️⚠️】添加了云存档功能，现在用户可以将学习进度存储在云端，永久保存。",
+      "在"关于-Cloud Sync · 云端存档"界面既可保存云存档，具体内容可前往页面中查看",
+    ],
+  },
+  {
     version: "1.1.1",
     date: "2026-07-10",
     items: [

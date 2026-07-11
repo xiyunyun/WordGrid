@@ -43,6 +43,11 @@ jobs:
           VITE_DEEPSEEK_API_KEY: ${{ secrets.VITE_DEEPSEEK_API_KEY }}
           VITE_YOUDAO_APP_KEY: ${{ secrets.VITE_YOUDAO_APP_KEY }}
           VITE_YOUDAO_APP_SECRET: ${{ secrets.VITE_YOUDAO_APP_SECRET }}
+          # Gitee 云存档（关于页云存档功能所需）
+          VITE_GITEE_OWNER: ${{ secrets.VITE_GITEE_OWNER }}
+          VITE_GITEE_REPO: ${{ secrets.VITE_GITEE_REPO }}
+          VITE_GITEE_TOKEN: ${{ secrets.VITE_GITEE_TOKEN }}
+          VITE_GITEE_BRANCH: ${{ secrets.VITE_GITEE_BRANCH }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
