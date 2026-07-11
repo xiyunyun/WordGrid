@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { X, Search, Volume2, Loader2, BookOpen, AlertCircle } from "lucide-react";
 import {
   lookupWord,
@@ -115,7 +116,7 @@ export default function DictionaryModal({
   const phonetic = getFirstPhonetic(entry);
   const audioUrl = getFirstAudio(entry);
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[70] flex animate-fade-in items-center justify-center p-4">
       {/* 遮罩 */}
       <div
@@ -374,6 +375,7 @@ export default function DictionaryModal({
 
       {/* 音频元素（隐藏） */}
       <audio ref={audioRef} className="hidden" />
-    </div>
+    </div>,
+    document.body,
   );
 }
