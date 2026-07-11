@@ -40,17 +40,17 @@ export default defineConfig({
         lang: 'zh-CN',
         icons: [
           {
-            src: 'pwa-192.png',
+            src: `/${REPO_NAME}/pwa-192.png`,
             sizes: '192x192',
             type: 'image/png',
           },
           {
-            src: 'pwa-512.png',
+            src: `/${REPO_NAME}/pwa-512.png`,
             sizes: '512x512',
             type: 'image/png',
           },
           {
-            src: 'pwa-maskable-512.png',
+            src: `/${REPO_NAME}/pwa-maskable-512.png`,
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable',
