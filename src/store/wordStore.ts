@@ -56,6 +56,7 @@ export const useWordStore = create<WordStore>()(
       hydrated: false,
 
       addWord: (input) => {
+        const { nextReview, reviewStage } = initReview();
         const word: Word = {
           id: uid(),
           word: input.word.trim(),
@@ -64,10 +65,11 @@ export const useWordStore = create<WordStore>()(
           meaning: input.meaning.trim(),
           note: input.note?.trim() || "",
           date: input.date || todayKey(),
-          isDifficult: false,
+          // 新词默认进入「初识」阶段，已是生词状态
+          isDifficult: true,
           isMastered: false,
-          nextReview: "",
-          reviewStage: -1,
+          nextReview,
+          reviewStage,
           createdAt: Date.now(),
         };
         set((s) => ({ words: [word, ...s.words] }));
@@ -76,6 +78,7 @@ export const useWordStore = create<WordStore>()(
 
       addWordsBulk: (items, date) => {
         const targetDate = date || todayKey();
+        const { nextReview, reviewStage } = initReview();
         const newWords: Word[] = items.map((item) => ({
           id: uid(),
           word: item.word.trim(),
@@ -84,10 +87,11 @@ export const useWordStore = create<WordStore>()(
           meaning: item.meaning.trim(),
           note: item.note?.trim() || "",
           date: targetDate,
-          isDifficult: false,
+          // 新词默认进入「初识」阶段
+          isDifficult: true,
           isMastered: false,
-          nextReview: "",
-          reviewStage: -1,
+          nextReview,
+          reviewStage,
           createdAt: Date.now(),
         }));
         set((s) => ({ words: [...newWords, ...s.words] }));
@@ -109,16 +113,8 @@ export const useWordStore = create<WordStore>()(
         set((s) => ({
           words: s.words.map((w) => {
             if (w.id !== id) return w;
-            if (w.isDifficult) {
-              // 取消生词标记
-              return {
-                ...w,
-                isDifficult: false,
-                nextReview: "",
-                reviewStage: -1,
-              };
-            }
-            // 标记为生词，初始化复习
+            // 遗忘语义：强制回到生词（初识）状态
+            // 已掌握的词可借此回到复习循环；正答错时也由 reviewWord 触发同样路径
             const { nextReview, reviewStage } = initReview();
             return {
               ...w,
@@ -177,7 +173,24 @@ export const useWordStore = create<WordStore>()(
         }
       },
 
-      setHydrated: () => set({ hydrated: true }),
+      setHydrated: () => {
+        set({ hydrated: true });
+        // 一次性数据迁移：旧数据中存在 !isMastered && !isDifficult 的词
+        // （即未点亮的新词）。按新逻辑，所有未掌握的词默认就是生词状态。
+        const state = get();
+        let needsMigration = false;
+        const newWords = state.words.map((w) => {
+          if (!w.isMastered && !w.isDifficult) {
+            needsMigration = true;
+            const { nextReview, reviewStage } = initReview();
+            return { ...w, isDifficult: true, nextReview, reviewStage };
+          }
+          return w;
+        });
+        if (needsMigration) {
+          set({ words: newWords });
+        }
+      },
     }),
     {
       name: "wordgrid-store",

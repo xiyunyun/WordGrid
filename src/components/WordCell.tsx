@@ -18,7 +18,6 @@ export default function WordCell({
   onRequestEdit,
   onRequestNote,
 }: WordCellProps) {
-  const toggleDifficult = useWordStore((s) => s.toggleDifficult);
   const markMastered = useWordStore((s) => s.markMastered);
   const removeWord = useWordStore((s) => s.removeWord);
 
@@ -26,19 +25,13 @@ export default function WordCell({
     <article
       className={cn(
         "group relative flex min-w-0 flex-col rounded-md border bg-paper-card shadow-paper transition-all hover:shadow-card",
-        word.isDifficult
-          ? "border-accent-red/40 border-l-[3px] border-l-accent-red"
-          : word.isMastered
-            ? "border-accent-green/30 border-l-[3px] border-l-accent-green opacity-75"
-            : "border-ink/10 hover:border-ink/30",
+        word.isMastered
+          ? "border-accent-green/30 border-l-[3px] border-l-accent-green opacity-75"
+          : "border-accent-red/40 border-l-[3px] border-l-accent-red",
       )}
     >
-      {/* 单词主体 - 单击切换生词 */}
-      <button
-        onClick={() => toggleDifficult(word.id)}
-        className="flex flex-col items-start gap-1 px-3 py-2.5 text-left md:px-4 md:py-3"
-        title={word.isDifficult ? "点击取消生词标记" : "点击标记为生词"}
-      >
+      {/* 单词主体 - 不再响应单击切换生词 */}
+      <div className="flex flex-col items-start gap-1 px-3 py-2.5 md:px-4 md:py-3">
         {/* 单词行：单词 + 词性 */}
         <div className="flex w-full items-baseline justify-between gap-2">
           <span
@@ -70,22 +63,12 @@ export default function WordCell({
         >
           {word.meaning}
         </span>
-      </button>
+      </div>
 
       {/* 状态条 */}
       <div className="flex items-center justify-between border-t border-ink/8 px-3 py-1.5">
         <div className="flex items-center gap-1.5">
-          {word.isDifficult ? (
-            <>
-              <Bookmark
-                className="h-3 w-3 fill-accent-red text-accent-red"
-                strokeWidth={1.5}
-              />
-              <span className="font-mono text-2xs uppercase tracking-editorial text-accent-red">
-                {STAGE_LABELS[word.reviewStage] || "生词"}
-              </span>
-            </>
-          ) : word.isMastered ? (
+          {word.isMastered ? (
             <>
               <Check
                 className="h-3 w-3 text-accent-green"
@@ -96,9 +79,15 @@ export default function WordCell({
               </span>
             </>
           ) : (
-            <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
-              ·
-            </span>
+            <>
+              <Bookmark
+                className="h-3 w-3 fill-accent-red text-accent-red"
+                strokeWidth={1.5}
+              />
+              <span className="font-mono text-2xs uppercase tracking-editorial text-accent-red">
+                {STAGE_LABELS[word.reviewStage] || "初识"}
+              </span>
+            </>
           )}
         </div>
 

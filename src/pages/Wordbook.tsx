@@ -82,6 +82,38 @@ export default function Wordbook() {
             </button>
           </div>
         </div>
+
+        {/* 艾宾浩斯遗忘曲线七阶段说明 */}
+        <div className="mt-4 flex flex-wrap items-center gap-x-1 gap-y-2">
+          <span className="mr-2 font-mono text-2xs uppercase tracking-editorial text-ink-light">
+            记忆阶段
+          </span>
+          {STAGE_LABELS.map((label, idx) => (
+            <span
+              key={label}
+              className="flex items-center gap-1"
+            >
+              <span
+                className={cn(
+                  "font-mono text-2xs tabular-nums",
+                  // 颜色渐进：暖灰 → 灰墨 → 金 → 墨绿（从生疏到熟练）
+                  idx === 0 && "text-ink-light",
+                  idx === 1 && "text-ink-muted",
+                  idx === 2 && "text-accent-gold/70",
+                  idx === 3 && "text-accent-gold",
+                  idx === 4 && "text-accent-green/60",
+                  idx === 5 && "text-accent-green/80",
+                  idx === 6 && "text-accent-green",
+                )}
+              >
+                {idx + 1}.{label}
+              </span>
+              {idx < STAGE_LABELS.length - 1 && (
+                <span className="text-ink-light/40">→</span>
+              )}
+            </span>
+          ))}
+        </div>
       </section>
 
       {/* 模式切换 */}

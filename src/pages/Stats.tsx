@@ -14,7 +14,7 @@ import {
 import {
   Plus,
   AlarmClock,
-  EyeOff,
+  BookOpen,
   Check,
   TrendingUp,
   Archive,
@@ -29,7 +29,6 @@ import {
   todayKey,
   formatMDShort,
   addDays,
-  isDue,
 } from "@/lib/review";
 import { cn } from "@/lib/utils";
 
@@ -42,9 +41,8 @@ export default function Stats() {
   const dueWords = selectDueWords(words);
   const difficultWords = selectDifficultWords(words);
   const masteredWords = selectMasteredWords(words);
-  const notKnownCount = difficultWords.filter(
-    (w) => isDue(w.nextReview) && !w.isMastered,
-  ).length;
+  // 学习中：所有未掌握的单词（含初识到长期，不含已掌握）
+  const learningCount = words.filter((w) => !w.isMastered).length;
 
   // 近 14 天每日新增数据
   const dailyData = useMemo(() => {
@@ -118,10 +116,10 @@ export default function Stats() {
       bg: "border-accent-red/30 bg-accent-red/5",
     },
     {
-      label: "不认识",
-      labelEn: "Not Known",
-      value: notKnownCount,
-      icon: EyeOff,
+      label: "学习中",
+      labelEn: "Learning",
+      value: learningCount,
+      icon: BookOpen,
       iconClass: "text-accent-gold",
       valueClass: "text-accent-gold",
       bg: "border-accent-gold/30 bg-accent-gold/5",
