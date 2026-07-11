@@ -1,57 +1,62 @@
-# React + TypeScript + Vite
+# WordGrid（单词网格）—— 你的专属英语学习工具
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+这两天学英语的时候灵光一动，突然想做个自己独有的学习英语工具，于是 **WordGrid（单词网格）** 诞生了。目前已经开源，所有人可免费使用。
 
-Currently, two official plugins are available:
+WordGrid 拥有学英语软件的一切基础功能，但更重要的是，它有几个我自己想出的独门巧思。
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## Expanding the ESLint configuration
+## 核心功能介绍
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### 1. ⚠️ 最核心功能：《积木造文》
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
+- 能够自由选择词汇，然后基于 AI 进行文章的生成。
+- 支持选择文章难度、支持选择文章字数、支持基于文章进行习题的创建和批阅、支持翻译、支持词典和发音、支持所有文章归档重新查看。
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+---
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### 2. 词汇档案功能
 
-export default tseslint.config({
-  extends: [
-    // other configs...
-    // Enable lint rules for React
-    reactX.configs['recommended-typescript'],
-    // Enable lint rules for React DOM
-    reactDom.configs.recommended,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
+- 软件整体基于 **艾宾浩斯遗忘曲线**，对于每一个单词都独立计算复习时间和熟练度，可随时查看学习进度。
+- 档案库支持自定义导入，也支持特定格式的导入，具体查看导入界面中的批量导入介绍。
+- 能够显示 **"单词 -> 词性 -> 音标 -> 词意 -> 自定义笔记"**。
+- 支持导出任意通用格式，如 `txt`、`md`、`Excel` 和 `Anki`。
+
+---
+
+### 3. 生词本功能
+
+- 生词本功能基于标签分类，同时还拥有三个特别练习模块。
+- 列表中显示 **"待复习、生词表、已掌握、近七日"** 四个分类模块，方便查找不同阶段的单词。
+- 支持自我检测，可学习待复习的单词、随机抽查所有学过的单词，以及听写单词。
+
+---
+
+### 4. 统计功能
+
+- 所有的学习进度都会以模块化和表格化的形式记录下来，包括 **"今日所学、待复习、学习中、已熟悉"**。
+- 每日学习的词汇会以柱状图的格式显示，可视化每天的学习进度。
+- 词汇类的会以折线图的方式呈现，所以永远是一个上升趋势，用以激励自己。
+- 熟练度排行，会记录你所答错的单词和答对的单词的排行，可以借此针对性学习错误率较高的单词。
+
+---
+
+### 5. 软件功能
+
+- **支持云存档和本地存档**  
+  本地存档可以让你将自己所有的单词存档和学习进度保存在本地，发给任何一个人共享学习进度或词典设计。  
+  云存档支持用户通过云服务保存自己的学习进度，永不丢失，但需要手动保存。
+
+---
+
+### 6. 技术信息
+
+- **技术栈**：React 18 + TypeScript + Vite + Tailwind CSS + Zustand  
+- **语音合成**：有道智云 TTS  
+- **文章生成**：DeepSeek-V4  
+- **数据存储**：浏览器 localStorage & Gitee 仓库  
+- **部署**：GitHub Pages
+
+---
+
+> 欢迎体验与贡献，一起让学习更高效、更有趣！
