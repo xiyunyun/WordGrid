@@ -385,12 +385,22 @@ function MinimalRow({
             className="mx-auto h-4 w-4 text-accent-green"
             strokeWidth={2.5}
           />
-        ) : word.isDifficult ? (
-          <span className="font-mono text-2xs text-ink-light">
+        ) : (
+          <span
+            className={cn(
+              "font-mono text-2xs",
+              // 颜色与七阶段展示同步：暖灰 → 灰墨 → 金 → 墨绿渐进
+              word.reviewStage === 0 && "text-ink-light",
+              word.reviewStage === 1 && "text-ink-muted",
+              word.reviewStage === 2 && "text-accent-gold/70",
+              word.reviewStage === 3 && "text-accent-gold",
+              word.reviewStage === 4 && "text-accent-green/60",
+              word.reviewStage === 5 && "text-accent-green/80",
+              word.reviewStage === 6 && "text-accent-green",
+            )}
+          >
             {STAGE_LABELS[word.reviewStage]?.[0] || "·"}
           </span>
-        ) : (
-          <span className="font-mono text-2xs text-ink-light/50">·</span>
         )}
       </div>
 
