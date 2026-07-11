@@ -26,8 +26,9 @@ export default function ImportantNoticeFloat() {
   useEffect(() => {
     // 仅当有重要更新且用户未关闭时显示
     if (hasImportantNotice() && !isImportantDismissed()) {
-      // 延迟 800ms 显示，避免与 UpdateNotice 弹窗冲突
-      const timer = setTimeout(() => setVisible(true), 800);
+      // 延迟 1500ms 显示，确保 UpdateNotice 弹窗（500ms 显示）已在前台
+      // 用户关闭 UpdateNotice 后，ImportantNoticeFloat 浮窗才可见，避免重叠
+      const timer = setTimeout(() => setVisible(true), 1500);
       return () => clearTimeout(timer);
     }
   }, []);
@@ -49,8 +50,8 @@ export default function ImportantNoticeFloat() {
 
   return (
     <>
-      {/* 手机端：底部条幅 */}
-      <div className="md:hidden fixed inset-x-0 bottom-0 z-40 animate-slide-up">
+      {/* 手机端：底部条幅 - 避开底部导航栏（z-40），用 z-50 显示在导航栏上方 */}
+      <div className="md:hidden fixed inset-x-0 bottom-16 z-50 animate-slide-up px-3">
         <div className="m-3 rounded-lg border border-accent-red/40 bg-paper-card shadow-deep">
           {/* 头部 */}
           <div className="flex items-center justify-between border-b border-accent-red/20 bg-accent-red/5 px-4 py-2.5">
@@ -95,7 +96,7 @@ export default function ImportantNoticeFloat() {
       </div>
 
       {/* 桌面端：右侧浮窗 */}
-      <div className="hidden md:flex fixed right-6 bottom-24 z-40 animate-slide-in-right">
+      <div className="hidden md:flex fixed right-6 bottom-24 z-50 animate-slide-in-right">
         <div className="w-80 rounded-lg border border-accent-red/40 bg-paper-card shadow-deep">
           {/* 头部 */}
           <div className="flex items-center justify-between border-b border-accent-red/20 bg-accent-red/5 px-4 py-3">
