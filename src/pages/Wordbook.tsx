@@ -504,7 +504,7 @@ function MinimalRow({
 function SelfCheckView({ words }: { words: Word[] }) {
   return (
     <div className="mx-auto max-w-2xl px-0">
-      <SelfCheckFlow words={words} mode="self_check" />
+      <SelfCheckFlow words={words} mode="self_check" persistKey="wordgrid-selfcheck-wordbook" />
     </div>
   );
 }

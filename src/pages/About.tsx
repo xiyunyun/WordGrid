@@ -300,12 +300,11 @@ export default function About() {
               重要提示
             </div>
             <p className="mt-1 font-body text-sm leading-relaxed text-ink-soft">
-              本应用的数据存储在浏览器本地（localStorage），<strong className="text-ink">不会自动上云</strong>。
-              清除浏览器缓存、重装系统或更换设备都会导致数据丢失。
+              本应用的数据存储在浏览器本地（localStorage）。配置云端存档后，
+              数据会<strong className="text-ink">自动同步</strong>到云端（打开时智能下载，操作后自动上传）。
               <br />
-              请<strong className="text-accent-red">定期点击下方「导出数据」</strong>
-              保存备份文件，以防数据丢失。导入备份文件可恢复数据，
-              也可用于在不同设备间迁移或分享给他人。
+              未配置云端存档时，清除浏览器缓存、重装系统或更换设备都会导致数据丢失。
+              请<strong className="text-accent-red">定期导出备份</strong>或配置云端存档以防数据丢失。
             </p>
           </div>
         </div>
@@ -547,18 +546,18 @@ export default function About() {
             {/* 使用提示 */}
             <div className="mt-4 space-y-2 border-t border-ink/10 pt-4">
               <p className="font-body text-xs text-ink-light">
-                <strong className="text-ink-soft">上传说明：</strong>
-                将当前设备的全部数据（单词、复习、文章归档、题目作答）
-                打包上传到云端。同一标识的云端存档会被覆盖。
+                <strong className="text-ink-soft">自动同步：</strong>
+                打开应用时自动比较云端和本地的修改时间，云端更新则自动下载。
+                每次操作后 3 分钟自动上传，退出时也会尽力上传。无需手动操作。
               </p>
               <p className="font-body text-xs text-ink-light">
-                <strong className="text-ink-soft">下载说明：</strong>
+                <strong className="text-ink-soft">手动上传：</strong>
+                强制将当前数据上传到云端，覆盖同一标识的存档。
+              </p>
+              <p className="font-body text-xs text-ink-light">
+                <strong className="text-ink-soft">手动下载：</strong>
                 从云端拉取存档并<strong className="text-accent-red">覆盖</strong>本地数据。
-                适用于换设备、重装系统、多端同步等场景。下载后页面会自动刷新。
-              </p>
-              <p className="font-body text-xs text-ink-light">
-                <strong className="text-ink-soft">建议流程：</strong>
-                在 A 设备点「上传云端存档」→ 在 B 设备输入相同标识后点「下载云端存档」。
+                适用于强制同步场景。下载后页面会自动刷新。
               </p>
             </div>
           </>

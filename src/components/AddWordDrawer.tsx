@@ -204,7 +204,6 @@ export default function AddWordDrawer({
                   }}
                   placeholder="如 abandon"
                   className="input-paper font-serif text-lg"
-                  autoFocus
                 />
               </div>
 

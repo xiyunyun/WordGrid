@@ -16,6 +16,15 @@ import LoginPage from "@/pages/Login";
 import { useWordStore, selectDueWords, selectTomorrowWords } from "@/store/wordStore";
 import { buildSeedWords } from "@/store/seedData";
 import { isAuthenticated, logout, getCurrentUser } from "@/lib/auth";
+import {
+  isCloudConfigured,
+  getCloudId,
+  setCloudId,
+  smartDownload,
+  uploadToCloud,
+  uploadKeepalive,
+  setLocalLastModified,
+} from "@/lib/cloudSync";
 import type { Word } from "@/types";
 
 const SEED_FLAG_KEY = "wordgrid-seeded";
@@ -65,6 +74,61 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
       localStorage.setItem(SEED_FLAG_KEY, "1");
     }
   }, [hydrated, words.length]);
+
+  // 云端存档自动同步：智能下载 + debounce 上传 + 退出兜底
+  useEffect(() => {
+    if (!hydrated) return;
+    if (!isCloudConfigured()) return;
+
+    // 确保 cloudId 已设置（默认用登录用户名）
+    if (!getCloudId()) {
+      const user = getCurrentUser();
+      if (user?.username) {
+        setCloudId(user.username);
+      } else {
+        return;
+      }
+    }
+
+    // 1. 打开时智能下载（比较时间戳，云端更新才下载）
+    let cancelled = false;
+    smartDownload().then((r) => {
+      if (cancelled) return;
+      if (r.success && !r.skipped) {
+        // 下载了新数据，刷新页面让 Zustand 重新加载
+        setTimeout(() => window.location.reload(), 1500);
+      }
+    }).catch(() => {});
+
+    // 2. 订阅 store 变化，debounce 3 分钟自动上传
+    //    3 分钟间隔避免频繁上传触发 Gitee API 限制（5-6 用户安全）
+    let uploadTimer: ReturnType<typeof setTimeout> | null = null;
+    const unsubscribe = useWordStore.subscribe((state) => {
+      if (!state.hydrated) return;
+      setLocalLastModified();
+      if (uploadTimer) clearTimeout(uploadTimer);
+      uploadTimer = setTimeout(() => {
+        uploadToCloud().catch(() => {});
+      }, 180000);
+    });
+
+    // 3. 页面隐藏/关闭时尽力上传（keepalive 兜底）
+    const handler = () => {
+      if (document.visibilityState === "hidden") {
+        uploadKeepalive();
+      }
+    };
+    document.addEventListener("visibilitychange", handler);
+    window.addEventListener("beforeunload", handler);
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+      if (uploadTimer) clearTimeout(uploadTimer);
+      document.removeEventListener("visibilitychange", handler);
+      window.removeEventListener("beforeunload", handler);
+    };
+  }, [hydrated]);
 
   const openDrawer = useCallback((date?: string) => {
     setEditWord(null);

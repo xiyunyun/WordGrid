@@ -95,6 +95,8 @@ export default defineConfig({
         // 开发环境也启用 SW，方便测试
         enabled: true,
         type: 'module',
+        // dev 模式按需编译，dev-dist 中无 precache 资源，置空避免 workbox glob warning
+        globPatterns: [],
       },
     }),
   ],

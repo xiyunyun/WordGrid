@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Check, X, Eye, RotateCcw } from "lucide-react";
 import type { Word, ReviewMode } from "@/types";
 import { useWordStore } from "@/store/wordStore";
@@ -18,6 +18,8 @@ interface SelfCheckFlowProps {
   showRestart?: boolean;
   /** 演练模式：不更新 store 的艾宾浩斯节点（用于提前复习明日） */
   dryRun?: boolean;
+  /** 持久化 key，传入则完成状态会持久化到 localStorage（同一天内跨页面切换保持） */
+  persistKey?: string;
 }
 
 /**
@@ -36,16 +38,50 @@ export default function SelfCheckFlow({
   onComplete,
   showRestart = true,
   dryRun = false,
+  persistKey,
 }: SelfCheckFlowProps) {
   const reviewWord = useWordStore((s) => s.reviewWord);
+
+  // 持久化完成状态：同一天内跨页面切换保持「复习完成」页面
+  const storageKey = persistKey ? `${persistKey}-${todayKey()}` : null;
 
   // 挂载时锁定快照 —— 复习过程中 store 更新不会干扰当前流程
   const [initialWords] = useState<Word[]>(() => words);
   const [queue, setQueue] = useState<Word[]>(() => [...words]);
   const [idx, setIdx] = useState(0);
   const [revealed, setRevealed] = useState(false);
-  const [stats, setStats] = useState({ correct: 0, wrong: 0 });
-  const [done, setDone] = useState(false);
+  const [done, setDone] = useState<boolean>(() => {
+    if (!storageKey) return false;
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return parsed.done === true;
+      }
+    } catch {}
+    return false;
+  });
+  const [stats, setStats] = useState<{ correct: number; wrong: number }>(() => {
+    if (!storageKey) return { correct: 0, wrong: 0 };
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        // 只有 done === true 时才恢复 stats（用于显示完成页面）
+        if (parsed.done === true && parsed.stats) return parsed.stats;
+      }
+    } catch {}
+    return { correct: 0, wrong: 0 };
+  });
+
+  // done/stats 变化时持久化
+  useEffect(() => {
+    if (storageKey) {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify({ done, stats }));
+      } catch {}
+    }
+  }, [done, stats, storageKey]);
 
   const total = initialWords.length; // 唯一单词总数
   const current = queue[idx];

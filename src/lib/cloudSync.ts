@@ -21,6 +21,12 @@ const GITEE_BRANCH =
 /** localStorage 中存 cloudId 的 key */
 const CLOUD_ID_KEY = "wordgrid-cloud-id";
 
+/** localStorage 中存本地最后修改时间的 key（ISO 字符串，仅作记录） */
+const LOCAL_LAST_MODIFIED_KEY = "wordgrid-last-modified";
+
+/** localStorage 中存云端文件 SHA 的 key（用于版本比对，避免重复下载） */
+const LOCAL_CLOUD_SHA_KEY = "wordgrid-cloud-sha";
+
 /** Gitee API 基础地址 */
 const GITEE_API = "https://gitee.com/api/v5";
 
@@ -44,6 +50,26 @@ export function validateCloudId(id: string): string | null {
 /** 检查 Gitee 是否已配置 */
 export function isCloudConfigured(): boolean {
   return !!(GITEE_OWNER && GITEE_REPO && GITEE_TOKEN);
+}
+
+/** 获取本地最后修改时间（ISO 字符串），用于与云端比较 */
+export function getLocalLastModified(): string {
+  return localStorage.getItem(LOCAL_LAST_MODIFIED_KEY) || "";
+}
+
+/** 更新本地最后修改时间为当前时间 */
+export function setLocalLastModified(): void {
+  localStorage.setItem(LOCAL_LAST_MODIFIED_KEY, new Date().toISOString());
+}
+
+/** 获取本地保存的云端文件 SHA（用于版本比对） */
+export function getLocalCloudSha(): string {
+  return localStorage.getItem(LOCAL_CLOUD_SHA_KEY) || "";
+}
+
+/** 保存云端文件 SHA 到本地（下载/上传成功后调用） */
+export function setLocalCloudSha(sha: string): void {
+  localStorage.setItem(LOCAL_CLOUD_SHA_KEY, sha);
 }
 
 /** 返回 Gitee 配置信息（用于 UI 提示） */
@@ -187,6 +213,18 @@ export async function uploadToCloud(): Promise<CloudResult> {
       };
     }
 
+    // 上传成功后，保存新文件 SHA 到本地（关键：避免下次 smartDownload 误判为远端更新而循环刷新）
+    try {
+      const data = await res.json();
+      const newSha = data.content?.sha || data.sha;
+      if (newSha) {
+        setLocalCloudSha(newSha);
+      }
+      setLocalLastModified();
+    } catch {
+      setLocalLastModified();
+    }
+
     return {
       success: true,
       message: `已上传 ${(content.length / 1024).toFixed(1)} KB 到云端存档（标识：${cloudId}）`,
@@ -236,5 +274,101 @@ export async function downloadFromCloud(): Promise<CloudResult> {
     };
   } catch (e) {
     return { success: false, error: e instanceof Error ? e.message : "网络错误" };
+  }
+}
+
+/* ============ 自动同步：智能下载 + 尽力上传 ============ */
+
+/**
+ * 智能下载：基于文件 SHA 比对决定是否下载
+ *
+ * Gitee contents 接口返回的文件 SHA 是内容唯一标识 —— 内容不变则 SHA 不变。
+ * 比对本地保存的 SHA 与云端 SHA：
+ * - 相同 → 跳过（内容未变化，无重复刷新）
+ * - 不同或本地无记录 → 下载，下载成功后保存新 SHA
+ *
+ * 注意：不能用「最后修改时间」比对，Gitee contents 接口不返回 last_commit / updated_at 字段，
+ * 会导致每次返回 null，误判为「云端有更新」→ 无限刷新循环。
+ */
+export async function smartDownload(): Promise<CloudResult & { skipped?: boolean }> {
+  if (!isCloudConfigured()) {
+    return { success: false, error: "云存档未配置" };
+  }
+  const cloudId = getCloudId();
+  const err = validateCloudId(cloudId);
+  if (err) return { success: false, error: err };
+
+  // 获取云端文件 SHA（内容指纹）
+  const cloudSha = await getFileSha(cloudId);
+
+  // 云端无文件 → 尝试下载（会返回 404 错误提示用户先上传）
+  if (!cloudSha) {
+    return downloadFromCloud();
+  }
+
+  const localSha = getLocalCloudSha();
+
+  // SHA 相同 → 本地已是最新版本，跳过
+  if (localSha && cloudSha === localSha) {
+    return { success: true, message: "本地数据与云端一致，跳过下载", skipped: true };
+  }
+
+  // SHA 不同或本地无记录 → 下载云端数据
+  const result = await downloadFromCloud();
+
+  // 下载成功后保存云端 SHA，避免下次刷新重复下载
+  if (result.success) {
+    setLocalCloudSha(cloudSha);
+  }
+
+  return result;
+}
+
+/** 尽力上传（用于页面关闭时，使用 keepalive 确保请求发出） */
+export async function uploadKeepalive(): Promise<void> {
+  if (!isCloudConfigured()) return;
+  const cloudId = getCloudId();
+  const err = validateCloudId(cloudId);
+  if (err) return;
+
+  const content = packLocalData();
+  const base64Content = encodeBase64(content);
+  const path = buildFilePath(cloudId);
+
+  try {
+    const sha = await getFileSha(cloudId);
+    const method = sha ? "PUT" : "POST";
+    const url = `${GITEE_API}/repos/${GITEE_OWNER}/${GITEE_REPO}/contents/${path}?access_token=${GITEE_TOKEN}`;
+
+    const body: Record<string, unknown> = {
+      access_token: GITEE_TOKEN,
+      content: base64Content,
+      message: `chore(backup): auto-sync ${cloudId} at ${new Date().toISOString()}`,
+      branch: GITEE_BRANCH,
+    };
+    if (sha) body.sha = sha;
+
+    const res = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      keepalive: true,
+    });
+
+    if (res.ok) {
+      // 上传成功后保存新 SHA，避免下次 smartDownload 误判
+      try {
+        const data = await res.json();
+        const newSha = data.content?.sha || data.sha;
+        if (newSha) {
+          setLocalCloudSha(newSha);
+        }
+        setLocalLastModified();
+      } catch {
+        setLocalLastModified();
+      }
+    }
+  } catch {
+    // 静默失败
   }
 }

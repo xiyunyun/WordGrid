@@ -12,6 +12,7 @@ export interface Word {
   isMastered: boolean; // 是否已掌握
   nextReview: string; // ISO 日期 YYYY-MM-DD
   reviewStage: number; // 0-6 对应艾宾浩斯节点
+  lastReviewDate?: string; // 最后一次推进复习阶段的日期 YYYY-MM-DD（同一天不重复推进）
   createdAt: number;
 }
 

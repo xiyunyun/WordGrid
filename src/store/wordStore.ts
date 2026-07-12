@@ -144,6 +144,9 @@ export const useWordStore = create<WordStore>()(
       reviewWord: (id, correct, mode) => {
         const word = get().words.find((w) => w.id === id);
         if (!word) return;
+        const today = todayKey();
+
+        // 始终记录复习日志（每次复习行为都记录）
         const log: ReviewLog = {
           id: uid(),
           wordId: id,
@@ -153,15 +156,21 @@ export const useWordStore = create<WordStore>()(
         };
         set((s) => ({ logs: [log, ...s.logs] }));
 
+        // 同一天最多只推进一次复习阶段
+        // 防止「再来一轮」重复认识导致阶段直接到永久
+        if (word.lastReviewDate === today) return;
+
         if (correct) {
           if (word.reviewStage >= 6) {
             // 已达最高阶段，标记为掌握
             get().markMastered(id);
+            get().updateWord(id, { lastReviewDate: today });
           } else {
             const next = advanceReview(word.reviewStage);
             get().updateWord(id, {
               ...next,
               isMastered: false,
+              lastReviewDate: today,
             });
           }
         } else {
@@ -169,6 +178,7 @@ export const useWordStore = create<WordStore>()(
           get().updateWord(id, {
             ...next,
             isMastered: false,
+            lastReviewDate: today,
           });
         }
       },

@@ -9,6 +9,7 @@ import {
   type DictEntry,
 } from "@/lib/dictionary";
 import { lookupWordMeaning, type CnMeaning } from "@/lib/deepseek";
+import { speakWord } from "@/lib/tts";
 
 interface DictionaryModalProps {
   open: boolean;
@@ -56,13 +57,6 @@ export default function DictionaryModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initialWord]);
 
-  // 自动聚焦输入框
-  useEffect(() => {
-    if (open) {
-      setTimeout(() => inputRef.current?.focus(), 100);
-    }
-  }, [open]);
-
   const doLookup = async (word: string) => {
     const clean = word.trim();
     if (!clean) return;
@@ -103,18 +97,20 @@ export default function DictionaryModal({
     doLookup(query);
   };
 
-  const handlePlayAudio = () => {
+  const handlePlayAudio = async () => {
     const audioUrl = getFirstAudio(entry);
     if (audioUrl && audioRef.current) {
       audioRef.current.src = audioUrl;
       audioRef.current.play().catch(() => {});
+    } else {
+      // 无 Free Dictionary 音频，回退到有道 TTS
+      await speakWord(entry?.word || query);
     }
   };
 
   if (!open) return null;
 
   const phonetic = getFirstPhonetic(entry);
-  const audioUrl = getFirstAudio(entry);
 
   return createPortal(
     <div className="fixed inset-0 z-[70] flex animate-fade-in items-center justify-center p-4">
@@ -234,16 +230,14 @@ export default function DictionaryModal({
                   <h3 className="font-display text-2xl font-medium tracking-word text-ink md:text-3xl">
                     {entry.word}
                   </h3>
-                  {audioUrl && (
-                    <button
-                      onClick={handlePlayAudio}
-                      className="flex items-center gap-1.5 rounded-md border border-ink/20 px-2.5 py-1 font-mono text-2xs uppercase tracking-editorial text-ink transition-colors hover:bg-ink hover:text-paper"
-                      title="播放发音"
-                    >
-                      <Volume2 className="h-3.5 w-3.5" strokeWidth={1.5} />
-                      发音
-                    </button>
-                  )}
+                  <button
+                    onClick={handlePlayAudio}
+                    className="flex items-center gap-1.5 rounded-md border border-ink/20 px-2.5 py-1 font-mono text-2xs uppercase tracking-editorial text-ink transition-colors hover:bg-ink hover:text-paper"
+                    title="播放发音"
+                  >
+                    <Volume2 className="h-3.5 w-3.5" strokeWidth={1.5} />
+                    发音
+                  </button>
                 </div>
                 {phonetic && (
                   <div className="mt-1 font-mono text-sm italic text-accent-gold">
