@@ -59,7 +59,7 @@ export const AUTH_USERS: AuthUser[] = [
   {
     username: "liujing",
     // 密码 "498890" 的哈希
-    passwordHash: "f9b066b94d9d32c58d75b8f95d01c89946a9192e45cd32917bac814cfe1e97fd",
+    passwordHash: "404463501d3f4dddb20b0affa5003f2610c7bfb1c8cf47de4f45ea9a54f732d6",
     displayName: "刘静",
   },
 ];
