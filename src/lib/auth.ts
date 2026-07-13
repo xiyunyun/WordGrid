@@ -56,6 +56,12 @@ export const AUTH_USERS: AuthUser[] = [
     passwordHash: "5cc5057444a9c3ec3b3d700c813bff07fb3e20a5231599112d168553242de232",
     displayName: "梁淦",
   },
+  {
+    username: "liujing",
+    // 密码 "498890" 的哈希
+    passwordHash: "f9b066b94d9d32c58d75b8f95d01c89946a9192e45cd32917bac814cfe1e97fd",
+    displayName: "刘静",
+  },
 ];
 
 /** localStorage 存储登录状态的 key */
