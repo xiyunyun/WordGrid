@@ -49,13 +49,34 @@ export default function AddWordDrawer({
   const [tab, setTab] = useState<Tab>("single");
   const [word, setWord] = useState("");
   const [phonetic, setPhonetic] = useState("");
-  const [pos, setPos] = useState("n.");
+  const [posArr, setPosArr] = useState<string[]>(["n."]);
   const [meaning, setMeaning] = useState("");
   const [note, setNote] = useState("");
   const [date, setDate] = useState(defaultDate || todayKey());
   const [bulkText, setBulkText] = useState("");
   const [justAdded, setJustAdded] = useState(0);
   const [justSaved, setJustSaved] = useState(false);
+
+  /** 将存储中的 pos 字符串拆分为词性数组 */
+  const splitPos = (raw: string): string[] => {
+    if (!raw?.trim()) return [];
+    // 按 COMMON_POS 长度降序匹配，避免 "v." 误匹配 "modal v." 中的片段
+    const sorted = [...COMMON_POS].sort((a, b) => b.length - a.length);
+    const found: string[] = [];
+    let rest = raw;
+    for (const p of sorted) {
+      if (rest.includes(p)) {
+        found.push(p);
+        rest = rest.replace(p, " ");
+      }
+    }
+    // 若有未匹配的残留片段，也作为自定义词性保留
+    const leftover = rest.split(/[\s,，、/]+/).map((s) => s.trim()).filter(Boolean);
+    return [...found, ...leftover];
+  };
+
+  /** 将词性数组合并为存储字符串 */
+  const joinPos = (arr: string[]): string => arr.join(" ");
 
   // 抽屉重新打开时重置或回填
   useEffect(() => {
@@ -65,7 +86,7 @@ export default function AddWordDrawer({
       setTab("single");
       setWord(editWord.word);
       setPhonetic(editWord.phonetic || "");
-      setPos(editWord.pos);
+      setPosArr(splitPos(editWord.pos));
       setMeaning(editWord.meaning);
       setNote(editWord.note);
       setDate(editWord.date);
@@ -75,6 +96,7 @@ export default function AddWordDrawer({
       setTab("single");
       setWord("");
       setPhonetic("");
+      setPosArr(["n."]);
       setMeaning("");
       setNote("");
       setBulkText("");
@@ -87,13 +109,13 @@ export default function AddWordDrawer({
 
   const handleAddSingle = () => {
     if (!word.trim()) return;
-    addWord({ word, phonetic, pos, meaning, note, date });
+    addWord({ word, phonetic, pos: joinPos(posArr), meaning, note, date });
     setJustAdded((n) => n + 1);
     setWord("");
     setPhonetic("");
     setMeaning("");
     setNote("");
-    // 保持 pos 与 date
+    // 保持 posArr 与 date
   };
 
   const handleSaveEdit = () => {
@@ -101,7 +123,7 @@ export default function AddWordDrawer({
     updateWord(editWord.id, {
       word: word.trim(),
       phonetic: phonetic.trim(),
-      pos: pos.trim(),
+      pos: joinPos(posArr).trim(),
       meaning: meaning.trim(),
       note: note.trim(),
       date,
@@ -111,6 +133,13 @@ export default function AddWordDrawer({
     setTimeout(() => {
       onClose();
     }, 700);
+  };
+
+  /** 切换词性选中状态（多选） */
+  const togglePos = (p: string) => {
+    setPosArr((prev) =>
+      prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p],
+    );
   };
 
   const handleAddBulk = () => {
@@ -227,15 +256,15 @@ export default function AddWordDrawer({
               </div>
 
               <div>
-                <label className="eyebrow mb-2 block">POS · 词性</label>
+                <label className="eyebrow mb-2 block">POS · 词性（可多选）</label>
                 <div className="flex flex-wrap gap-2">
                   {COMMON_POS.map((p) => (
                     <button
                       key={p}
-                      onClick={() => setPos(p)}
+                      onClick={() => togglePos(p)}
                       className={cn(
                         "rounded-md border px-3 py-1.5 font-mono text-xs transition-all",
-                        pos === p
+                        posArr.includes(p)
                           ? "border-ink bg-ink text-paper"
                           : "border-ink/20 text-ink-light hover:border-ink hover:text-ink",
                       )}

@@ -23,6 +23,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.4.1",
+    date: "2026-07-13",
+    items: [
+      "修复单词列表缩进对齐问题：改用 CSS Grid subgrid 布局，所有行共享同一组列宽，词性列宽自动取最宽行，列对齐整齐",
+      "修复词汇档案词性导入和显示问题：添加单词抽屉的词性改为多选，编辑已有单词时正确回填所有词性，不再只显示单个",
+    ],
+  },
+  {
     version: "1.4.0",
     date: "2026-07-13",
     items: [

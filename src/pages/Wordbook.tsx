@@ -327,7 +327,7 @@ function ListView({
 
         {/* 当前标签下的单词列表 */}
         {tagWords.length > 0 ? (
-          <ul className="divide-y divide-ink/8 border-y border-ink/10">
+          <ul className="wordbook-grid divide-y divide-ink/8 border-y border-ink/10">
             {tagWords.map((w) => (
               <MinimalRow
                 key={w.id}
@@ -370,12 +370,12 @@ function MinimalRow({
   return (
     <li
       className={cn(
-        "group flex items-center gap-2 px-2 py-2.5 md:gap-4 md:py-3 transition-colors hover:bg-paper-warm/40",
+        "group px-2 py-2.5 md:py-3 transition-colors hover:bg-paper-warm/40",
         highlighted && "bg-accent-red/5",
       )}
     >
       {/* 等级 - 已掌握显示加深颜色的对勾 */}
-      <div className="w-8 md:w-12 flex-shrink-0 text-center">
+      <div className="text-center">
         {highlighted ? (
           <span className="font-mono text-2xs uppercase tracking-editorial text-accent-red">
             due
@@ -405,7 +405,7 @@ function MinimalRow({
       </div>
 
       {/* 单词 + 音标 - 不使用删除线，保持字形完整以加强记忆 */}
-      <div className="w-28 md:w-52 flex-shrink-0">
+      <div className="overflow-hidden">
         <span
           className={cn(
             "font-serif text-base md:text-lg font-medium tracking-word",
@@ -421,15 +421,15 @@ function MinimalRow({
         )}
       </div>
 
-      {/* 词性 */}
-      <div className="hidden sm:block w-12 md:w-16 flex-shrink-0">
-        <span className="font-mono text-xs italic text-accent-gold">
+      {/* 词性 - 列宽由 grid 的 max-content 统一取最宽行 */}
+      <div className="hidden sm:block overflow-hidden">
+        <span className="font-mono text-xs italic text-accent-gold whitespace-nowrap">
           {word.pos}
         </span>
       </div>
 
       {/* 释义 - 复习标签下隐藏（点击显示），其余直接显示 */}
-      <div className="min-w-0 flex-1">
+      <div className="overflow-hidden">
         {showMeaning ? (
           <span className="font-body text-xs md:text-sm text-ink-soft animate-fade-in">
             {word.meaning}
@@ -445,12 +445,12 @@ function MinimalRow({
       </div>
 
       {/* 语音播放按钮 */}
-      <div className="flex-shrink-0 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
+      <div className="opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
         <SpeakButton text={word.word} />
       </div>
 
       {/* 笔记按钮 - 点击打开二级菜单（NoteModal） */}
-      <div className="hidden sm:flex flex-shrink-0">
+      <div className="hidden sm:flex">
         {word.note ? (
           <button
             onClick={() => onRequestNote(word)}
@@ -471,7 +471,7 @@ function MinimalRow({
 
       {/* 操作 - 根据单词状态显示唯一按钮：
           已掌握 → 遗忘（回到生词）；非已掌握 → 标熟 */}
-      <div className="flex flex-shrink-0 items-center opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
+      <div className="flex items-center opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
         {word.isMastered ? (
           <button
             onClick={onForget}

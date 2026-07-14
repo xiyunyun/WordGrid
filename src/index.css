@@ -120,6 +120,27 @@ body {
   .paper-card {
     @apply bg-paper-card border border-ink/10 shadow-paper;
   }
+
+  /* 单词列表网格 - 所有行共享同一组列宽 */
+  .wordbook-grid {
+    display: grid;
+    /* 手机端：等级 单词 释义 语音 操作 */
+    grid-template-columns: 2rem 7rem 1fr auto auto;
+    gap: 0.5rem;
+  }
+  .wordbook-grid > li {
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-column: 1 / -1;
+    align-items: center;
+  }
+  @media (min-width: 640px) {
+    .wordbook-grid {
+      /* 桌面端：等级 单词 词性(max-content取最宽) 释义 语音 笔记 操作 */
+      grid-template-columns: 3rem 13rem max-content 1fr auto auto auto;
+      gap: 1rem;
+    }
+  }
 }
 
 @layer utilities {
