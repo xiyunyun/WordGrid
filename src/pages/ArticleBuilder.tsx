@@ -100,13 +100,26 @@ export default function ArticleBuilder() {
     });
   }, []);
 
-  const selectAll = useCallback(() => {
-    setSelected(new Set(words.map((w) => w.id)));
-  }, [words]);
+  /** 选中指定 id 列表（用于"全选当前筛选结果"） */
+  const selectIds = useCallback((ids: string[]) => {
+    setSelected(new Set(ids));
+  }, []);
 
   const clearAll = useCallback(() => {
     setSelected(new Set());
   }, []);
+
+  /** 错误次数统计：从复习日志中聚合每个单词的错误次数 */
+  const logs = useWordStore((s) => s.logs);
+  const wrongCountMap = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const l of logs) {
+      if (!l.correct) {
+        map.set(l.wordId, (map.get(l.wordId) || 0) + 1);
+      }
+    }
+    return map;
+  }, [logs]);
 
   const handleGenerate = async () => {
     if (selectedWords.length < 3) return;
@@ -287,8 +300,9 @@ export default function ArticleBuilder() {
           difficulty={difficulty}
           wordCount={wordCount}
           error={error}
+          wrongCountMap={wrongCountMap}
           onToggle={toggleSelect}
-          onSelectAll={selectAll}
+          onSelectAll={selectIds}
           onClearAll={clearAll}
           onDifficultyChange={setDifficulty}
           onWordCountChange={setWordCount}
@@ -368,6 +382,7 @@ function SelectPhase({
   difficulty,
   wordCount,
   error,
+  wrongCountMap,
   onToggle,
   onSelectAll,
   onClearAll,
@@ -381,13 +396,82 @@ function SelectPhase({
   difficulty: Difficulty;
   wordCount: number;
   error: string;
+  /** wordId → 错误次数 */
+  wrongCountMap: Map<string, number>;
   onToggle: (id: string) => void;
-  onSelectAll: () => void;
+  /** 选中指定 id 列表（用于"全选当前筛选结果"） */
+  onSelectAll: (ids: string[]) => void;
   onClearAll: () => void;
   onDifficultyChange: (d: Difficulty) => void;
   onWordCountChange: (n: number) => void;
   onGenerate: () => void;
 }) {
+  // ====== 筛选状态 ======
+  /** 日期筛选，空字符串表示不限 */
+  const [filterDate, setFilterDate] = useState("");
+  /** 字母数上限，0 表示不限；>0 表示 word.length <= N */
+  const [filterMaxLength, setFilterMaxLength] = useState(0);
+  /** 词性筛选集合，空集合表示不限 */
+  const [filterPos, setFilterPos] = useState<Set<string>>(new Set());
+  /** 错误率筛选开关，启用时只显示做错过的词并按错误次数降序 */
+  const [wrongOnly, setWrongOnly] = useState(false);
+
+  // 从全部单词中提取出现过的词性列表（pos 字段是空格分隔，如 "n. v."）
+  const allPos = useMemo(() => {
+    const set = new Set<string>();
+    for (const w of words) {
+      if (w.pos) {
+        for (const p of w.pos.split(/\s+/)) {
+          const t = p.trim();
+          if (t) set.add(t);
+        }
+      }
+    }
+    return Array.from(set).sort();
+  }, [words]);
+
+  const togglePos = (p: string) => {
+    setFilterPos((prev) => {
+      const next = new Set(prev);
+      if (next.has(p)) next.delete(p);
+      else next.add(p);
+      return next;
+    });
+  };
+
+  // 综合筛选
+  const filteredWords = useMemo(() => {
+    let list = words;
+    if (filterDate) list = list.filter((w) => w.date === filterDate);
+    if (filterMaxLength > 0) list = list.filter((w) => w.word.length <= filterMaxLength);
+    if (filterPos.size > 0) {
+      list = list.filter((w) => {
+        if (!w.pos) return false;
+        const wPos = w.pos.split(/\s+/).filter(Boolean);
+        return wPos.some((p) => filterPos.has(p));
+      });
+    }
+    if (wrongOnly) {
+      list = list
+        .filter((w) => (wrongCountMap.get(w.id) || 0) > 0)
+        .sort(
+          (a, b) =>
+            (wrongCountMap.get(b.id) || 0) - (wrongCountMap.get(a.id) || 0),
+        );
+    }
+    return list;
+  }, [words, filterDate, filterMaxLength, filterPos, wrongOnly, wrongCountMap]);
+
+  const anyFilterActive =
+    !!filterDate || filterMaxLength > 0 || filterPos.size > 0 || wrongOnly;
+
+  const clearFilters = () => {
+    setFilterDate("");
+    setFilterMaxLength(0);
+    setFilterPos(new Set());
+    setWrongOnly(false);
+  };
+
   return (
     <div className="space-y-5 animate-fade-in">
       {/* 难度 + 字数设置 */}
@@ -464,6 +548,126 @@ function SelectPhase({
         </div>
       </section>
 
+      {/* 单词筛选区 - 日期 + 字母数 + 词性 + 错误率 */}
+      <section className="rounded-md border border-ink/15 bg-paper-card p-3 shadow-paper md:p-5">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Search className="h-4 w-4 text-accent-gold" strokeWidth={1.5} />
+            <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
+              Filter · 单词筛选
+            </span>
+          </div>
+          {anyFilterActive && (
+            <button
+              onClick={clearFilters}
+              className="rounded-md border border-ink/15 px-2 py-0.5 font-mono text-2xs uppercase tracking-editorial text-ink-light transition-colors hover:border-accent-red/40 hover:text-accent-red"
+            >
+              清除筛选
+            </button>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {/* 日期筛选 */}
+          <div>
+            <label className="eyebrow mb-2 block">Date · 添加日期</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={filterDate}
+                onChange={(e) => setFilterDate(e.target.value)}
+                className="input-paper flex-1 font-mono text-sm"
+                placeholder="选择日期"
+              />
+              {filterDate && (
+                <button
+                  onClick={() => setFilterDate("")}
+                  className="rounded-md border border-ink/15 px-2 py-1 font-mono text-2xs text-ink-light hover:border-ink/30 hover:text-ink"
+                  title="清除日期"
+                >
+                  清除
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* 字母数筛选 */}
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <label className="eyebrow">Length · 字母数上限</label>
+              <span className="font-mono text-2xs tabular-nums text-accent-gold">
+                {filterMaxLength === 0 ? "不限" : `≤ ${filterMaxLength}`}
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min={0}
+                max={20}
+                step={1}
+                value={filterMaxLength}
+                onChange={(e) => setFilterMaxLength(Number(e.target.value))}
+                className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-ink/15 accent-accent-gold"
+              />
+              <button
+                onClick={() => setFilterMaxLength(0)}
+                className="rounded-md border border-ink/15 px-2 py-0.5 font-mono text-2xs text-ink-light hover:border-ink/30 hover:text-ink"
+              >
+                不限
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* 词性多选网格 */}
+        {allPos.length > 0 && (
+          <div className="mt-4 border-t border-ink/10 pt-4">
+            <label className="eyebrow mb-2 block">POS · 词性（可多选）</label>
+            <div className="flex flex-wrap gap-1.5">
+              {allPos.map((p) => {
+                const active = filterPos.has(p);
+                return (
+                  <button
+                    key={p}
+                    onClick={() => togglePos(p)}
+                    className={cn(
+                      "rounded-md border px-2.5 py-1 font-mono text-2xs transition-all",
+                      active
+                        ? "border-accent-gold/50 bg-accent-gold/10 text-accent-gold"
+                        : "border-ink/15 text-ink-light hover:border-accent-gold/30 hover:text-ink",
+                    )}
+                  >
+                    {p}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* 错误率筛选按钮 */}
+        <div className="mt-4 border-t border-ink/10 pt-4">
+          <button
+            onClick={() => setWrongOnly((v) => !v)}
+            className={cn(
+              "inline-flex items-center gap-2 rounded-md border px-3 py-1.5 font-mono text-2xs uppercase tracking-editorial transition-all",
+              wrongOnly
+                ? "border-accent-red/50 bg-accent-red/10 text-accent-red"
+                : "border-ink/15 text-ink-light hover:border-accent-red/30 hover:text-accent-red",
+            )}
+            title="只显示做错过的单词，按错误次数降序"
+          >
+            <AlertCircle className="h-3.5 w-3.5" strokeWidth={1.5} />
+            错误率筛选
+            {wrongOnly && (
+              <span className="font-body text-2xs normal-case tracking-normal">
+                · 已开启（按错误次数排序）
+              </span>
+            )}
+          </button>
+        </div>
+      </section>
+
       {/* 选择工具栏 */}
       <section className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
@@ -471,11 +675,17 @@ function SelectPhase({
             已选{" "}
             <span className="text-accent-gold tabular-nums">{selectedCount}</span>
             {" "}/{" "}
-            <span className="text-ink tabular-nums">{words.length}</span>
+            <span className="text-ink tabular-nums">{filteredWords.length}</span>
+            {anyFilterActive && (
+              <span className="text-ink-light/70">
+                {" "}（总 {words.length}）
+              </span>
+            )}
           </span>
           <button
-            onClick={onSelectAll}
-            className="rounded-md border border-ink/15 px-2.5 py-1 font-mono text-2xs uppercase tracking-editorial text-ink-light transition-colors hover:border-ink/30 hover:text-ink"
+            onClick={() => onSelectAll(filteredWords.map((w) => w.id))}
+            disabled={filteredWords.length === 0}
+            className="rounded-md border border-ink/15 px-2.5 py-1 font-mono text-2xs uppercase tracking-editorial text-ink-light transition-colors hover:border-ink/30 hover:text-ink disabled:opacity-40"
           >
             全选
           </button>
@@ -504,54 +714,74 @@ function SelectPhase({
         </div>
       )}
 
-      {/* 单词网格 - 可多选 */}
+      {/* 单词网格 - 显示筛选后的结果 */}
       <section>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-          {words.map((w) => {
-            const isSelected = selected.has(w.id);
-            return (
-              <button
-                key={w.id}
-                onClick={() => onToggle(w.id)}
-                className={cn(
-                  "group relative flex flex-col rounded-md border p-3 text-left transition-all",
-                  isSelected
-                    ? "border-accent-gold/50 bg-accent-gold/10 shadow-paper"
-                    : "border-ink/10 bg-paper-card hover:border-accent-gold/30",
-                )}
-              >
-                {/* 选中标记 */}
-                <div className="absolute right-2 top-2">
-                  <div
-                    className={cn(
-                      "flex h-4 w-4 items-center justify-center rounded-full border transition-all",
-                      isSelected
-                        ? "border-accent-gold bg-accent-gold text-paper"
-                        : "border-ink/20",
-                    )}
-                  >
-                    {isSelected && <Check className="h-2.5 w-2.5" strokeWidth={3} />}
-                  </div>
-                </div>
-
-                <span
+        {filteredWords.length > 0 ? (
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+            {filteredWords.map((w) => {
+              const isSelected = selected.has(w.id);
+              const wrongCount = wrongCountMap.get(w.id) || 0;
+              return (
+                <button
+                  key={w.id}
+                  onClick={() => onToggle(w.id)}
                   className={cn(
-                    "min-w-0 break-words pr-5 font-serif text-base font-medium tracking-word",
-                    isSelected ? "text-ink" : "text-ink-soft",
+                    "group relative flex flex-col rounded-md border p-3 text-left transition-all",
+                    isSelected
+                      ? "border-accent-gold/50 bg-accent-gold/10 shadow-paper"
+                      : "border-ink/10 bg-paper-card hover:border-accent-gold/30",
                   )}
                 >
-                  {w.word}
-                </span>
-                <span className="mt-0.5 font-mono text-2xs italic text-accent-gold">
-                  {w.pos}
-                </span>
-                <span className="mt-1 line-clamp-2 font-body text-2xs text-ink-light">
-                  {w.meaning}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+                  {/* 选中标记 */}
+                  <div className="absolute right-2 top-2">
+                    <div
+                      className={cn(
+                        "flex h-4 w-4 items-center justify-center rounded-full border transition-all",
+                        isSelected
+                          ? "border-accent-gold bg-accent-gold text-paper"
+                          : "border-ink/20",
+                      )}
+                    >
+                      {isSelected && <Check className="h-2.5 w-2.5" strokeWidth={3} />}
+                    </div>
+                  </div>
+
+                  <span
+                    className={cn(
+                      "min-w-0 break-words pr-5 font-serif text-base font-medium tracking-word",
+                      isSelected ? "text-ink" : "text-ink-soft",
+                    )}
+                  >
+                    {w.word}
+                  </span>
+                  <span className="mt-0.5 font-mono text-2xs italic text-accent-gold">
+                    {w.pos}
+                  </span>
+                  <span className="mt-1 line-clamp-2 font-body text-2xs text-ink-light">
+                    {w.meaning}
+                  </span>
+                  {/* 错误次数标记（错误率筛选开启时显示） */}
+                  {wrongOnly && wrongCount > 0 && (
+                    <span className="mt-1.5 inline-flex w-fit items-center gap-1 rounded-sm border border-accent-red/30 bg-accent-red/5 px-1.5 py-0.5 font-mono text-2xs text-accent-red">
+                      <AlertCircle className="h-2.5 w-2.5" strokeWidth={2} />
+                      错 {wrongCount} 次
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <Search className="mb-3 h-8 w-8 text-ink-light/50" strokeWidth={1} />
+            <div className="eyebrow mb-1">No Matches</div>
+            <p className="font-body text-sm text-ink-light">
+              {anyFilterActive
+                ? "当前筛选条件下没有匹配的单词，试试调整筛选条件。"
+                : "单词本暂无单词。"}
+            </p>
+          </div>
+        )}
       </section>
 
       {selectedCount < 3 && selectedCount > 0 && (

@@ -4,11 +4,15 @@ import { cn } from "@/lib/utils";
 import { useWordStore } from "@/store/wordStore";
 import { selectDueWords } from "@/store/wordStore";
 import { formatMDShort, weekdayCN, todayKey } from "@/lib/review";
+import SearchBar from "@/components/SearchBar";
+import type { Word } from "@/types";
 
 interface AppShellProps {
   children: React.ReactNode;
   onQuickAdd: () => void;
   onLogout?: () => void;
+  /** 顶部搜索栏选中单词时触发（在 App.tsx 中打开搜索结果弹窗） */
+  onPickWord?: (word: Word) => void;
 }
 
 const navItems = [
@@ -19,7 +23,7 @@ const navItems = [
   { to: "/about", label: "About", labelCN: "关于", icon: Info },
 ];
 
-export default function AppShell({ children, onQuickAdd, onLogout }: AppShellProps) {
+export default function AppShell({ children, onQuickAdd, onLogout, onPickWord }: AppShellProps) {
   const location = useLocation();
   const words = useWordStore((s) => s.words);
   const dueCount = selectDueWords(words).length;
@@ -29,40 +33,49 @@ export default function AppShell({ children, onQuickAdd, onLogout }: AppShellPro
     <div className="flex h-full min-h-screen flex-col bg-paper pt-[env(safe-area-inset-top)]">
       {/* 顶部导航 - 编辑杂志刊头 */}
       <header className="border-b border-ink/15 bg-paper/80 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-[1400px] items-center justify-between px-4 py-3 md:px-6 md:py-4 lg:px-10">
-          <div className="flex items-baseline gap-3 md:gap-4">
-            <h1 className="font-display text-2xl font-semibold tracking-tightest text-ink md:text-3xl lg:text-4xl">
-              WordGrid
-            </h1>
-            <span className="hidden font-mono text-2xs uppercase tracking-editorial text-ink-light sm:inline">
-              词汇网格 · Vol.I
-            </span>
+        <div className="mx-auto max-w-[1400px] px-4 py-3 md:px-6 md:py-4 lg:px-10">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-baseline gap-3 md:gap-4">
+              <h1 className="font-display text-2xl font-semibold tracking-tightest text-ink md:text-3xl lg:text-4xl">
+                WordGrid
+              </h1>
+              <span className="hidden font-mono text-2xs uppercase tracking-editorial text-ink-light sm:inline">
+                词汇网格 · Vol.I
+              </span>
+            </div>
+
+            <div className="flex items-center gap-3 md:gap-6">
+              <div className="hidden text-right md:block">
+                <div className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
+                  {weekdayCN(today)}
+                </div>
+                <div className="font-display text-lg italic text-ink">
+                  {formatMDShort(today)}
+                </div>
+              </div>
+              <button onClick={onQuickAdd} className="btn-gold" aria-label="添加单词">
+                <Plus className="h-3.5 w-3.5" strokeWidth={1.5} />
+                <span>Add</span>
+              </button>
+              {onLogout && (
+                <button
+                  onClick={onLogout}
+                  className="btn-ghost ml-1 md:ml-2"
+                  aria-label="登出"
+                  title="退出登录"
+                >
+                  <LogOut className="h-3.5 w-3.5" strokeWidth={1.5} />
+                </button>
+              )}
+            </div>
           </div>
 
-          <div className="flex items-center gap-3 md:gap-6">
-            <div className="hidden text-right md:block">
-              <div className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
-                {weekdayCN(today)}
-              </div>
-              <div className="font-display text-lg italic text-ink">
-                {formatMDShort(today)}
-              </div>
+          {/* 全局搜索栏 - 桌面端与手机端均显示，置于 Logo 行下方 */}
+          {onPickWord && (
+            <div className="mt-3 max-w-2xl">
+              <SearchBar onPickWord={onPickWord} />
             </div>
-            <button onClick={onQuickAdd} className="btn-gold" aria-label="添加单词">
-              <Plus className="h-3.5 w-3.5" strokeWidth={1.5} />
-              <span>Add</span>
-            </button>
-            {onLogout && (
-              <button
-                onClick={onLogout}
-                className="btn-ghost ml-1 md:ml-2"
-                aria-label="登出"
-                title="退出登录"
-              >
-                <LogOut className="h-3.5 w-3.5" strokeWidth={1.5} />
-              </button>
-            )}
-          </div>
+          )}
         </div>
 
         {/* 主导航标签栏 - 仅桌面端显示（md+） */}

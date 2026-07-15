@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { HashRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import { HashRouter as Router, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import AppShell from "@/components/AppShell";
 import AddWordDrawer from "@/components/AddWordDrawer";
 import FloatingActions from "@/components/FloatingActions";
@@ -7,6 +7,7 @@ import DueTodayModal from "@/components/DueTodayModal";
 import NoteModal from "@/components/NoteModal";
 import UpdateNotice from "@/components/UpdateNotice";
 import ImportantNoticeFloat from "@/components/ImportantNoticeFloat";
+import WordSearchModal from "@/components/WordSearchModal";
 import DailyGrid from "@/pages/DailyGrid";
 import Wordbook from "@/pages/Wordbook";
 import ArticleBuilder from "@/pages/ArticleBuilder";
@@ -49,6 +50,7 @@ function jumpToDate(date: string) {
 /** 仅在主页显示浮动按钮组的内层组件 */
 function AppContent({ onLogout }: { onLogout: () => void }) {
   const location = useLocation();
+  const navigate = useNavigate();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerDate, setDrawerDate] = useState<string | undefined>(undefined);
   const [editWord, setEditWord] = useState<Word | null>(null);
@@ -61,6 +63,9 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
   const [dueModalTomorrowWords, setDueModalTomorrowWords] = useState<Word[]>(
     [],
   );
+  // 全局搜索结果弹窗 —— 顶部搜索栏选中单词后弹出
+  const [searchModalOpen, setSearchModalOpen] = useState(false);
+  const [searchWord, setSearchWord] = useState<Word | null>(null);
 
   const words = useWordStore((s) => s.words);
   const hydrated = useWordStore((s) => s.hydrated);
@@ -146,6 +151,18 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
     setNoteModalOpen(true);
   }, []);
 
+  const openSearchModal = useCallback((word: Word) => {
+    setSearchWord(word);
+    setSearchModalOpen(true);
+  }, []);
+
+  const gotoWordbookFromSearch = useCallback(() => {
+    const targetId = searchWord?.id;
+    setSearchModalOpen(false);
+    // 通过 URL query 传递目标单词 id，Wordbook 页面接收后自动定位
+    navigate(targetId ? `/wordbook?focus=${targetId}` : "/wordbook");
+  }, [navigate, searchWord]);
+
   const closeDrawer = useCallback(() => {
     setDrawerOpen(false);
     setEditWord(null);
@@ -162,7 +179,7 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
 
   return (
     <>
-      <AppShell onQuickAdd={() => openDrawer()} onLogout={onLogout}>
+      <AppShell onQuickAdd={() => openDrawer()} onLogout={onLogout} onPickWord={openSearchModal}>
         <Routes>
           <Route
             path="/"
@@ -208,6 +225,14 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
         onClose={closeDrawer}
         defaultDate={drawerDate}
         editWord={editWord}
+      />
+
+      {/* 全局搜索结果弹窗 */}
+      <WordSearchModal
+        open={searchModalOpen}
+        word={searchWord}
+        onClose={() => setSearchModalOpen(false)}
+        onGotoWordbook={gotoWordbookFromSearch}
       />
     </>
   );

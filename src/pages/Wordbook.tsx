@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Eye,
   Shuffle,
@@ -31,7 +32,7 @@ import NoteModal from "@/components/NoteModal";
 import ExportModal from "@/components/ExportModal";
 
 type ViewMode = "list" | "self_check" | "random" | "dictation";
-type ListTag = "due" | "difficult" | "mastered" | "recent7";
+type ListTag = "due" | "difficult" | "mastered" | "recent7" | "all";
 
 export default function Wordbook() {
   const words = useWordStore((s) => s.words);
@@ -41,6 +42,10 @@ export default function Wordbook() {
   const [noteWord, setNoteWord] = useState<Word | null>(null);
   // 导出弹窗
   const [exportModalOpen, setExportModalOpen] = useState(false);
+
+  // 从 URL 读取 focus 参数（搜索跳转定位用），处理完后清除
+  const [searchParams, setSearchParams] = useSearchParams();
+  const focusWordId = searchParams.get("focus") || "";
 
   const difficultWords = selectDifficultWords(words);
   const dueWords = selectDueWords(words);
@@ -174,6 +179,12 @@ export default function Wordbook() {
               difficultWords={difficultWords}
               masteredWords={masteredWords}
               recentWords={recentWords}
+              allWords={words}
+              focusWordId={focusWordId}
+              onConsumeFocus={() => {
+                // 定位完成后清除 URL 中的 focus，避免刷新重复滚动
+                setSearchParams({}, { replace: true });
+              }}
               onRequestNote={openNoteModal}
             />
           )}
@@ -208,21 +219,51 @@ function ListView({
   difficultWords,
   masteredWords,
   recentWords,
+  allWords,
+  focusWordId,
+  onConsumeFocus,
   onRequestNote,
 }: {
   dueWords: Word[];
   difficultWords: Word[];
   masteredWords: Word[];
   recentWords: Word[];
+  allWords: Word[];
+  /** 搜索跳转传入的目标单词 id，定位完成后会调用 onConsumeFocus 清除 */
+  focusWordId?: string;
+  onConsumeFocus?: () => void;
   onRequestNote: (word: Word) => void;
 }) {
   const markMastered = useWordStore((s) => s.markMastered);
   const toggleDifficult = useWordStore((s) => s.toggleDifficult);
 
-  // 标签筛选：默认显示今日需复习，无则回退生词
+  // 标签筛选：默认显示今日需复习，无则回退生词；若带 focus 则强制「全部」标签
   const [activeTag, setActiveTag] = useState<ListTag>(
     dueWords.length > 0 ? "due" : "difficult",
   );
+
+  // 搜索跳转：自动切到「全部」标签（确保目标词必定在列表中）
+  useEffect(() => {
+    if (!focusWordId) return;
+    setActiveTag("all");
+  }, [focusWordId]);
+
+  // 标签切换后列表渲染完成，滚动到目标词并高亮
+  const focusedRef = useRef<HTMLLIElement | null>(null);
+  useEffect(() => {
+    if (!focusWordId) return;
+    // 等待 DOM 渲染（切到 all 标签后的列表）
+    const t = setTimeout(() => {
+      const el = document.getElementById(`word-${focusWordId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        focusedRef.current = el as HTMLLIElement;
+        onConsumeFocus?.();
+      }
+    }, 80);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusWordId, activeTag]);
 
   const tagWords =
     activeTag === "due"
@@ -231,9 +272,11 @@ function ListView({
         ? difficultWords
         : activeTag === "mastered"
           ? masteredWords
-          : recentWords;
+          : activeTag === "recent7"
+            ? recentWords
+            : allWords;
 
-  // 复习标签下隐藏释义（点击显示），其余标签直接显示
+  // 复习标签下隐藏释义（点击显示），其余标签（含全部单词、近七日）直接显示
   const hideMeaning = activeTag === "due";
 
   const tags: Array<{
@@ -269,6 +312,13 @@ function ListView({
       label: "Recent 7d",
       labelCN: "近七日",
       count: recentWords.length,
+      accent: "accent-gold",
+    },
+    {
+      key: "all",
+      label: "All",
+      labelCN: "全部",
+      count: allWords.length,
       accent: "accent-gold",
     },
   ];
@@ -333,6 +383,7 @@ function ListView({
                 key={w.id}
                 word={w}
                 hideMeaning={hideMeaning}
+                focusHighlight={!!focusWordId && w.id === focusWordId}
                 onMaster={() => markMastered(w.id)}
                 onForget={() => toggleDifficult(w.id)}
                 onRequestNote={onRequestNote}
@@ -353,6 +404,7 @@ function MinimalRow({
   word,
   highlighted = false,
   hideMeaning = false,
+  focusHighlight = false,
   onMaster,
   onForget,
   onRequestNote,
@@ -360,6 +412,8 @@ function MinimalRow({
   word: Word;
   highlighted?: boolean;
   hideMeaning?: boolean;
+  /** 搜索跳转定位高亮（金色 ring 闪烁 1.6s） */
+  focusHighlight?: boolean;
   onMaster: () => void;
   onForget: () => void;
   onRequestNote: (word: Word) => void;
@@ -367,11 +421,22 @@ function MinimalRow({
   const [revealed, setRevealed] = useState(false);
   const showMeaning = !hideMeaning || revealed;
 
+  // 搜索跳转高亮：1.6s 后自动消失
+  const [flash, setFlash] = useState(false);
+  useEffect(() => {
+    if (!focusHighlight) return;
+    setFlash(true);
+    const t = setTimeout(() => setFlash(false), 1600);
+    return () => clearTimeout(t);
+  }, [focusHighlight]);
+
   return (
     <li
+      id={`word-${word.id}`}
       className={cn(
         "group px-2 py-2.5 md:py-3 transition-colors hover:bg-paper-warm/40",
         highlighted && "bg-accent-red/5",
+        flash && "ring-2 ring-accent-gold ring-offset-2 ring-offset-paper bg-accent-gold/5",
       )}
     >
       {/* 等级 - 已掌握显示加深颜色的对勾 */}
