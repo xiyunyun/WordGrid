@@ -17,6 +17,7 @@ interface WordStore {
   hydrated: boolean;
 
   // CRUD
+  /** 添加单个单词，若单词已存在（大小写不敏感）则返回 null */
   addWord: (input: {
     word: string;
     phonetic?: string;
@@ -24,7 +25,8 @@ interface WordStore {
     meaning: string;
     note?: string;
     date?: string;
-  }) => Word;
+  }) => Word | null;
+  /** 批量添加单词，自动跳过重复项（大小写不敏感），返回新增数与重复单词列表 */
   addWordsBulk: (
     items: Array<{
       word: string;
@@ -34,7 +36,7 @@ interface WordStore {
       note?: string;
     }>,
     date?: string,
-  ) => number;
+  ) => { added: number; duplicates: string[] };
   updateWord: (id: string, patch: Partial<Word>) => void;
   removeWord: (id: string) => void;
 
@@ -56,10 +58,17 @@ export const useWordStore = create<WordStore>()(
       hydrated: false,
 
       addWord: (input) => {
+        const trimmedWord = input.word.trim();
+        // 重复检查（大小写不敏感）
+        const exists = get().words.some(
+          (w) => w.word.toLowerCase() === trimmedWord.toLowerCase(),
+        );
+        if (exists) return null;
+
         const { nextReview, reviewStage } = initReview();
         const word: Word = {
           id: uid(),
-          word: input.word.trim(),
+          word: trimmedWord,
           phonetic: input.phonetic?.trim() || "",
           pos: input.pos.trim(),
           meaning: input.meaning.trim(),
@@ -79,23 +88,44 @@ export const useWordStore = create<WordStore>()(
       addWordsBulk: (items, date) => {
         const targetDate = date || todayKey();
         const { nextReview, reviewStage } = initReview();
-        const newWords: Word[] = items.map((item) => ({
-          id: uid(),
-          word: item.word.trim(),
-          phonetic: item.phonetic?.trim() || "",
-          pos: item.pos.trim(),
-          meaning: item.meaning.trim(),
-          note: item.note?.trim() || "",
-          date: targetDate,
-          // 新词默认进入「初识」阶段
-          isDifficult: true,
-          isMastered: false,
-          nextReview,
-          reviewStage,
-          createdAt: Date.now(),
-        }));
-        set((s) => ({ words: [...newWords, ...s.words] }));
-        return newWords.length;
+
+        // 重复检查（大小写不敏感）：既比对已有单词，也比对当前批次内已通过的
+        const existingLower = new Set(
+          get().words.map((w) => w.word.toLowerCase()),
+        );
+        const seenInBatch = new Set<string>();
+        const duplicates: string[] = [];
+        const newWords: Word[] = [];
+
+        for (const item of items) {
+          const trimmed = item.word.trim();
+          const lower = trimmed.toLowerCase();
+          if (existingLower.has(lower) || seenInBatch.has(lower)) {
+            duplicates.push(trimmed);
+            continue;
+          }
+          seenInBatch.add(lower);
+          newWords.push({
+            id: uid(),
+            word: trimmed,
+            phonetic: item.phonetic?.trim() || "",
+            pos: item.pos.trim(),
+            meaning: item.meaning.trim(),
+            note: item.note?.trim() || "",
+            date: targetDate,
+            // 新词默认进入「初识」阶段
+            isDifficult: true,
+            isMastered: false,
+            nextReview,
+            reviewStage,
+            createdAt: Date.now(),
+          });
+        }
+
+        if (newWords.length > 0) {
+          set((s) => ({ words: [...newWords, ...s.words] }));
+        }
+        return { added: newWords.length, duplicates };
       },
 
       updateWord: (id, patch) =>

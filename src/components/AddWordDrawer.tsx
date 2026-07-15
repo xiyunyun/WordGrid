@@ -38,6 +38,10 @@ export default function AddWordDrawer({
   const [bulkText, setBulkText] = useState("");
   const [justAdded, setJustAdded] = useState(0);
   const [justSaved, setJustSaved] = useState(false);
+  /** 单个录入：单词已存在提示 */
+  const [dupWarning, setDupWarning] = useState(false);
+  /** 批量导入：被跳过的重复单词列表 */
+  const [bulkDuplicates, setBulkDuplicates] = useState<string[]>([]);
 
   /** 将存储中的 pos 字符串拆分为词性数组 */
   const splitPos = (raw: string): string[] => {
@@ -73,6 +77,8 @@ export default function AddWordDrawer({
       setNote(editWord.note);
       setDate(editWord.date);
       setJustSaved(false);
+      setDupWarning(false);
+      setBulkDuplicates([]);
     } else {
       // 新增模式：清空表单
       setTab("single");
@@ -84,6 +90,8 @@ export default function AddWordDrawer({
       setBulkText("");
       setDate(defaultDate || todayKey());
       setJustAdded(0);
+      setDupWarning(false);
+      setBulkDuplicates([]);
     }
   }, [open, defaultDate, editWord]);
 
@@ -91,7 +99,13 @@ export default function AddWordDrawer({
 
   const handleAddSingle = () => {
     if (!word.trim()) return;
-    addWord({ word, phonetic, pos: joinPos(posArr), meaning, note, date });
+    const result = addWord({ word, phonetic, pos: joinPos(posArr), meaning, note, date });
+    if (!result) {
+      // 单词已存在，提示但不清空表单，方便用户修改
+      setDupWarning(true);
+      return;
+    }
+    setDupWarning(false);
     setJustAdded((n) => n + 1);
     setWord("");
     setPhonetic("");
@@ -127,8 +141,9 @@ export default function AddWordDrawer({
   const handleAddBulk = () => {
     const items = parseBulkText(bulkText, date);
     if (items.length === 0) return;
-    const count = addWordsBulk(items, date);
-    setJustAdded((n) => n + count);
+    const { added, duplicates } = addWordsBulk(items, date);
+    setJustAdded((n) => n + added);
+    setBulkDuplicates(duplicates);
     setBulkText("");
   };
 
@@ -205,7 +220,10 @@ export default function AddWordDrawer({
                 <label className="eyebrow mb-2 block">Word · 单词</label>
                 <input
                   value={word}
-                  onChange={(e) => setWord(e.target.value)}
+                  onChange={(e) => {
+                    setWord(e.target.value);
+                    if (dupWarning) setDupWarning(false);
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
@@ -297,9 +315,16 @@ export default function AddWordDrawer({
               )}
 
               {/* 新增模式：添加成功提示 */}
-              {!isEditing && justAdded > 0 && (
+              {!isEditing && justAdded > 0 && !dupWarning && (
                 <div className="rounded-md border border-accent-green/40 bg-accent-green/10 p-3 font-mono text-2xs text-accent-green">
                   ✓ 已添加 {justAdded} 个单词
+                </div>
+              )}
+
+              {/* 新增模式：单词已存在提示 */}
+              {!isEditing && dupWarning && (
+                <div className="rounded-md border border-accent-red/40 bg-accent-red/5 p-3 font-mono text-2xs text-accent-red">
+                  ⚠ 该单词已存在，无需重复添加
                 </div>
               )}
 
@@ -364,6 +389,25 @@ export default function AddWordDrawer({
               {justAdded > 0 && (
                 <div className="rounded-md border border-accent-green/40 bg-accent-green/10 p-3 font-mono text-2xs text-accent-green">
                   ✓ 已批量添加 {justAdded} 个单词
+                </div>
+              )}
+
+              {/* 批量导入：重复单词跳过提示 */}
+              {bulkDuplicates.length > 0 && (
+                <div className="rounded-md border border-accent-gold/40 bg-accent-gold/5 p-3">
+                  <div className="font-mono text-2xs text-accent-gold">
+                    ⚠ 以下 {bulkDuplicates.length} 个单词已存在，已自动跳过：
+                  </div>
+                  <div className="mt-1.5 flex flex-wrap gap-1">
+                    {bulkDuplicates.map((w) => (
+                      <span
+                        key={w}
+                        className="rounded-sm border border-accent-gold/30 bg-paper-card px-1.5 py-0.5 font-serif text-xs text-ink-muted"
+                      >
+                        {w}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
 
