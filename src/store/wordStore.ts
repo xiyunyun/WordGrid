@@ -46,6 +46,8 @@ interface WordStore {
 
   // 复习
   reviewWord: (id: string, correct: boolean, mode: ReviewMode) => void;
+  /** 只记录复习日志，不推进艾宾浩斯节点（用于随机抽查、听写测试等非正式复习） */
+  logReview: (id: string, correct: boolean, mode: ReviewMode) => void;
 
   setHydrated: () => void;
 }
@@ -211,6 +213,19 @@ export const useWordStore = create<WordStore>()(
             lastReviewDate: today,
           });
         }
+      },
+
+      logReview: (id, correct, mode) => {
+        // 只记录复习日志，不推进艾宾浩斯节点
+        // 用于随机抽查、听写测试等非正式复习场景，确保统计页面能正确统计熟练度
+        const log: ReviewLog = {
+          id: uid(),
+          wordId: id,
+          reviewedAt: Date.now(),
+          correct,
+          mode,
+        };
+        set((s) => ({ logs: [log, ...s.logs] }));
       },
 
       setHydrated: () => {

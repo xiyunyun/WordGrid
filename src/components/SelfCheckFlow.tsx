@@ -42,46 +42,44 @@ export default function SelfCheckFlow({
 }: SelfCheckFlowProps) {
   const reviewWord = useWordStore((s) => s.reviewWord);
 
-  // 持久化完成状态：同一天内跨页面切换保持「复习完成」页面
+  // 持久化完成状态：同一天内跨页面切换保持复习进度（含 queue/idx/revealed/done/stats）
   const storageKey = persistKey ? `${persistKey}-${todayKey()}` : null;
 
-  // 挂载时锁定快照 —— 复习过程中 store 更新不会干扰当前流程
-  const [initialWords] = useState<Word[]>(() => words);
-  const [queue, setQueue] = useState<Word[]>(() => [...words]);
-  const [idx, setIdx] = useState(0);
-  const [revealed, setRevealed] = useState(false);
-  const [done, setDone] = useState<boolean>(() => {
-    if (!storageKey) return false;
+  // 读取持久化状态（一次性读取，避免多次 JSON.parse）
+  const persisted = (() => {
+    if (!storageKey) return null;
     try {
       const raw = localStorage.getItem(storageKey);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        return parsed.done === true;
-      }
+      if (raw) return JSON.parse(raw);
     } catch {}
-    return false;
-  });
-  const [stats, setStats] = useState<{ correct: number; wrong: number }>(() => {
-    if (!storageKey) return { correct: 0, wrong: 0 };
-    try {
-      const raw = localStorage.getItem(storageKey);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        // 只有 done === true 时才恢复 stats（用于显示完成页面）
-        if (parsed.done === true && parsed.stats) return parsed.stats;
-      }
-    } catch {}
-    return { correct: 0, wrong: 0 };
-  });
+    return null;
+  })();
 
-  // done/stats 变化时持久化
+  // 挂载时锁定快照 —— 优先从持久化恢复，否则从 words prop 快照
+  const [initialWords] = useState<Word[]>(
+    () => persisted?.initialWords ?? words,
+  );
+  const [queue, setQueue] = useState<Word[]>(
+    () => persisted?.queue ?? [...words],
+  );
+  const [idx, setIdx] = useState(() => persisted?.idx ?? 0);
+  const [revealed, setRevealed] = useState(() => persisted?.revealed ?? false);
+  const [done, setDone] = useState(() => persisted?.done ?? false);
+  const [stats, setStats] = useState<{ correct: number; wrong: number }>(
+    () => persisted?.stats ?? { correct: 0, wrong: 0 },
+  );
+
+  // 状态变化时持久化（queue/idx/revealed/done/stats 全部保存）
   useEffect(() => {
     if (storageKey) {
       try {
-        localStorage.setItem(storageKey, JSON.stringify({ done, stats }));
+        localStorage.setItem(
+          storageKey,
+          JSON.stringify({ done, stats, queue, idx, revealed, initialWords }),
+        );
       } catch {}
     }
-  }, [done, stats, storageKey]);
+  }, [done, stats, queue, idx, revealed, storageKey, initialWords]);
 
   const total = initialWords.length; // 唯一单词总数
   const current = queue[idx];
@@ -262,9 +260,21 @@ export default function SelfCheckFlow({
           <div className="my-5 border-t border-dashed border-ink/15 md:my-8" />
 
           {revealed ? (
-            <p className="font-body text-xl text-ink-soft animate-ink-bloom md:text-2xl">
-              {current.meaning}
-            </p>
+            <div className="animate-ink-bloom">
+              <p className="font-body text-xl text-ink-soft md:text-2xl">
+                {current.meaning}
+              </p>
+              {current.note && (
+                <div className="mt-4 rounded-md border border-accent-gold/30 bg-accent-gold/5 px-4 py-3 text-left">
+                  <div className="mb-1 font-mono text-2xs uppercase tracking-editorial text-accent-gold">
+                    Note · 笔记
+                  </div>
+                  <p className="font-body text-sm leading-relaxed text-ink-muted whitespace-pre-wrap">
+                    {current.note}
+                  </p>
+                </div>
+              )}
+            </div>
           ) : (
             <button
               onClick={() => setRevealed(true)}

@@ -613,6 +613,7 @@ function RandomView({ words }: { words: Word[] }) {
   const [revealed, setRevealed] = useState(false);
   const [sessionCount, setSessionCount] = useState(0);
   const [stats, setStats] = useState<RandomStats>(loadRandomStats);
+  const logReview = useWordStore((s) => s.logReview);
 
   // 词库变化时重新洗牌
   useEffect(() => {
@@ -625,7 +626,9 @@ function RandomView({ words }: { words: Word[] }) {
 
   if (!current) return null;
 
-  const handle = () => {
+  const handle = (correct: boolean) => {
+    // 记录复习日志（计入统计页面熟练度排行，不推进艾宾浩斯节点）
+    logReview(current.id, correct, "random");
     // 计数：本轮 + 今日 + 累计
     setSessionCount((n) => n + 1);
     const newStats: RandomStats = {
@@ -701,9 +704,21 @@ function RandomView({ words }: { words: Word[] }) {
           </div>
           <div className="my-8 border-t border-dashed border-ink/15" />
           {revealed ? (
-            <p className="font-body text-xl md:text-2xl text-ink-soft animate-ink-bloom">
-              {current.meaning}
-            </p>
+            <div className="animate-ink-bloom">
+              <p className="font-body text-xl md:text-2xl text-ink-soft">
+                {current.meaning}
+              </p>
+              {current.note && (
+                <div className="mt-4 rounded-md border border-accent-gold/30 bg-accent-gold/5 px-4 py-3 text-left">
+                  <div className="mb-1 font-mono text-2xs uppercase tracking-editorial text-accent-gold">
+                    Note · 笔记
+                  </div>
+                  <p className="font-body text-sm leading-relaxed text-ink-muted whitespace-pre-wrap">
+                    {current.note}
+                  </p>
+                </div>
+              )}
+            </div>
           ) : (
             <button
               onClick={() => setRevealed(true)}
@@ -718,14 +733,14 @@ function RandomView({ words }: { words: Word[] }) {
         </div>
         <div className="mt-6 flex items-center justify-center gap-4">
           <button
-            onClick={handle}
+            onClick={() => handle(false)}
             className="flex items-center gap-2 rounded-md border border-accent-red/40 bg-accent-red/5 px-6 py-2.5 font-mono text-2xs uppercase tracking-editorial text-accent-red transition-colors hover:bg-accent-red hover:text-paper"
           >
             <X className="h-4 w-4" strokeWidth={2} />
             不认识
           </button>
           <button
-            onClick={handle}
+            onClick={() => handle(true)}
             className="flex items-center gap-2 rounded-md border border-accent-green/40 bg-accent-green/5 px-6 py-2.5 font-mono text-2xs uppercase tracking-editorial text-accent-green transition-colors hover:bg-accent-green hover:text-paper"
           >
             <Check className="h-4 w-4" strokeWidth={2} />
@@ -778,6 +793,7 @@ function DictationView({ words }: { words: Word[] }) {
   const [stats, setStats] = useState<DictationStats>(loadDictationStats);
   const [speaking, setSpeaking] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const logReview = useWordStore((s) => s.logReview);
 
   // 词库变化时重新洗牌
   useEffect(() => {
@@ -807,6 +823,30 @@ function DictationView({ words }: { words: Word[] }) {
     }
   };
 
+  // 答错后重来一次：只重置输入状态，不推进到下一题
+  const retry = () => {
+    setInput("");
+    setResult("idle");
+  };
+
+  // 答题后回车连贯操作：答对→下一题，答错/显示答案→再来一次
+  useEffect(() => {
+    if (result === "idle") return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (result === "correct") {
+          advance();
+        } else {
+          retry();
+        }
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [result, idx, queue.length, words]);
+
   const bumpStats = () => {
     setSessionCount((n) => n + 1);
     const newStats: DictationStats = {
@@ -822,12 +862,16 @@ function DictationView({ words }: { words: Word[] }) {
     if (!input.trim() || result !== "idle") return;
     const correct = input.trim().toLowerCase() === current.word.toLowerCase();
     setResult(correct ? "correct" : "wrong");
+    // 记录复习日志（计入统计页面熟练度排行，不推进艾宾浩斯节点）
+    logReview(current.id, correct, "dictation");
     bumpStats();
   };
 
   const showAnswer = () => {
     if (result !== "idle") return;
     setResult("wrong");
+    // 显示答案视为答错
+    logReview(current.id, false, "dictation");
     bumpStats();
   };
 
@@ -962,6 +1006,16 @@ function DictationView({ words }: { words: Word[] }) {
               <div className="mt-3 flex justify-center">
                 <SpeakButton text={current.word} size="md" />
               </div>
+              {current.note && (
+                <div className="mt-4 rounded-md border border-accent-gold/30 bg-accent-gold/5 px-4 py-3 text-left">
+                  <div className="mb-1 font-mono text-2xs uppercase tracking-editorial text-accent-gold">
+                    Note · 笔记
+                  </div>
+                  <p className="font-body text-sm leading-relaxed text-ink-muted whitespace-pre-wrap">
+                    {current.note}
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -983,9 +1037,15 @@ function DictationView({ words }: { words: Word[] }) {
                 显示答案
               </button>
             </>
-          ) : (
+          ) : result === "correct" ? (
             <button onClick={advance} className="btn-primary">
+              <Check className="h-4 w-4" strokeWidth={2} />
               下一题
+            </button>
+          ) : (
+            <button onClick={retry} className="btn-primary">
+              <RotateCcw className="h-4 w-4" strokeWidth={1.5} />
+              再来一次
             </button>
           )}
         </div>
