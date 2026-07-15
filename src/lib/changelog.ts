@@ -23,6 +23,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.5.1",
+    date: "2026-07-15",
+    items: [
+      "修复积木造文词性筛选 bug：筛选项改为固定的 15 个标准词性列表，不再从单词数据动态提取，多词性单词（如 num./adj./n.）可被任意子词性单独筛出",
+      "提取词性常量为共享模块（src/lib/pos.ts），添加单词抽屉与筛选系统共用，保证词性选项一致",
+    ],
+  },
+  {
     version: "1.5.0",
     date: "2026-07-15",
     items: [

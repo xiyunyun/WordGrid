@@ -4,6 +4,7 @@ import { useWordStore } from "@/store/wordStore";
 import { parseBulkText, todayKey } from "@/lib/review";
 import type { Word } from "@/types";
 import { cn } from "@/lib/utils";
+import { COMMON_POS } from "@/lib/pos";
 
 interface AddWordDrawerProps {
   open: boolean;
@@ -14,25 +15,6 @@ interface AddWordDrawerProps {
 }
 
 type Tab = "single" | "bulk";
-
-// 英语全部词性 - 含 8 大词性及常见细分
-const COMMON_POS = [
-  "n.",       // noun 名词
-  "v.",       // verb 动词
-  "adj.",     // adjective 形容词
-  "adv.",     // adverb 副词
-  "pron.",    // pronoun 代词
-  "prep.",    // preposition 介词
-  "conj.",    // conjunction 连词
-  "interj.",  // interjection 感叹词
-  "art.",     // article 冠词
-  "num.",     // numeral 数词
-  "aux.",     // auxiliary verb 助动词
-  "modal v.", // modal verb 情态动词
-  "vt.",      // transitive verb 及物动词
-  "vi.",      // intransitive verb 不及物动词
-  "abbr.",    // abbreviation 缩写
-];
 
 export default function AddWordDrawer({
   open,

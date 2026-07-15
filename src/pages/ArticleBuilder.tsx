@@ -12,6 +12,7 @@ import {
 } from "@/lib/deepseek";
 import type { Word } from "@/types";
 import { cn } from "@/lib/utils";
+import { COMMON_POS } from "@/lib/pos";
 import QuizPanel, { QuizLoading } from "@/components/QuizPanel";
 import ArchiveListModal from "@/components/ArchiveListModal";
 import DictionaryModal from "@/components/DictionaryModal";
@@ -416,19 +417,9 @@ function SelectPhase({
   /** 错误率筛选开关，启用时只显示做错过的词并按错误次数降序 */
   const [wrongOnly, setWrongOnly] = useState(false);
 
-  // 从全部单词中提取出现过的词性列表（pos 字段是空格分隔，如 "n. v."）
-  const allPos = useMemo(() => {
-    const set = new Set<string>();
-    for (const w of words) {
-      if (w.pos) {
-        for (const p of w.pos.split(/\s+/)) {
-          const t = p.trim();
-          if (t) set.add(t);
-        }
-      }
-    }
-    return Array.from(set).sort();
-  }, [words]);
+  // 词性筛选项使用固定的 15 个标准词性列表，保证向下兼容：
+  // 即使单词的 pos 是 "num. adj. n." 这样的合集，拆分后也能被 num./adj./n. 单独筛出
+  const allPos = COMMON_POS;
 
   const togglePos = (p: string) => {
     setFilterPos((prev) => {
