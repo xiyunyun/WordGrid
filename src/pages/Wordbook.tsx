@@ -34,9 +34,18 @@ import ExportModal from "@/components/ExportModal";
 type ViewMode = "list" | "self_check" | "random" | "dictation";
 type ListTag = "due" | "difficult" | "mastered" | "recent7" | "all";
 
+// 模块级缓存：路由切换时模块不重新加载（保持状态），刷新页面时模块重新加载（重置到默认）
+let cachedMode: ViewMode | null = null;
+let cachedTag: ListTag | null = null;
+
 export default function Wordbook() {
   const words = useWordStore((s) => s.words);
-  const [mode, setMode] = useState<ViewMode>("list");
+  // 从模块级缓存恢复，无缓存则默认 list
+  const [mode, setMode] = useState<ViewMode>(() => cachedMode ?? "list");
+  // mode 变化时同步到模块级缓存
+  useEffect(() => {
+    cachedMode = mode;
+  }, [mode]);
   // 笔记查看弹窗
   const [noteModalOpen, setNoteModalOpen] = useState(false);
   const [noteWord, setNoteWord] = useState<Word | null>(null);
@@ -237,10 +246,14 @@ function ListView({
   const markMastered = useWordStore((s) => s.markMastered);
   const toggleDifficult = useWordStore((s) => s.toggleDifficult);
 
-  // 标签筛选：默认显示今日需复习，无则回退生词；若带 focus 则强制「全部」标签
+  // 标签筛选：从模块级缓存恢复，无缓存则按默认逻辑（有待复习→due，否则→difficult）
   const [activeTag, setActiveTag] = useState<ListTag>(
-    dueWords.length > 0 ? "due" : "difficult",
+    () => cachedTag ?? (dueWords.length > 0 ? "due" : "difficult"),
   );
+  // activeTag 变化时同步到模块级缓存
+  useEffect(() => {
+    cachedTag = activeTag;
+  }, [activeTag]);
 
   // 搜索跳转：自动切到「全部」标签（确保目标词必定在列表中）
   useEffect(() => {
