@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Check, X, Eye, RotateCcw } from "lucide-react";
-import type { Word, ReviewMode } from "@/types";
+import type { Word, ReviewMode, ReviewLog } from "@/types";
 import { useWordStore } from "@/store/wordStore";
 import { formatMD, todayKey } from "@/lib/review";
 import SpeakButton from "@/components/SpeakButton";
@@ -18,19 +18,49 @@ interface SelfCheckFlowProps {
   showRestart?: boolean;
   /** 演练模式：不更新 store 的艾宾浩斯节点（用于提前复习明日） */
   dryRun?: boolean;
-  /** 持久化 key，传入则完成状态会持久化到 localStorage（同一天内跨页面切换保持） */
+  /**
+   * 已废弃：进度现在从 review_logs 派生，天然跨设备同步。
+   * 保留参数仅为向后兼容，不再有实际作用。
+   */
   persistKey?: string;
+}
+
+/**
+ * 从今日 review_logs 派生自我检测的进度
+ *
+ * 设计原理：
+ * - 每次"认识/不认识"都会写一条 review_log（mode=self_check）
+ * - 跨设备同步后，B 设备能从 logs 看到A 设备已复习的词
+ * - "已消费" = 该 wordId 在今日 logs 中至少有一条记录（不论对错、不论重问）
+ * - "完成" = initialWords 中的每个 wordId 都已消费
+ * - 重问的词会产生新 log，但不影响"是否已消费"的判断
+ */
+function getTodaySelfCheckStats(logs: ReviewLog[], mode: ReviewMode) {
+  const todayStart = new Date(todayKey() + "T00:00:00").getTime();
+  const consumedIds = new Set<string>();
+  let correct = 0;
+  let wrong = 0;
+  for (const log of logs) {
+    if (log.mode !== mode) continue;
+    if (log.reviewedAt < todayStart) continue;
+    consumedIds.add(log.wordId);
+    if (log.correct) correct++;
+    else wrong++;
+  }
+  return { consumedIds, correct, wrong };
 }
 
 /**
  * 自我检测流程 - 可复用的复习卡片流转组件
  *
  * 核心行为：
- * - 挂载时快照 words 到内部 queue，之后不受 props 变化影响
+ * - 挂载时快照 words 到 initialWords（不变）
+ * - 从今日 review_logs 派生已消费的 wordId 集合
+ * - 队列 = initialWords 中尚未消费的词（保持原顺序）
  * - "不认识"：记录复习日志 + 重置艾宾浩斯节点，并将该词重新追加到队尾再次提问
- * - "认识"：记录复习日志 + 推进艾宾浩斯节点，消费该词
+ * - "认识"：记录复习日志 + 推进艾宾浩斯节点
  * - 全部消费后显示完成统计页
- * - dryRun=true 时仅流转卡片，不调用 reviewWord 更新 store
+ * - dryRun=true 时仅流转卡片，不调用 reviewWord 更新 store（进度也不同步）
  */
 export default function SelfCheckFlow({
   words,
@@ -38,51 +68,62 @@ export default function SelfCheckFlow({
   onComplete,
   showRestart = true,
   dryRun = false,
-  persistKey,
 }: SelfCheckFlowProps) {
   const reviewWord = useWordStore((s) => s.reviewWord);
+  const logs = useWordStore((s) => s.logs);
 
-  // 持久化完成状态：同一天内跨页面切换保持复习进度（含 queue/idx/revealed/done/stats）
-  const storageKey = persistKey ? `${persistKey}-${todayKey()}` : null;
+  // 挂载时锁定快照（之后不受 props 变化影响）
+  const [initialWords] = useState<Word[]>(() => words);
 
-  // 读取持久化状态（一次性读取，避免多次 JSON.parse）
-  const persisted = (() => {
-    if (!storageKey) return null;
-    try {
-      const raw = localStorage.getItem(storageKey);
-      if (raw) return JSON.parse(raw);
-    } catch {}
-    return null;
-  })();
+  // 本地状态：只记录"本轮重问"的临时队列（不持久化，因为进度从 logs 派生）
+  // 当用户点"不认识"时，词会被追加到 reaskQueue 末尾再次提问
+  const [reaskQueue, setReaskQueue] = useState<Word[]>([]);
+  const [revealed, setRevealed] = useState(false);
+  // 是否点击了"再来一轮"：重启后不再从 logs 派生 done，而是用本轮临时计数
+  const [restarted, setRestarted] = useState(false);
+  const [restartedStats, setRestartedStats] = useState({ correct: 0, wrong: 0 });
+  const [restartedConsumed, setRestartedConsumed] = useState(0);
 
-  // 挂载时锁定快照 —— 优先从持久化恢复，否则从 words prop 快照
-  const [initialWords] = useState<Word[]>(
-    () => persisted?.initialWords ?? words,
-  );
-  const [queue, setQueue] = useState<Word[]>(
-    () => persisted?.queue ?? [...words],
-  );
-  const [idx, setIdx] = useState(() => persisted?.idx ?? 0);
-  const [revealed, setRevealed] = useState(() => persisted?.revealed ?? false);
-  const [done, setDone] = useState(() => persisted?.done ?? false);
-  const [stats, setStats] = useState<{ correct: number; wrong: number }>(
-    () => persisted?.stats ?? { correct: 0, wrong: 0 },
+  // 从今日 logs 派生已消费集合与统计（跨设备同步的进度来源）
+  const { consumedIds, correct: logCorrect, wrong: logWrong } = useMemo(
+    () => getTodaySelfCheckStats(logs, mode),
+    [logs, mode],
   );
 
-  // 状态变化时持久化（queue/idx/revealed/done/stats 全部保存）
-  useEffect(() => {
-    if (storageKey) {
-      try {
-        localStorage.setItem(
-          storageKey,
-          JSON.stringify({ done, stats, queue, idx, revealed, initialWords }),
-        );
-      } catch {}
+  // 主队列 = initialWords 中尚未消费的词 + 本轮重问队列
+  // dryRun 模式下不从 logs 派生（因为 dryRun 不写 logs）
+  const queue = useMemo(() => {
+    if (dryRun) return [...initialWords, ...reaskQueue];
+    if (restarted) {
+      // "再来一轮"模式：重新从头开始，用本地计数
+      const remaining = initialWords.slice(restartedConsumed);
+      return [...remaining, ...reaskQueue];
     }
-  }, [done, stats, queue, idx, revealed, storageKey, initialWords]);
+    const remaining = initialWords.filter((w) => !consumedIds.has(w.id));
+    return [...remaining, ...reaskQueue];
+  }, [initialWords, consumedIds, reaskQueue, dryRun, restarted, restartedConsumed]);
 
-  const total = initialWords.length; // 唯一单词总数
-  const current = queue[idx];
+  const total = initialWords.length;
+  const current = queue[0];
+
+  // done 判断
+  const done = restarted
+    ? restartedConsumed >= total
+    : !dryRun && consumedIds.size >= total;
+
+  // 统计展示
+  const stats = restarted
+    ? restartedStats
+    : dryRun
+      ? { correct: 0, wrong: 0 }
+      : { correct: logCorrect, wrong: logWrong };
+
+  // 完成回调
+  useEffect(() => {
+    if (done) {
+      onComplete?.({ ...stats, total });
+    }
+  }, [done, stats, total, onComplete]);
 
   const handle = (correct: boolean) => {
     if (!current) return;
@@ -92,44 +133,57 @@ export default function SelfCheckFlow({
     }
     setRevealed(false);
 
-    const newStats = {
-      correct: stats.correct + (correct ? 1 : 0),
-      wrong: stats.wrong + (correct ? 0 : 1),
-    };
-    setStats(newStats);
-
-    let newQueue = queue;
-    if (!correct) {
-      // 不认识 → 重新追加到队尾，稍后会再次提问
-      newQueue = [...queue, current];
-      setQueue(newQueue);
+    if (restarted) {
+      // "再来一轮"模式：本地计数
+      setRestartedStats((s) => ({
+        correct: s.correct + (correct ? 1 : 0),
+        wrong: s.wrong + (correct ? 0 : 1),
+      }));
+      setRestartedConsumed((n) => n + 1);
+      if (!correct) {
+        setReaskQueue((q) => [...q, current]);
+      }
+      return;
     }
 
-    const nextIdx = idx + 1;
-    if (nextIdx >= newQueue.length) {
-      setDone(true);
-      onComplete?.({ ...newStats, total });
+    // 正常模式：
+    // - 首次复习的词（来自 remaining）：日志写入后 consumedIds 自动更新，remaining 缩减
+    // - 重问的词（来自 reaskQueue）：需要手动管理 reaskQueue
+    // 判断 current 是否来自 reaskQueue：检查它是否已在 consumedIds 中（重问的词之前一定被消费过）
+    const isFromReask = !dryRun && consumedIds.has(current.id);
+
+    if (isFromReask) {
+      // 来自重问队列：无论对错都从 reaskQueue 移除当前位置
+      // 不认识的话再加到末尾
+      setReaskQueue((q) => {
+        const idx = q.findIndex((w) => w.id === current.id);
+        if (idx === -1) return q;
+        const newQ = [...q.slice(0, idx), ...q.slice(idx + 1)];
+        if (!correct) newQ.push(current);
+        return newQ;
+      });
     } else {
-      setIdx(nextIdx);
+      // 首次复习：日志写入后 consumedIds 会自动更新
+      // 不认识的话需要加到 reaskQueue 末尾
+      if (!correct) {
+        setReaskQueue((q) => [...q, current]);
+      }
     }
   };
 
   const restart = () => {
-    setQueue([...initialWords]);
-    setIdx(0);
+    setRestarted(true);
+    setRestartedStats({ correct: 0, wrong: 0 });
+    setRestartedConsumed(0);
+    setReaskQueue([]);
     setRevealed(false);
-    setStats({ correct: 0, wrong: 0 });
-    setDone(false);
   };
 
-  // 空列表 —— 弹窗仍保持打开，仅提示无待复习词
+  // 空列表
   if (total === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
-        <Check
-          className="mb-4 h-10 w-10 text-accent-green"
-          strokeWidth={1.5}
-        />
+        <Check className="mb-4 h-10 w-10 text-accent-green" strokeWidth={1.5} />
         <div className="eyebrow mb-2 text-accent-green">All Caught Up</div>
         <h3 className="font-display text-2xl font-medium text-ink">
           今日无待复习词
@@ -148,10 +202,7 @@ export default function SelfCheckFlow({
       attempts > 0 ? Math.round((stats.correct / attempts) * 100) : 100;
     return (
       <div className="flex flex-col items-center justify-center py-10 text-center animate-fade-in">
-        <Check
-          className="mb-4 h-12 w-12 text-accent-green"
-          strokeWidth={1.5}
-        />
+        <Check className="mb-4 h-12 w-12 text-accent-green" strokeWidth={1.5} />
         <div className="eyebrow mb-2 text-accent-green">Review Complete</div>
         <h3 className="mb-6 font-display text-3xl font-medium text-ink">
           复习完成
@@ -216,22 +267,26 @@ export default function SelfCheckFlow({
     );
   }
 
+  // 计算进度条位置（基于已消费数 + 本轮重问位置）
+  const consumedCount = restarted ? restartedConsumed : (dryRun ? 0 : consumedIds.size);
+  const progressIdx = consumedCount + (queue.length - reaskQueue.length > 0 ? 0 : 0);
+
   return (
     <div className="animate-fade-in">
       {/* 进度条 */}
       <div className="mb-4 flex items-center gap-2 md:mb-6 md:gap-4">
         <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
-          {idx + 1} / {queue.length}
-          {queue.length > total && (
+          {consumedCount + 1} / {total}
+          {reaskQueue.length > 0 && (
             <span className="ml-2 text-accent-red">
-              (含重问 {queue.length - total})
+              (含重问 {reaskQueue.length})
             </span>
           )}
         </span>
         <div className="h-px flex-1 bg-ink/15">
           <div
             className="h-px bg-ink transition-all duration-300"
-            style={{ width: `${(idx / queue.length) * 100}%` }}
+            style={{ width: `${(consumedCount / total) * 100}%` }}
           />
         </div>
       </div>
