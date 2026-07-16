@@ -48,6 +48,9 @@ jobs:
           VITE_GITEE_REPO: ${{ secrets.VITE_GITEE_REPO }}
           VITE_GITEE_TOKEN: ${{ secrets.VITE_GITEE_TOKEN }}
           VITE_GITEE_BRANCH: ${{ secrets.VITE_GITEE_BRANCH }}
+          # Supabase 云存档（v1.7.0 起使用）
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
