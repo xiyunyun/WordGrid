@@ -113,9 +113,11 @@ export const useWordStore = create<WordStore>()(
           createdAt: Date.now(),
         };
         set((s) => ({ words: [word, ...s.words] }));
-        // 云同步：后台推送（不阻塞 UI，失败静默）
+        // 云同步：后台推送（不阻塞 UI，失败记录到控制台便于排查）
         if (get().syncEnabled) {
-          pushWord(word).catch(() => {});
+          pushWord(word).catch((e) => {
+            console.error("[云同步] pushWord 失败:", e);
+          });
         }
         return word;
       },
@@ -161,7 +163,7 @@ export const useWordStore = create<WordStore>()(
           set((s) => ({ words: [...newWords, ...s.words] }));
           // 云同步：批量推送（一次请求）
           if (get().syncEnabled) {
-            pushWordsBulk(newWords).catch(() => {});
+            pushWordsBulk(newWords).catch((e) => console.error("[云同步] 推送异常:", e));
           }
         }
         return { added: newWords.length, duplicates };
@@ -174,7 +176,7 @@ export const useWordStore = create<WordStore>()(
         // 云同步：推送更新后的完整单词（需从 state 取最新值）
         if (get().syncEnabled) {
           const updated = get().words.find((w) => w.id === id);
-          if (updated) pushWord(updated).catch(() => {});
+          if (updated) pushWord(updated).catch((e) => console.error("[云同步] 推送异常:", e));
         }
       },
 
@@ -185,8 +187,8 @@ export const useWordStore = create<WordStore>()(
         }));
         // 云同步：删除云端单词和关联日志
         if (get().syncEnabled) {
-          cloudDeleteWord(id).catch(() => {});
-          deleteReviewLogsByWordId(id).catch(() => {});
+          cloudDeleteWord(id).catch((e) => console.error("[云同步] 推送异常:", e));
+          deleteReviewLogsByWordId(id).catch((e) => console.error("[云同步] 推送异常:", e));
         }
       },
 
@@ -209,7 +211,7 @@ export const useWordStore = create<WordStore>()(
         // 云同步：推送状态变更
         if (get().syncEnabled) {
           const updated = get().words.find((w) => w.id === id);
-          if (updated) pushWord(updated).catch(() => {});
+          if (updated) pushWord(updated).catch((e) => console.error("[云同步] 推送异常:", e));
         }
       },
 
@@ -230,7 +232,7 @@ export const useWordStore = create<WordStore>()(
         // 云同步：推送状态变更
         if (get().syncEnabled) {
           const updated = get().words.find((w) => w.id === id);
-          if (updated) pushWord(updated).catch(() => {});
+          if (updated) pushWord(updated).catch((e) => console.error("[云同步] 推送异常:", e));
         }
       },
 
@@ -250,7 +252,7 @@ export const useWordStore = create<WordStore>()(
         set((s) => ({ logs: [log, ...s.logs] }));
         // 云同步：推送复习日志
         if (get().syncEnabled) {
-          pushReviewLog(log).catch(() => {});
+          pushReviewLog(log).catch((e) => console.error("[云同步] 推送异常:", e));
         }
 
         // 同一天最多只推进一次复习阶段
@@ -293,7 +295,7 @@ export const useWordStore = create<WordStore>()(
         set((s) => ({ logs: [log, ...s.logs] }));
         // 云同步：推送复习日志
         if (get().syncEnabled) {
-          pushReviewLog(log).catch(() => {});
+          pushReviewLog(log).catch((e) => console.error("[云同步] 推送异常:", e));
         }
       },
 

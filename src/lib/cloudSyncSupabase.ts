@@ -59,6 +59,7 @@ export async function pullAll(): Promise<CloudSyncResult & { data?: PulledData }
   if (!username) return { success: false, error: "未登录" };
 
   try {
+    console.log("[云同步] pullAll: 开始查询，用户:", username);
     // 并行拉取四类数据
     const [wordsRes, logsRes, articlesRes, notesRes] = await Promise.all([
       (supabase.from("words") as any).select("*").eq("username", username),
@@ -67,12 +68,25 @@ export async function pullAll(): Promise<CloudSyncResult & { data?: PulledData }
       (supabase.from("date_notes") as any).select("*").eq("username", username),
     ]);
 
+    // 逐个检查错误，打印详细信息
+    if (wordsRes.error) console.error("[云同步] pullAll words 错误:", wordsRes.error.message, "code:", wordsRes.error.code);
+    if (logsRes.error) console.error("[云同步] pullAll logs 错误:", logsRes.error.message, "code:", logsRes.error.code);
+    if (articlesRes.error) console.error("[云同步] pullAll articles 错误:", articlesRes.error.message, "code:", articlesRes.error.code);
+    if (notesRes.error) console.error("[云同步] pullAll notes 错误:", notesRes.error.message, "code:", notesRes.error.code);
+
     const errors = [wordsRes.error, logsRes.error, articlesRes.error, notesRes.error].filter(
       Boolean,
     );
     if (errors.length > 0) {
       return { success: false, error: errors[0]?.message || "拉取失败" };
     }
+
+    console.log("[云同步] pullAll 原始数据量:", {
+      words: wordsRes.data?.length,
+      logs: logsRes.data?.length,
+      articles: articlesRes.data?.length,
+      notes: notesRes.data?.length,
+    });
 
     const words = (wordsRes.data as WordRow[]).map(fromWordRow);
     const logs = (logsRes.data as ReviewLogRow[]).map(fromReviewLogRow);
@@ -99,13 +113,23 @@ export async function pullAll(): Promise<CloudSyncResult & { data?: PulledData }
 /** 推送单个单词（upsert） */
 export async function pushWord(word: Word): Promise<CloudSyncResult> {
   const supabase = getSupabase();
-  if (!supabase) return { success: false, error: "Supabase 未配置" };
+  if (!supabase) {
+    console.error("[云同步] pushWord: Supabase 未配置");
+    return { success: false, error: "Supabase 未配置" };
+  }
   const username = getCurrentUsername();
-  if (!username) return { success: false, error: "未登录" };
+  if (!username) {
+    console.error("[云同步] pushWord: 未登录");
+    return { success: false, error: "未登录" };
+  }
 
   const row = toWordRow(word, username);
   const { error } = await (supabase.from("words") as any).upsert(row, { onConflict: "id" });
-  if (error) return { success: false, error: error.message };
+  if (error) {
+    console.error("[云同步] pushWord upsert 失败:", error.message, "code:", error.code, "word:", word.word);
+    return { success: false, error: error.message };
+  }
+  console.log("[云同步] pushWord 成功:", word.word);
   return { success: true };
 }
 
@@ -119,7 +143,11 @@ export async function pushWordsBulk(words: Word[]): Promise<CloudSyncResult> {
 
   const rows = words.map((w) => toWordRow(w, username));
   const { error } = await (supabase.from("words") as any).upsert(rows, { onConflict: "id" });
-  if (error) return { success: false, error: error.message };
+  if (error) {
+    console.error("[云同步] pushWordsBulk 失败:", error.message, "code:", error.code, "count:", rows.length);
+    return { success: false, error: error.message };
+  }
+  console.log("[云同步] pushWordsBulk 成功:", rows.length, "条");
   return { success: true, count: rows.length };
 }
 
@@ -144,7 +172,10 @@ export async function pushReviewLog(log: ReviewLog): Promise<CloudSyncResult> {
 
   const row = toReviewLogRow(log, username);
   const { error } = await (supabase.from("review_logs") as any).upsert(row, { onConflict: "id" });
-  if (error) return { success: false, error: error.message };
+  if (error) {
+    console.error("[云同步] pushReviewLog 失败:", error.message, "code:", error.code);
+    return { success: false, error: error.message };
+  }
   return { success: true };
 }
 

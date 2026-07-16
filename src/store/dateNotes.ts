@@ -47,9 +47,9 @@ export const useDateNotesStore = create<DateNotesStore>()(
         // 云同步：推送（有内容则 upsert，空则删除）
         if (get().syncEnabled) {
           if (trimmed) {
-            pushDateNote(date, trimmed).catch(() => {});
+            pushDateNote(date, trimmed).catch((e) => console.error("[云同步] 日期备注推送异常:", e));
           } else {
-            deleteDateNote(date).catch(() => {});
+            deleteDateNote(date).catch((e) => console.error("[云同步] 日期备注推送异常:", e));
           }
         }
       },
@@ -63,7 +63,7 @@ export const useDateNotesStore = create<DateNotesStore>()(
           return { notes: next };
         });
         if (get().syncEnabled) {
-          deleteDateNote(date).catch(() => {});
+          deleteDateNote(date).catch((e) => console.error("[云同步] 日期备注推送异常:", e));
         }
       },
 

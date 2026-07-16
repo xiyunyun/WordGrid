@@ -124,7 +124,7 @@ export const useArticleStore = create<ArticleStore>()(
         };
         set((s) => ({ archives: [archive, ...s.archives] }));
         if (get().syncEnabled) {
-          pushArticle(archive).catch(() => {});
+          pushArticle(archive).catch((e) => console.error("[云同步] 文章推送异常:", e));
         }
         return id;
       },
@@ -137,7 +137,7 @@ export const useArticleStore = create<ArticleStore>()(
         }));
         if (get().syncEnabled) {
           const updated = get().archives.find((a) => a.id === archiveId);
-          if (updated) pushArticle(updated).catch(() => {});
+          if (updated) pushArticle(updated).catch((e) => console.error("[云同步] 文章推送异常:", e));
         }
       },
 
@@ -149,7 +149,7 @@ export const useArticleStore = create<ArticleStore>()(
         }));
         if (get().syncEnabled) {
           const updated = get().archives.find((a) => a.id === archiveId);
-          if (updated) pushArticle(updated).catch(() => {});
+          if (updated) pushArticle(updated).catch((e) => console.error("[云同步] 文章推送异常:", e));
         }
       },
 
@@ -160,7 +160,7 @@ export const useArticleStore = create<ArticleStore>()(
             s.lastReadArchiveId === id ? null : s.lastReadArchiveId,
         }));
         if (get().syncEnabled) {
-          cloudDeleteArticle(id).catch(() => {});
+          cloudDeleteArticle(id).catch((e) => console.error("[云同步] 文章推送异常:", e));
         }
       },
 
@@ -168,7 +168,7 @@ export const useArticleStore = create<ArticleStore>()(
         const old = get().archives;
         set({ archives: [], lastReadArchiveId: null });
         if (get().syncEnabled) {
-          old.forEach((a) => cloudDeleteArticle(a.id).catch(() => {}));
+          old.forEach((a) => cloudDeleteArticle(a.id).catch((e) => console.error("[云同步] 文章推送异常:", e)));
         }
       },
 

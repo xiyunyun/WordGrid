@@ -83,18 +83,51 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
 
   // 云端存档同步：Supabase Realtime（替代旧的 Gitee 强制刷新方案）
   useEffect(() => {
-    if (!hydrated) return;
-    if (!isSupabaseConfigured()) return;
+    if (!hydrated) {
+      console.log("[云同步] 等待 store hydrated...");
+      return;
+    }
+    if (!isSupabaseConfigured()) {
+      console.warn(
+        "[云同步] Supabase 未配置，URL:",
+        !!import.meta.env.VITE_SUPABASE_URL,
+        "KEY:",
+        !!import.meta.env.VITE_SUPABASE_ANON_KEY,
+      );
+      return;
+    }
     const user = getCurrentUser();
-    if (!user?.username) return;
+    if (!user?.username) {
+      console.warn("[云同步] 用户未登录，跳过同步");
+      return;
+    }
+    console.log("[云同步] 初始化同步，用户:", user.username);
 
     let unsubscribeRealtime: (() => void) | null = null;
     let cancelled = false;
 
     (async () => {
       // 1. 先拉取云端数据（判断云端是否已有该用户的数据）
+      console.log("[云同步] 开始拉取云端数据，用户:", user.username);
       const pullRes = await pullAll();
       if (cancelled) return;
+
+      if (!pullRes.success) {
+        console.error("[云同步] 拉取失败:", pullRes.error);
+      } else {
+        console.log(
+          "[云同步] 拉取成功，总数据量:",
+          pullRes.count,
+          "words:",
+          pullRes.data?.words.length,
+          "logs:",
+          pullRes.data?.logs.length,
+          "articles:",
+          pullRes.data?.articles.length,
+          "dateNotes:",
+          pullRes.data ? Object.keys(pullRes.data.dateNotes).length : 0,
+        );
+      }
 
       if (pullRes.success && pullRes.data && (pullRes.count ?? 0) > 0) {
         // 云端已有数据：用云端数据覆盖本地（云端是 source of truth）
@@ -116,6 +149,7 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
         console.log(`[云同步] 已从云端拉取 ${pullRes.count} 条数据`);
       } else {
         // 云端无数据：执行首次迁移，把本地数据上传到 Supabase
+        console.log("[云同步] 云端无数据，执行首次迁移");
         const migrationRes = await migrateFromLocal(
           useWordStore.getState().words,
           useWordStore.getState().logs,
@@ -123,8 +157,10 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
           useDateNotesStore.getState().notes,
         );
         if (cancelled) return;
-        if (migrationRes.success && !migrationRes.skipped) {
-          console.log("[云同步] 首次迁移完成:", migrationRes.message);
+        if (migrationRes.success) {
+          console.log("[云同步] 迁移结果:", migrationRes.message || "成功");
+        } else {
+          console.error("[云同步] 迁移失败:", migrationRes.error);
         }
       }
 
