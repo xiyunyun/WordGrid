@@ -10,11 +10,23 @@ import {
   resetReview,
   isDue,
 } from "@/lib/review";
+import {
+  pushWord,
+  pushWordsBulk,
+  pushReviewLog,
+  deleteWord as cloudDeleteWord,
+  deleteReviewLogsByWordId,
+} from "@/lib/cloudSyncSupabase";
 
 interface WordStore {
   words: Word[];
   logs: ReviewLog[];
   hydrated: boolean;
+  /**
+   * 云同步开关：true 时本地变更会推送到 Supabase
+   * 收到 Realtime 回调更新本地时设为 false，避免循环推送
+   */
+  syncEnabled: boolean;
 
   // CRUD
   /** 添加单个单词，若单词已存在（大小写不敏感）则返回 null */
@@ -50,6 +62,22 @@ interface WordStore {
   logReview: (id: string, correct: boolean, mode: ReviewMode) => void;
 
   setHydrated: () => void;
+
+  /* ============ 云同步相关方法 ============ */
+  /** 设置 syncEnabled（App.tsx 在 Realtime 回调前后切换） */
+  setSyncEnabled: (v: boolean) => void;
+  /** 从云端拉取的数据覆盖本地（初次加载或手动同步时调用） */
+  hydrateFromCloud: (words: Word[], logs: ReviewLog[]) => void;
+  /** 应用 Realtime 推送的单条单词变更 */
+  applyRemoteWord: (
+    type: "INSERT" | "UPDATE" | "DELETE",
+    word: Word,
+  ) => void;
+  /** 应用 Realtime 推送的单条复习日志变更 */
+  applyRemoteLog: (
+    type: "INSERT" | "UPDATE" | "DELETE",
+    log: ReviewLog,
+  ) => void;
 }
 
 export const useWordStore = create<WordStore>()(
@@ -58,6 +86,7 @@ export const useWordStore = create<WordStore>()(
       words: [],
       logs: [],
       hydrated: false,
+      syncEnabled: true, // 默认开启；Realtime 回调更新本地时临时关闭
 
       addWord: (input) => {
         const trimmedWord = input.word.trim();
@@ -84,6 +113,10 @@ export const useWordStore = create<WordStore>()(
           createdAt: Date.now(),
         };
         set((s) => ({ words: [word, ...s.words] }));
+        // 云同步：后台推送（不阻塞 UI，失败静默）
+        if (get().syncEnabled) {
+          pushWord(word).catch(() => {});
+        }
         return word;
       },
 
@@ -126,22 +159,38 @@ export const useWordStore = create<WordStore>()(
 
         if (newWords.length > 0) {
           set((s) => ({ words: [...newWords, ...s.words] }));
+          // 云同步：批量推送（一次请求）
+          if (get().syncEnabled) {
+            pushWordsBulk(newWords).catch(() => {});
+          }
         }
         return { added: newWords.length, duplicates };
       },
 
-      updateWord: (id, patch) =>
+      updateWord: (id, patch) => {
         set((s) => ({
           words: s.words.map((w) => (w.id === id ? { ...w, ...patch } : w)),
-        })),
+        }));
+        // 云同步：推送更新后的完整单词（需从 state 取最新值）
+        if (get().syncEnabled) {
+          const updated = get().words.find((w) => w.id === id);
+          if (updated) pushWord(updated).catch(() => {});
+        }
+      },
 
-      removeWord: (id) =>
+      removeWord: (id) => {
         set((s) => ({
           words: s.words.filter((w) => w.id !== id),
           logs: s.logs.filter((l) => l.wordId !== id),
-        })),
+        }));
+        // 云同步：删除云端单词和关联日志
+        if (get().syncEnabled) {
+          cloudDeleteWord(id).catch(() => {});
+          deleteReviewLogsByWordId(id).catch(() => {});
+        }
+      },
 
-      toggleDifficult: (id) =>
+      toggleDifficult: (id) => {
         set((s) => ({
           words: s.words.map((w) => {
             if (w.id !== id) return w;
@@ -156,9 +205,15 @@ export const useWordStore = create<WordStore>()(
               reviewStage,
             };
           }),
-        })),
+        }));
+        // 云同步：推送状态变更
+        if (get().syncEnabled) {
+          const updated = get().words.find((w) => w.id === id);
+          if (updated) pushWord(updated).catch(() => {});
+        }
+      },
 
-      markMastered: (id) =>
+      markMastered: (id) => {
         set((s) => ({
           words: s.words.map((w) =>
             w.id === id
@@ -171,7 +226,13 @@ export const useWordStore = create<WordStore>()(
                 }
               : w,
           ),
-        })),
+        }));
+        // 云同步：推送状态变更
+        if (get().syncEnabled) {
+          const updated = get().words.find((w) => w.id === id);
+          if (updated) pushWord(updated).catch(() => {});
+        }
+      },
 
       reviewWord: (id, correct, mode) => {
         const word = get().words.find((w) => w.id === id);
@@ -187,6 +248,10 @@ export const useWordStore = create<WordStore>()(
           mode,
         };
         set((s) => ({ logs: [log, ...s.logs] }));
+        // 云同步：推送复习日志
+        if (get().syncEnabled) {
+          pushReviewLog(log).catch(() => {});
+        }
 
         // 同一天最多只推进一次复习阶段
         // 防止「再来一轮」重复认识导致阶段直接到永久
@@ -226,6 +291,10 @@ export const useWordStore = create<WordStore>()(
           mode,
         };
         set((s) => ({ logs: [log, ...s.logs] }));
+        // 云同步：推送复习日志
+        if (get().syncEnabled) {
+          pushReviewLog(log).catch(() => {});
+        }
       },
 
       setHydrated: () => {
@@ -244,6 +313,62 @@ export const useWordStore = create<WordStore>()(
         });
         if (needsMigration) {
           set({ words: newWords });
+        }
+      },
+
+      /* ============ 云同步相关方法 ============ */
+      setSyncEnabled: (v) => set({ syncEnabled: v }),
+
+      hydrateFromCloud: (words, logs) => {
+        // 从云端拉取的数据覆盖本地（注意：会触发 persist 写入 localStorage）
+        set({ words, logs });
+      },
+
+      applyRemoteWord: (type, word) => {
+        // Realtime 回调：临时关闭 syncEnabled，避免本地更新触发推送形成循环
+        const wasEnabled = get().syncEnabled;
+        set({ syncEnabled: false });
+        try {
+          if (type === "DELETE") {
+            set((s) => ({
+              words: s.words.filter((w) => w.id !== word.id),
+              logs: s.logs.filter((l) => l.wordId !== word.id),
+            }));
+          } else if (type === "INSERT") {
+            // 仅在本地不存在时插入，避免覆盖本地更新的更高版本
+            const exists = get().words.some((w) => w.id === word.id);
+            if (!exists) {
+              set((s) => ({ words: [word, ...s.words] }));
+            }
+          } else {
+            // UPDATE：直接覆盖（Last-Write-Wins；更精细的冲突解决可比较 updatedAt）
+            set((s) => ({
+              words: s.words.map((w) => (w.id === word.id ? word : w)),
+            }));
+          }
+        } finally {
+          set({ syncEnabled: wasEnabled });
+        }
+      },
+
+      applyRemoteLog: (type, log) => {
+        const wasEnabled = get().syncEnabled;
+        set({ syncEnabled: false });
+        try {
+          if (type === "DELETE") {
+            set((s) => ({ logs: s.logs.filter((l) => l.id !== log.id) }));
+          } else if (type === "INSERT") {
+            const exists = get().logs.some((l) => l.id === log.id);
+            if (!exists) {
+              set((s) => ({ logs: [log, ...s.logs] }));
+            }
+          } else {
+            set((s) => ({
+              logs: s.logs.map((l) => (l.id === log.id ? log : l)),
+            }));
+          }
+        } finally {
+          set({ syncEnabled: wasEnabled });
         }
       },
     }),

@@ -2,6 +2,10 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { Difficulty, QuizQuestion } from "@/lib/deepseek";
 import type { Word } from "@/types";
+import {
+  pushArticle,
+  deleteArticle as cloudDeleteArticle,
+} from "@/lib/cloudSyncSupabase";
 
 /** 单篇文章的归档记录 */
 export interface ArticleArchive {
@@ -48,6 +52,8 @@ interface ArticleStore {
   archives: ArticleArchive[];
   /** 最后阅读的归档 id（用于离开页面后恢复） */
   lastReadArchiveId: string | null;
+  /** 云同步开关（同 wordStore） */
+  syncEnabled: boolean;
 
   /** 新建归档（生成文章后调用），返回新归档 id */
   addArchive: (input: {
@@ -70,6 +76,14 @@ interface ArticleStore {
 
   /** 设置最后阅读的归档 id */
   setLastReadArchiveId: (id: string | null) => void;
+
+  /* ============ 云同步相关方法 ============ */
+  setSyncEnabled: (v: boolean) => void;
+  hydrateFromCloud: (archives: ArticleArchive[]) => void;
+  applyRemoteArticle: (
+    type: "INSERT" | "UPDATE" | "DELETE",
+    article: ArticleArchive,
+  ) => void;
 }
 
 function genId(): string {
@@ -86,9 +100,10 @@ function todayKey(): string {
 
 export const useArticleStore = create<ArticleStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       archives: [],
       lastReadArchiveId: null,
+      syncEnabled: true,
 
       addArchive: (input) => {
         const id = genId();
@@ -108,34 +123,92 @@ export const useArticleStore = create<ArticleStore>()(
           questions: [],
         };
         set((s) => ({ archives: [archive, ...s.archives] }));
+        if (get().syncEnabled) {
+          pushArticle(archive).catch(() => {});
+        }
         return id;
       },
 
-      setQuestions: (archiveId, questions) =>
+      setQuestions: (archiveId, questions) => {
         set((s) => ({
           archives: s.archives.map((a) =>
             a.id === archiveId ? { ...a, questions } : a,
           ),
-        })),
+        }));
+        if (get().syncEnabled) {
+          const updated = get().archives.find((a) => a.id === archiveId);
+          if (updated) pushArticle(updated).catch(() => {});
+        }
+      },
 
-      setAttempt: (archiveId, attempt) =>
+      setAttempt: (archiveId, attempt) => {
         set((s) => ({
           archives: s.archives.map((a) =>
             a.id === archiveId ? { ...a, attempt } : a,
           ),
-        })),
+        }));
+        if (get().syncEnabled) {
+          const updated = get().archives.find((a) => a.id === archiveId);
+          if (updated) pushArticle(updated).catch(() => {});
+        }
+      },
 
-      removeArchive: (id) =>
+      removeArchive: (id) => {
         set((s) => ({
           archives: s.archives.filter((a) => a.id !== id),
-          // 若删除的是最后阅读的归档，一并清除标记
           lastReadArchiveId:
             s.lastReadArchiveId === id ? null : s.lastReadArchiveId,
-        })),
+        }));
+        if (get().syncEnabled) {
+          cloudDeleteArticle(id).catch(() => {});
+        }
+      },
 
-      clearAll: () => set({ archives: [], lastReadArchiveId: null }),
+      clearAll: () => {
+        const old = get().archives;
+        set({ archives: [], lastReadArchiveId: null });
+        if (get().syncEnabled) {
+          old.forEach((a) => cloudDeleteArticle(a.id).catch(() => {}));
+        }
+      },
 
       setLastReadArchiveId: (id) => set({ lastReadArchiveId: id }),
+
+      /* ============ 云同步相关方法 ============ */
+      setSyncEnabled: (v) => set({ syncEnabled: v }),
+
+      hydrateFromCloud: (archives) => {
+        set({ archives });
+      },
+
+      applyRemoteArticle: (type, article) => {
+        const wasEnabled = get().syncEnabled;
+        set({ syncEnabled: false });
+        try {
+          if (type === "DELETE") {
+            set((s) => ({
+              archives: s.archives.filter((a) => a.id !== article.id),
+              lastReadArchiveId:
+                s.lastReadArchiveId === article.id
+                  ? null
+                  : s.lastReadArchiveId,
+            }));
+          } else if (type === "INSERT") {
+            const exists = get().archives.some((a) => a.id === article.id);
+            if (!exists) {
+              set((s) => ({ archives: [article, ...s.archives] }));
+            }
+          } else {
+            set((s) => ({
+              archives: s.archives.map((a) =>
+                a.id === article.id ? article : a,
+              ),
+            }));
+          }
+        } finally {
+          set({ syncEnabled: wasEnabled });
+        }
+      },
     }),
     {
       name: "wordgrid-article-archive",

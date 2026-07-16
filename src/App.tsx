@@ -16,17 +16,17 @@ import Stats from "@/pages/Stats";
 import About from "@/pages/About";
 import LoginPage from "@/pages/Login";
 import { useWordStore, selectDueWords, selectTomorrowWords } from "@/store/wordStore";
+import { useArticleStore } from "@/store/articleStore";
+import { useDateNotesStore } from "@/store/dateNotes";
 import { buildSeedWords } from "@/store/seedData";
 import { isAuthenticated, logout, getCurrentUser } from "@/lib/auth";
+import { isSupabaseConfigured } from "@/lib/supabase";
 import {
-  isCloudConfigured,
-  getCloudId,
-  setCloudId,
-  smartDownload,
-  uploadToCloud,
-  uploadKeepalive,
-  setLocalLastModified,
-} from "@/lib/cloudSync";
+  pullAll,
+  subscribeChanges,
+  migrateFromLocal,
+  setMigratedToSupabase,
+} from "@/lib/cloudSyncSupabase";
 import type { Word } from "@/types";
 
 const SEED_FLAG_KEY = "wordgrid-seeded";
@@ -81,66 +81,73 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
     }
   }, [hydrated, words.length]);
 
-  // 云端存档自动同步：智能下载 + debounce 上传 + 退出兜底
+  // 云端存档同步：Supabase Realtime（替代旧的 Gitee 强制刷新方案）
   useEffect(() => {
     if (!hydrated) return;
-    if (!isCloudConfigured()) return;
+    if (!isSupabaseConfigured()) return;
+    const user = getCurrentUser();
+    if (!user?.username) return;
 
-    // 确保 cloudId 已设置（默认用登录用户名）
-    // localhost 测试环境自动加 -dev 后缀，与正式网站数据完全隔离，避免测试数据污染真实云存档
-    const isDev = window.location.hostname === "localhost";
-    const currentCloudId = getCloudId();
-    if (!currentCloudId) {
-      const user = getCurrentUser();
-      if (user?.username) {
-        setCloudId(isDev ? `${user.username}-dev` : user.username);
-      } else {
-        return;
-      }
-    } else if (isDev && !currentCloudId.endsWith("-dev")) {
-      // 旧版本在 localhost 设置了不带 -dev 的 cloudId，自动修正以隔离数据
-      setCloudId(`${currentCloudId}-dev`);
-      // 清除旧的云端 SHA 记录，强制重新下载 dev 环境的存档（如果有）
-      localStorage.removeItem("wordgrid-cloud-sha");
-    }
-
-    // 1. 打开时智能下载（比较时间戳，云端更新才下载）
+    let unsubscribeRealtime: (() => void) | null = null;
     let cancelled = false;
-    smartDownload().then((r) => {
+
+    (async () => {
+      // 1. 先拉取云端数据（判断云端是否已有该用户的数据）
+      const pullRes = await pullAll();
       if (cancelled) return;
-      if (r.success && !r.skipped) {
-        // 下载了新数据，刷新页面让 Zustand 重新加载
-        setTimeout(() => window.location.reload(), 1500);
-      }
-    }).catch(() => {});
 
-    // 2. 订阅 store 变化，debounce 3 分钟自动上传
-    //    3 分钟间隔避免频繁上传触发 Gitee API 限制（5-6 用户安全）
-    let uploadTimer: ReturnType<typeof setTimeout> | null = null;
-    const unsubscribe = useWordStore.subscribe((state) => {
-      if (!state.hydrated) return;
-      setLocalLastModified();
-      if (uploadTimer) clearTimeout(uploadTimer);
-      uploadTimer = setTimeout(() => {
-        uploadToCloud().catch(() => {});
-      }, 180000);
-    });
-
-    // 3. 页面隐藏/关闭时尽力上传（keepalive 兜底）
-    const handler = () => {
-      if (document.visibilityState === "hidden") {
-        uploadKeepalive();
+      if (pullRes.success && pullRes.data && (pullRes.count ?? 0) > 0) {
+        // 云端已有数据：用云端数据覆盖本地（云端是 source of truth）
+        const { words, logs, articles, dateNotes } = pullRes.data;
+        useWordStore.getState().setSyncEnabled(false);
+        useArticleStore.getState().setSyncEnabled(false);
+        useDateNotesStore.getState().setSyncEnabled(false);
+        try {
+          useWordStore.getState().hydrateFromCloud(words, logs);
+          useArticleStore.getState().hydrateFromCloud(articles);
+          useDateNotesStore.getState().hydrateFromCloud(dateNotes);
+        } finally {
+          useWordStore.getState().setSyncEnabled(true);
+          useArticleStore.getState().setSyncEnabled(true);
+          useDateNotesStore.getState().setSyncEnabled(true);
+        }
+        // 标记为已迁移（云端已有数据，本地已同步）
+        setMigratedToSupabase();
+        console.log(`[云同步] 已从云端拉取 ${pullRes.count} 条数据`);
+      } else {
+        // 云端无数据：执行首次迁移，把本地数据上传到 Supabase
+        const migrationRes = await migrateFromLocal(
+          useWordStore.getState().words,
+          useWordStore.getState().logs,
+          useArticleStore.getState().archives,
+          useDateNotesStore.getState().notes,
+        );
+        if (cancelled) return;
+        if (migrationRes.success && !migrationRes.skipped) {
+          console.log("[云同步] 首次迁移完成:", migrationRes.message);
+        }
       }
-    };
-    document.addEventListener("visibilitychange", handler);
-    window.addEventListener("beforeunload", handler);
+
+      // 2. 订阅 Realtime 变更（其他设备的修改会实时推送到本机）
+      unsubscribeRealtime = subscribeChanges({
+        onWordChange: (type, word) => {
+          useWordStore.getState().applyRemoteWord(type, word);
+        },
+        onReviewLogChange: (type, log) => {
+          useWordStore.getState().applyRemoteLog(type, log);
+        },
+        onArticleChange: (type, article) => {
+          useArticleStore.getState().applyRemoteArticle(type, article);
+        },
+        onDateNoteChange: (type, date, note) => {
+          useDateNotesStore.getState().applyRemoteNote(type, date, note);
+        },
+      });
+    })();
 
     return () => {
       cancelled = true;
-      unsubscribe();
-      if (uploadTimer) clearTimeout(uploadTimer);
-      document.removeEventListener("visibilitychange", handler);
-      window.removeEventListener("beforeunload", handler);
+      if (unsubscribeRealtime) unsubscribeRealtime();
     };
   }, [hydrated]);
 
