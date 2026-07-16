@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   Eye,
@@ -23,7 +23,7 @@ import {
 } from "@/store/wordStore";
 import { shuffle, todayKey } from "@/lib/review";
 import { STAGE_LABELS } from "@/types";
-import type { Word } from "@/types";
+import type { Word, ReviewLog, ReviewMode } from "@/types";
 import { cn } from "@/lib/utils";
 import { speakWord } from "@/lib/tts";
 import SpeakButton from "@/components/SpeakButton";
@@ -198,7 +198,18 @@ export default function Wordbook() {
             />
           )}
           {mode === "self_check" && (
-            <SelfCheckView words={dueWords.length > 0 ? dueWords : difficultWords} />
+            <SelfCheckView
+              words={(() => {
+                // 自我检测列表 = 到期词 ∪ 当天新词
+                // 当天新加的词 nextReview 是明天，isDue 返回 false，但用户当天应该先学习一次
+                const today = todayKey();
+                const todayNewWords = difficultWords.filter((w) => w.date === today);
+                // 合并去重（按 id）
+                const seen = new Set(dueWords.map((w) => w.id));
+                const merged = [...dueWords, ...todayNewWords.filter((w) => !seen.has(w.id))];
+                return merged.length > 0 ? merged : difficultWords;
+              })()}
+            />
           )}
           {mode === "random" && <RandomView words={words} />}
           {mode === "dictation" && <DictationView words={words} />}
@@ -588,36 +599,24 @@ function SelfCheckView({ words }: { words: Word[] }) {
 }
 
 /* ============ 随机抽查模式 - 基于全部单词的无限随机练习 ============ */
-const RANDOM_STATS_KEY = "wordgrid-random-stats";
 
-interface RandomStats {
-  date: string; // YYYY-MM-DD：用于跨日归零
-  today: number; // 今日随机学习数
-  total: number; // 累计随机学习数
-}
-
-function loadRandomStats(): RandomStats {
-  const today = todayKey();
-  try {
-    const raw = localStorage.getItem(RANDOM_STATS_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as RandomStats;
-      if (parsed.date === today) return parsed;
-      // 跨日：今日归零，累计保留
-      return { date: today, today: 0, total: parsed.total };
-    }
-  } catch {
-    // 解析失败：忽略
+/**
+ * 从复习日志聚合计算某 mode 的统计（今日/累计）
+ * 数据源是已同步的 review_logs，天然跨设备同步
+ */
+function getPracticeStats(
+  logs: ReviewLog[],
+  mode: ReviewMode,
+): { today: number; total: number } {
+  const todayStart = new Date(todayKey() + "T00:00:00").getTime();
+  let today = 0;
+  let total = 0;
+  for (const log of logs) {
+    if (log.mode !== mode) continue;
+    total++;
+    if (log.reviewedAt >= todayStart) today++;
   }
-  return { date: today, today: 0, total: 0 };
-}
-
-function saveRandomStats(stats: RandomStats) {
-  try {
-    localStorage.setItem(RANDOM_STATS_KEY, JSON.stringify(stats));
-  } catch {
-    // 写入失败：忽略
-  }
+  return { today, total };
 }
 
 function RandomView({ words }: { words: Word[] }) {
@@ -625,8 +624,13 @@ function RandomView({ words }: { words: Word[] }) {
   const [idx, setIdx] = useState(0);
   const [revealed, setRevealed] = useState(false);
   const [sessionCount, setSessionCount] = useState(0);
-  const [stats, setStats] = useState<RandomStats>(loadRandomStats);
   const logReview = useWordStore((s) => s.logReview);
+  // 统计直接从 logs 聚合（已同步），无需独立 localStorage
+  const logs = useWordStore((s) => s.logs);
+  const stats = useMemo(
+    () => getPracticeStats(logs, "random"),
+    [logs],
+  );
 
   // 词库变化时重新洗牌
   useEffect(() => {
@@ -642,15 +646,8 @@ function RandomView({ words }: { words: Word[] }) {
   const handle = (correct: boolean) => {
     // 记录复习日志（计入统计页面熟练度排行，不推进艾宾浩斯节点）
     logReview(current.id, correct, "random");
-    // 计数：本轮 + 今日 + 累计
+    // 计数：本轮（今日/累计从 logs 自动聚合，无需手动维护）
     setSessionCount((n) => n + 1);
-    const newStats: RandomStats = {
-      date: todayKey(),
-      today: stats.today + 1,
-      total: stats.total + 1,
-    };
-    setStats(newStats);
-    saveRandomStats(newStats);
 
     // 推进：队列耗尽则自动重新洗牌（无限练习，不触发完成页）
     setRevealed(false);
@@ -766,36 +763,6 @@ function RandomView({ words }: { words: Word[] }) {
 }
 
 /* ============ 听写测试模式 - 基于全部单词的无限听写练习 ============ */
-const DICTATION_STATS_KEY = "wordgrid-dictation-stats";
-
-interface DictationStats {
-  date: string;
-  today: number;
-  total: number;
-}
-
-function loadDictationStats(): DictationStats {
-  const today = todayKey();
-  try {
-    const raw = localStorage.getItem(DICTATION_STATS_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as DictationStats;
-      if (parsed.date === today) return parsed;
-      return { date: today, today: 0, total: parsed.total };
-    }
-  } catch {
-    // 解析失败：忽略
-  }
-  return { date: today, today: 0, total: 0 };
-}
-
-function saveDictationStats(stats: DictationStats) {
-  try {
-    localStorage.setItem(DICTATION_STATS_KEY, JSON.stringify(stats));
-  } catch {
-    // 写入失败：忽略
-  }
-}
 
 function DictationView({ words }: { words: Word[] }) {
   const [queue, setQueue] = useState<Word[]>(() => shuffle(words));
@@ -803,10 +770,15 @@ function DictationView({ words }: { words: Word[] }) {
   const [input, setInput] = useState("");
   const [result, setResult] = useState<"idle" | "correct" | "wrong">("idle");
   const [sessionCount, setSessionCount] = useState(0);
-  const [stats, setStats] = useState<DictationStats>(loadDictationStats);
   const [speaking, setSpeaking] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const logReview = useWordStore((s) => s.logReview);
+  // 统计直接从 logs 聚合（已同步），无需独立 localStorage
+  const logs = useWordStore((s) => s.logs);
+  const stats = useMemo(
+    () => getPracticeStats(logs, "dictation"),
+    [logs],
+  );
 
   // 词库变化时重新洗牌
   useEffect(() => {
@@ -861,14 +833,8 @@ function DictationView({ words }: { words: Word[] }) {
   }, [result, idx, queue.length, words]);
 
   const bumpStats = () => {
+    // 今日/累计从 logs 自动聚合，这里只计本轮
     setSessionCount((n) => n + 1);
-    const newStats: DictationStats = {
-      date: todayKey(),
-      today: stats.today + 1,
-      total: stats.total + 1,
-    };
-    setStats(newStats);
-    saveDictationStats(newStats);
   };
 
   const submit = () => {
