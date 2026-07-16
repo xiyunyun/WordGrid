@@ -11,9 +11,6 @@ import {
   Loader2,
   Trash2,
   ScrollText,
-  CloudUpload,
-  CloudDownload,
-  Cloud,
 } from "lucide-react";
 import {
   exportAllData,
@@ -21,16 +18,7 @@ import {
   getDataStats,
   clearAllData,
 } from "@/lib/dataTransfer";
-import {
-  isCloudConfigured,
-  getCloudConfigInfo,
-  getCloudId,
-  setCloudId,
-  validateCloudId,
-  uploadToCloud,
-  downloadFromCloud,
-  type CloudResult,
-} from "@/lib/cloudSync";
+import { isSupabaseConfigured } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/auth";
 import { CHANGELOG } from "@/lib/changelog";
 
@@ -43,13 +31,6 @@ export default function About() {
   const [exporting, setExporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 云端存档相关状态
-  const defaultCloudId = getCloudId() || getCurrentUser()?.username || "";
-  const [cloudIdInput, setCloudIdInput] = useState(defaultCloudId);
-  const [cloudBusy, setCloudBusy] = useState<"upload" | "download" | null>(null);
-  const [cloudResult, setCloudResult] = useState<CloudResult | null>(null);
-  const cloudConfig = getCloudConfigInfo();
-
   // 删除数据：三阶段流程
   // 0 = 初始（显示按钮）
   // 1 = 第一次确认（显示警告 + 继续按钮）
@@ -59,6 +40,8 @@ export default function About() {
   const [deleting, setDeleting] = useState(false);
 
   const stats = getDataStats();
+  const cloudConfigured = isSupabaseConfigured();
+  const currentUser = getCurrentUser();
 
   const handleExport = () => {
     setExporting(true);
@@ -140,45 +123,6 @@ export default function About() {
       }, 500);
     } catch {
       setDeleting(false);
-    }
-  };
-
-  // 保存云端标识并校验，返回 true 表示通过
-  const commitCloudId = (): boolean => {
-    const err = validateCloudId(cloudIdInput);
-    if (err) {
-      setCloudResult({ success: false, error: err });
-      return false;
-    }
-    setCloudId(cloudIdInput);
-    return true;
-  };
-
-  const handleCloudUpload = async () => {
-    setCloudResult(null);
-    if (!commitCloudId()) return;
-    setCloudBusy("upload");
-    try {
-      const r = await uploadToCloud();
-      setCloudResult(r);
-    } finally {
-      setCloudBusy(null);
-    }
-  };
-
-  const handleCloudDownload = async () => {
-    setCloudResult(null);
-    if (!commitCloudId()) return;
-    setCloudBusy("download");
-    try {
-      const r = await downloadFromCloud();
-      setCloudResult(r);
-      // 下载成功后 2 秒刷新页面
-      if (r.success) {
-        setTimeout(() => window.location.reload(), 2000);
-      }
-    } finally {
-      setCloudBusy(null);
     }
   };
 
@@ -300,11 +244,19 @@ export default function About() {
               重要提示
             </div>
             <p className="mt-1 font-body text-sm leading-relaxed text-ink-soft">
-              本应用的数据存储在浏览器本地（localStorage）。配置云端存档后，
-              数据会<strong className="text-ink">自动同步</strong>到云端（打开时智能下载，操作后自动上传）。
-              <br />
-              未配置云端存档时，清除浏览器缓存、重装系统或更换设备都会导致数据丢失。
-              请<strong className="text-accent-red">定期导出备份</strong>或配置云端存档以防数据丢失。
+              本应用的数据存储在浏览器本地（localStorage）。
+              {cloudConfigured ? (
+                <>
+                  已配置云端同步，数据会<strong className="text-ink">自动同步</strong>到云端
+                  （基于 Supabase 实时数据库，多设备修改自动同步，无需手动操作）。
+                  仍建议<strong className="text-accent-red">定期导出备份</strong>以防意外。
+                </>
+              ) : (
+                <>
+                  清除浏览器缓存、重装系统或更换设备都会导致数据丢失。
+                  请<strong className="text-accent-red">定期导出备份</strong>以防数据丢失。
+                </>
+              )}
             </p>
           </div>
         </div>
@@ -405,163 +357,14 @@ export default function About() {
             导入会<strong className="text-accent-red">覆盖</strong>当前同类型数据。
             导入后页面将自动刷新以应用新数据。语音缓存不会被导入（会在使用时自动重建）。
           </p>
+          {cloudConfigured && currentUser && (
+            <p className="font-body text-xs text-ink-light">
+              <strong className="text-ink-soft">云同步状态：</strong>
+              当前账号 <span className="font-mono text-ink-soft">{currentUser.username}</span>{" "}
+              已启用 Supabase 实时云同步，所有修改会自动推送到云端，其他设备登录同一账号即可同步。
+            </p>
+          )}
         </div>
-      </section>
-
-      {/* 云端存档 */}
-      <section className="rounded-md border border-ink/15 bg-paper-card p-4 md:p-6 shadow-paper">
-        <div className="mb-4 flex items-center gap-2">
-          <Cloud className="h-4 w-4 text-accent-gold" strokeWidth={1.5} />
-          <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
-            Cloud Sync · 云端存档
-          </span>
-        </div>
-
-        {/* 配置状态提示 */}
-        {!cloudConfig.configured ? (
-          <div className="flex items-start gap-3 rounded-md border border-accent-gold/40 bg-accent-gold/10 p-4">
-            <AlertTriangle
-              className="mt-0.5 h-5 w-5 flex-shrink-0 text-accent-gold"
-              strokeWidth={1.5}
-            />
-            <div>
-              <div className="font-mono text-2xs uppercase tracking-editorial text-accent-gold">
-                云存档未配置
-              </div>
-              <p className="mt-1 font-body text-sm leading-relaxed text-ink-soft">
-                当前未配置 Gitee 云存档参数。请联系开发者
-                <span className="font-mono">在 .env.local 中填写</span>
-                <span className="font-mono"> VITE_GITEE_OWNER / VITE_GITEE_REPO / VITE_GITEE_TOKEN</span>
-                后重新部署即可启用云端存档功能。
-              </p>
-            </div>
-          </div>
-        ) : (
-          <>
-            {/* 标识输入 */}
-            <div className="mb-4">
-              <label className="eyebrow mb-2 block">
-                Cloud ID · 云端存档标识
-              </label>
-              <input
-                value={cloudIdInput}
-                onChange={(e) => setCloudIdInput(e.target.value)}
-                disabled={cloudBusy !== null}
-                placeholder="例如：xiyun"
-                className="input-paper font-mono"
-              />
-              <p className="mt-2 font-body text-xs leading-relaxed text-ink-light">
-                每个标识对应云端一份独立的存档文件。
-                <strong className="text-ink-soft">默认使用你的登录用户名</strong>。
-                不同设备使用相同标识即可同步同一份数据。
-                仅支持字母、数字、下划线、横线（≤32 字符）。
-              </p>
-            </div>
-
-            {/* 云端信息 */}
-            <div className="mb-4 rounded-md border border-ink/10 bg-paper p-3 font-mono text-2xs text-ink-light">
-              <span className="uppercase tracking-editorial">Repo · </span>
-              {cloudConfig.owner}/{cloudConfig.repo}
-              <span className="mx-2">·</span>
-              <span className="uppercase tracking-editorial">Branch · </span>
-              {cloudConfig.branch}
-            </div>
-
-            {/* 上传 / 下载按钮 */}
-            <div className="flex flex-wrap gap-3">
-              <button
-                onClick={handleCloudUpload}
-                disabled={cloudBusy !== null}
-                className="btn-primary disabled:opacity-40"
-              >
-                {cloudBusy === "upload" ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.5} />
-                    上传中...
-                  </>
-                ) : (
-                  <>
-                    <CloudUpload className="h-4 w-4" strokeWidth={1.5} />
-                    上传云端存档
-                  </>
-                )}
-              </button>
-
-              <button
-                onClick={handleCloudDownload}
-                disabled={cloudBusy !== null}
-                className="btn-ghost disabled:opacity-40"
-              >
-                {cloudBusy === "download" ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.5} />
-                    下载中...
-                  </>
-                ) : (
-                  <>
-                    <CloudDownload className="h-4 w-4" strokeWidth={1.5} />
-                    下载云端存档
-                  </>
-                )}
-              </button>
-            </div>
-
-            {/* 操作结果提示 */}
-            {cloudResult && (
-              <div
-                className={
-                  "mt-4 flex items-start gap-3 rounded-md border p-4 animate-fade-in " +
-                  (cloudResult.success
-                    ? "border-accent-green/40 bg-accent-green/10"
-                    : "border-accent-red/40 bg-accent-red/10")
-                }
-              >
-                {cloudResult.success ? (
-                  <Check
-                    className="mt-0.5 h-5 w-5 flex-shrink-0 text-accent-green"
-                    strokeWidth={1.5}
-                  />
-                ) : (
-                  <AlertTriangle
-                    className="mt-0.5 h-5 w-5 flex-shrink-0 text-accent-red"
-                    strokeWidth={1.5}
-                  />
-                )}
-                <div>
-                  <div
-                    className={
-                      "font-mono text-2xs uppercase tracking-editorial " +
-                      (cloudResult.success ? "text-accent-green" : "text-accent-red")
-                    }
-                  >
-                    {cloudResult.success ? "操作成功" : "操作失败"}
-                  </div>
-                  <p className="mt-1 font-body text-sm text-ink-soft">
-                    {cloudResult.message || cloudResult.error}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* 使用提示 */}
-            <div className="mt-4 space-y-2 border-t border-ink/10 pt-4">
-              <p className="font-body text-xs text-ink-light">
-                <strong className="text-ink-soft">自动同步：</strong>
-                打开应用时自动比较云端和本地的修改时间，云端更新则自动下载。
-                每次操作后 3 分钟自动上传，退出时也会尽力上传。无需手动操作。
-              </p>
-              <p className="font-body text-xs text-ink-light">
-                <strong className="text-ink-soft">手动上传：</strong>
-                强制将当前数据上传到云端，覆盖同一标识的存档。
-              </p>
-              <p className="font-body text-xs text-ink-light">
-                <strong className="text-ink-soft">手动下载：</strong>
-                从云端拉取存档并<strong className="text-accent-red">覆盖</strong>本地数据。
-                适用于强制同步场景。下载后页面会自动刷新。
-              </p>
-            </div>
-          </>
-        )}
       </section>
 
       {/* 危险操作区：删除所有数据 */}
@@ -732,7 +535,7 @@ export default function About() {
           <br />
           语音合成：有道智云 TTS · 文章生成：DeepSeek API
           <br />
-          数据存储：浏览器 localStorage · 部署：GitHub Pages
+          数据存储：浏览器 localStorage · 云同步：Supabase 实时数据库 · 部署：GitHub Pages
         </p>
       </section>
     </div>

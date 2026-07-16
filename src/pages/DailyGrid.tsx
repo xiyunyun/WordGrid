@@ -11,10 +11,13 @@ import {
   X,
   ArrowDownNarrowWide,
   ArrowUpNarrowWide,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { useWordStore } from "@/store/wordStore";
 import { selectDueWords } from "@/store/wordStore";
 import { useDateNotesStore, truncateNote } from "@/store/dateNotes";
+import { useDisplaySettingsStore } from "@/store/displaySettings";
 import { COMMON_POS } from "@/lib/pos";
 import {
   todayKey,
@@ -111,6 +114,17 @@ export default function DailyGrid({
 
   // 词性筛选面板展开/收起
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
+
+  // 显示设置面板展开/收起（控制单词块各信息行的显隐）
+  const [displayPanelOpen, setDisplayPanelOpen] = useState(false);
+  const displaySettings = useDisplaySettingsStore();
+  // 是否有隐藏项（用于按钮激活指示）
+  const hasHiddenItem =
+    !displaySettings.showPos ||
+    !displaySettings.showPhonetic ||
+    !displaySettings.showMeaning ||
+    !displaySettings.showStage ||
+    !displaySettings.showNote;
 
   const today = todayKey();
   const dueWords = selectDueWords(words);
@@ -380,6 +394,28 @@ export default function DailyGrid({
                 清空
               </button>
             )}
+
+            {/* 分隔线 */}
+            <span className="mx-1 h-5 w-px bg-ink/10" />
+
+            {/* 显示设置按钮 */}
+            <button
+              onClick={() => setDisplayPanelOpen((v) => !v)}
+              className={cn(
+                "flex items-center gap-1.5 rounded-md border px-3 py-1.5 font-mono text-2xs uppercase tracking-editorial transition-colors",
+                displayPanelOpen || hasHiddenItem
+                  ? "border-accent-gold/50 bg-accent-gold/10 text-accent-gold"
+                  : "border-ink/15 bg-paper-card text-ink-light hover:border-ink/30 hover:text-ink",
+              )}
+              title="设置单词块显示内容"
+            >
+              {hasHiddenItem ? (
+                <EyeOff className="h-3.5 w-3.5" strokeWidth={1.5} />
+              ) : (
+                <Eye className="h-3.5 w-3.5" strokeWidth={1.5} />
+              )}
+              显示
+            </button>
           </div>
 
           {/* 统计信息 */}
@@ -456,6 +492,62 @@ export default function DailyGrid({
                   </p>
                 )}
               </div>
+            )}
+          </div>
+        )}
+
+        {/* 第三行：显示设置面板（可折叠）—— 控制单词块各信息行的显隐 */}
+        {displayPanelOpen && (
+          <div className="mt-2 space-y-3 rounded-md border border-ink/10 bg-paper-warm/40 p-3 animate-fade-in">
+            <div className="flex items-center justify-between">
+              <label className="eyebrow">
+                Display · 单词块显示内容（单词本身始终显示）
+              </label>
+              {hasHiddenItem && (
+                <button
+                  onClick={() => displaySettings.showAll()}
+                  className="rounded-md border border-ink/15 px-2 py-1 font-mono text-2xs uppercase tracking-editorial text-ink-light transition-colors hover:border-accent-gold/30 hover:text-accent-gold"
+                  title="一键显示全部"
+                >
+                  全部显示
+                </button>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                { key: "showPos" as const, label: "词性" },
+                { key: "showPhonetic" as const, label: "音标" },
+                { key: "showMeaning" as const, label: "词意" },
+                { key: "showStage" as const, label: "记忆阶段" },
+                { key: "showNote" as const, label: "笔记" },
+              ].map(({ key, label }) => {
+                const active = displaySettings[key];
+                return (
+                  <button
+                    key={key}
+                    onClick={() => displaySettings.toggle(key)}
+                    className={cn(
+                      "flex items-center gap-1 rounded-md border px-2.5 py-1 font-mono text-2xs transition-all",
+                      active
+                        ? "border-accent-gold/50 bg-accent-gold/10 text-accent-gold"
+                        : "border-ink/15 text-ink-light hover:border-ink/30 hover:text-ink",
+                    )}
+                  >
+                    {active ? (
+                      <Eye className="h-3 w-3" strokeWidth={1.5} />
+                    ) : (
+                      <EyeOff className="h-3 w-3" strokeWidth={1.5} />
+                    )}
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+            {hasHiddenItem && (
+              <p className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
+                已隐藏 {5 -
+                  [displaySettings.showPos, displaySettings.showPhonetic, displaySettings.showMeaning, displaySettings.showStage, displaySettings.showNote].filter(Boolean).length} 项 · 关闭后单词块会自适应缩小
+              </p>
             )}
           </div>
         )}

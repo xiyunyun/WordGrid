@@ -1,9 +1,10 @@
-import { Bookmark, Check, Trash2, NotebookPen, Pencil } from "lucide-react";
+import { Check, Trash2, NotebookPen, Pencil, Eye } from "lucide-react";
 import type { Word } from "@/types";
 import { useWordStore } from "@/store/wordStore";
 import { STAGE_LABELS } from "@/types";
 import { cn } from "@/lib/utils";
 import SpeakButton from "@/components/SpeakButton";
+import { useDisplaySettingsStore } from "@/store/displaySettings";
 
 interface WordCellProps {
   word: Word;
@@ -11,6 +12,20 @@ interface WordCellProps {
   onRequestEdit?: (word: Word) => void;
   onRequestNote?: (word: Word) => void;
 }
+
+/**
+ * 记忆阶段标签的颜色映射（与生词本保持一致）
+ * 暖灰 → 灰墨 → 金 → 墨绿渐进，对应 0-6 七个阶段
+ */
+const STAGE_COLORS: Record<number, string> = {
+  0: "text-ink-light",
+  1: "text-ink-muted",
+  2: "text-accent-gold/70",
+  3: "text-accent-gold",
+  4: "text-accent-green/60",
+  5: "text-accent-green/80",
+  6: "text-accent-green",
+};
 
 export default function WordCell({
   word,
@@ -20,6 +35,8 @@ export default function WordCell({
 }: WordCellProps) {
   const markMastered = useWordStore((s) => s.markMastered);
   const removeWord = useWordStore((s) => s.removeWord);
+  const { showPos, showPhonetic, showMeaning, showStage, showNote } =
+    useDisplaySettingsStore();
 
   return (
     <article
@@ -30,10 +47,10 @@ export default function WordCell({
           : "border-accent-red/40 border-l-[3px] border-l-accent-red",
       )}
     >
-      {/* 单词主体 - 不再响应单击切换生词 */}
+      {/* 单词主体：单词行（右侧固定状态标签）+ 词性/音标/词意竖向排列 */}
       <div className="flex flex-col items-start gap-1 px-3 py-2.5 md:px-4 md:py-3">
-        {/* 单词行：单词 + 词性 */}
-        <div className="flex w-full items-baseline justify-between gap-2">
+        {/* 单词行：单词 + 右侧固定宽度的记忆状态标签 */}
+        <div className="flex w-full items-start justify-between gap-2">
           <span
             className={cn(
               "min-w-0 flex-1 font-serif text-lg font-medium leading-tight tracking-word break-words md:text-xl",
@@ -42,57 +59,56 @@ export default function WordCell({
           >
             {word.word}
           </span>
-          {word.pos && (
-            <span className="flex-shrink-0 font-mono text-2xs italic text-accent-gold">
-              {word.pos}
+          {/* 记忆状态标签 - 无图标、固定小尺寸、七色方案、靠右边界 */}
+          {showStage && (
+            <span
+              className={cn(
+                "ml-2 flex-shrink-0 self-start pt-0.5 text-right font-mono text-2xs uppercase tracking-editorial",
+                word.isMastered
+                  ? "w-10 text-accent-green"
+                  : STAGE_COLORS[word.reviewStage] ?? "text-ink-light",
+              )}
+              title={
+                word.isMastered
+                  ? "已掌握"
+                  : `记忆阶段：${STAGE_LABELS[word.reviewStage] || "初识"}`
+              }
+            >
+              {word.isMastered
+                ? "掌握"
+                : STAGE_LABELS[word.reviewStage]?.[0] || "初"}
             </span>
           )}
         </div>
+        {/* 词性行 */}
+        {showPos && word.pos && (
+          <span className="font-mono text-2xs italic text-accent-gold">
+            {word.pos}
+          </span>
+        )}
         {/* 音标行 */}
-        {word.phonetic && (
+        {showPhonetic && word.phonetic && (
           <span className="font-mono text-xs text-ink-light">
             {word.phonetic}
           </span>
         )}
         {/* 释义行 */}
-        <span
-          className={cn(
-            "font-body text-sm leading-snug",
-            word.isMastered ? "text-ink-light" : "text-ink-soft",
-          )}
-        >
-          {word.meaning}
-        </span>
+        {showMeaning && (
+          <span
+            className={cn(
+              "font-body text-sm leading-snug",
+              word.isMastered ? "text-ink-light" : "text-ink-soft",
+            )}
+          >
+            {word.meaning}
+          </span>
+        )}
       </div>
 
-      {/* 状态条 */}
-      <div className="flex items-center justify-between border-t border-ink/8 px-3 py-1.5">
-        <div className="flex items-center gap-1.5">
-          {word.isMastered ? (
-            <>
-              <Check
-                className="h-3 w-3 text-accent-green"
-                strokeWidth={2}
-              />
-              <span className="font-mono text-2xs uppercase tracking-editorial text-accent-green">
-                已掌握
-              </span>
-            </>
-          ) : (
-            <>
-              <Bookmark
-                className="h-3 w-3 fill-accent-red text-accent-red"
-                strokeWidth={1.5}
-              />
-              <span className="font-mono text-2xs uppercase tracking-editorial text-accent-red">
-                {STAGE_LABELS[word.reviewStage] || "初识"}
-              </span>
-            </>
-          )}
-        </div>
-
+      {/* 功能按钮栏 - 独占一行，居中平均放置；mt-auto 确保卡片被拉高时贴底对齐 */}
+      <div className="mt-auto flex items-center justify-center gap-4 border-t border-ink/8 px-3 py-1.5">
         {/* 悬浮操作 - 手机端始终显示，桌面端 hover 显示 */}
-        <div className="flex items-center gap-1 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
+        <div className="flex items-center gap-4 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
           <SpeakButton text={word.word} />
           {onRequestEdit && (
             <button
@@ -132,7 +148,7 @@ export default function WordCell({
       </div>
 
       {/* 笔记预览 - 点击打开完整笔记弹窗 */}
-      {word.note && !compact && (
+      {showNote && word.note && !compact && (
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -154,6 +170,14 @@ export default function WordCell({
             </span>
           </div>
         </button>
+      )}
+
+      {/* 辅助：用于提示当前为"仅单词"模式（仅当其他项全部关闭时显示一次） */}
+      {!showPos && !showPhonetic && !showMeaning && !showStage && !showNote && (
+        <div className="flex items-center justify-center gap-1 border-t border-ink/8 py-0.5 font-mono text-2xs uppercase tracking-editorial text-ink-light/40">
+          <Eye className="h-2.5 w-2.5" strokeWidth={1.5} />
+          <span>仅单词</span>
+        </div>
       )}
     </article>
   );
