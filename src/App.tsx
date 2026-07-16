@@ -8,6 +8,7 @@ import NoteModal from "@/components/NoteModal";
 import UpdateNotice from "@/components/UpdateNotice";
 import ImportantNoticeFloat from "@/components/ImportantNoticeFloat";
 import WordSearchModal from "@/components/WordSearchModal";
+import PWAUpdatePrompt from "@/components/PWAUpdatePrompt";
 import DailyGrid from "@/pages/DailyGrid";
 import Wordbook from "@/pages/Wordbook";
 import ArticleBuilder from "@/pages/ArticleBuilder";
@@ -86,13 +87,21 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
     if (!isCloudConfigured()) return;
 
     // 确保 cloudId 已设置（默认用登录用户名）
-    if (!getCloudId()) {
+    // localhost 测试环境自动加 -dev 后缀，与正式网站数据完全隔离，避免测试数据污染真实云存档
+    const isDev = window.location.hostname === "localhost";
+    const currentCloudId = getCloudId();
+    if (!currentCloudId) {
       const user = getCurrentUser();
       if (user?.username) {
-        setCloudId(user.username);
+        setCloudId(isDev ? `${user.username}-dev` : user.username);
       } else {
         return;
       }
+    } else if (isDev && !currentCloudId.endsWith("-dev")) {
+      // 旧版本在 localhost 设置了不带 -dev 的 cloudId，自动修正以隔离数据
+      setCloudId(`${currentCloudId}-dev`);
+      // 清除旧的云端 SHA 记录，强制重新下载 dev 环境的存档（如果有）
+      localStorage.removeItem("wordgrid-cloud-sha");
     }
 
     // 1. 打开时智能下载（比较时间戳，云端更新才下载）
@@ -259,6 +268,7 @@ export default function App() {
     <Router>
       <AppContent onLogout={handleLogout} />
       <UpdateNotice />
+      <PWAUpdatePrompt />
     </Router>
   );
 }

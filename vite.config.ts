@@ -58,6 +58,10 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // 新 SW 立即接管，避免旧 SW 持续命中 precache 导致用户看到旧版本
+        // 这是「推送后网站不更新，需 Ctrl+Shift+R 才刷新」bug 的核心修复
+        skipWaiting: true,
+        clientsClaim: true,
         // precache 清单中的资源路径会自动加上 base path
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff,woff2}'],
         // 运行时缓存：API 请求采用 NetworkFirst，保证数据新鲜

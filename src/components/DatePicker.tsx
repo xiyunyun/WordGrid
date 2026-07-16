@@ -1,22 +1,33 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { Calendar, ChevronRight, X } from "lucide-react";
+import { Calendar, ChevronRight, X, StickyNote } from "lucide-react";
 import { useWordStore } from "@/store/wordStore";
+import { useDateNotesStore } from "@/store/dateNotes";
 import { formatMD, weekdayCN, todayKey } from "@/lib/review";
 import { cn } from "@/lib/utils";
+import DateNoteModal from "@/components/DateNoteModal";
 
 interface DatePickerProps {
   onJump: (date: string) => void;
 }
 
+/** 跳转面板中备注内联显示的字数上限（超出则显示「查看全部」按钮） */
+const NOTE_INLINE_MAX = 12;
+
 /**
  * 悬浮日期选择器 - 右下角固定按钮
  * 点击展开二级菜单，按月份分组列出所有存在单词的日期
+ * 每个日期项会显示备注摘要，方便按学习主题定位
  */
 export default function DatePicker({ onJump }: DatePickerProps) {
   const words = useWordStore((s) => s.words);
+  const dateNotes = useDateNotesStore((s) => s.notes);
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+
+  // 备注查看/编辑弹窗
+  const [noteModalOpen, setNoteModalOpen] = useState(false);
+  const [noteModalDate, setNoteModalDate] = useState("");
 
   // 收集所有存在单词的日期，倒序
   const dates = useMemo(() => {
@@ -85,6 +96,12 @@ export default function DatePicker({ onJump }: DatePickerProps) {
     }
   };
 
+  const openNoteModal = (e: React.MouseEvent, date: string) => {
+    e.stopPropagation();
+    setNoteModalDate(date);
+    setNoteModalOpen(true);
+  };
+
   if (dates.length === 0) return null;
 
   return (
@@ -109,13 +126,13 @@ export default function DatePicker({ onJump }: DatePickerProps) {
       {open && (
         <div
           ref={panelRef}
-          className="absolute bottom-full right-0 mb-3 w-72 origin-bottom-right animate-slide-up overflow-hidden rounded-md border border-ink/15 bg-paper-card shadow-deep"
+          className="absolute bottom-full right-0 mb-3 w-80 origin-bottom-right animate-slide-up overflow-hidden rounded-md border border-ink/15 bg-paper-card shadow-deep"
         >
           {/* 头部 */}
           <div className="flex items-center justify-between border-b border-ink/10 px-4 py-3">
             <div>
               <div className="eyebrow">Jump To Date</div>
-              <div className="font-display text-lg font-medium text-ink">
+              <div className="font-serif text-lg font-medium text-ink">
                 跳转到日期
               </div>
             </div>
@@ -149,15 +166,15 @@ export default function DatePicker({ onJump }: DatePickerProps) {
           </div>
 
           {/* 日期列表 - 按月分组 */}
-          <div className="max-h-80 overflow-y-auto px-2 py-2 scrollbar-thin">
+          <div className="max-h-96 overflow-y-auto px-2 py-2 scrollbar-thin">
             {monthGroups.map(([monthKey, days]) => {
               const [y, m] = monthKey.split("-");
               return (
                 <div key={monthKey} className="mb-2">
                   {/* 月份标题 */}
-                  <div className="sticky top-0 bg-paper-card px-2 py-1.5">
+                  <div className="sticky top-0 z-10 bg-paper-card px-2 py-1.5">
                     <div className="flex items-baseline gap-2">
-                      <span className="font-display text-base font-medium text-ink">
+                      <span className="font-serif text-base font-medium text-ink">
                         {parseInt(m, 10)}月
                       </span>
                       <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
@@ -171,40 +188,77 @@ export default function DatePicker({ onJump }: DatePickerProps) {
                     {days.map((d) => {
                       const dayCount = words.filter((w) => w.date === d).length;
                       const isToday = d === today;
+                      const note = dateNotes[d] || "";
+                      const isLongNote = note.length > NOTE_INLINE_MAX;
+                      const noteInline = isLongNote
+                        ? note.slice(0, NOTE_INLINE_MAX) + "…"
+                        : note;
+
                       return (
                         <li key={d}>
-                          <button
-                            onClick={() => handleJump(d)}
+                          <div
                             className={cn(
-                              "group flex w-full items-center justify-between rounded px-2 py-2 text-left transition-colors",
+                              "group flex w-full items-center justify-between rounded px-2 py-2 transition-colors",
                               isToday
                                 ? "bg-accent-red/8 hover:bg-accent-red/12"
                                 : "hover:bg-paper-warm/60",
                             )}
                           >
-                            <div className="flex items-baseline gap-2">
-                              <span
-                                className={cn(
-                                  "font-display text-base font-medium",
-                                  isToday ? "text-accent-red" : "text-ink",
-                                )}
-                              >
-                                {formatMD(d)}
-                              </span>
-                              <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
-                                {weekdayCN(d)}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleJump(d)}
+                              className="flex flex-1 flex-col items-start text-left"
+                            >
+                              <div className="flex items-baseline gap-2">
+                                {/* 日期字体：font-serif（Lora）替代 font-display，更易读 */}
+                                <span
+                                  className={cn(
+                                    "font-serif text-base font-medium",
+                                    isToday ? "text-accent-red" : "text-ink",
+                                  )}
+                                >
+                                  {formatMD(d)}
+                                </span>
+                                <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
+                                  {weekdayCN(d)}
+                                </span>
+                              </div>
+                              {/* 备注摘要 */}
+                              {note && (
+                                <div className="mt-0.5 flex items-center gap-1">
+                                  <StickyNote
+                                    className="h-3 w-3 flex-shrink-0 text-accent-gold"
+                                    strokeWidth={1.5}
+                                  />
+                                  <span className="font-body text-xs italic text-ink-muted">
+                                    {noteInline}
+                                  </span>
+                                </div>
+                              )}
+                            </button>
+                            <div className="flex items-center gap-1.5">
                               <span className="font-mono text-2xs text-ink-light">
                                 {dayCount} 词
                               </span>
+                              {/* 长备注：显示「查看全部」按钮 */}
+                              {isLongNote && (
+                                <button
+                                  onClick={(e) => openNoteModal(e, d)}
+                                  className="flex items-center gap-0.5 rounded border border-accent-gold/30 bg-accent-gold/5 px-1.5 py-0.5 font-mono text-2xs uppercase tracking-editorial text-accent-gold transition-colors hover:bg-accent-gold/15"
+                                  title="查看完整备注"
+                                >
+                                  <StickyNote
+                                    className="h-2.5 w-2.5"
+                                    strokeWidth={1.5}
+                                  />
+                                  全文
+                                </button>
+                              )}
                               <ChevronRight
                                 className="h-3.5 w-3.5 text-ink-light opacity-0 transition-opacity group-hover:opacity-100"
                                 strokeWidth={1.5}
                               />
                             </div>
-                          </button>
+                          </div>
                         </li>
                       );
                     })}
@@ -220,6 +274,13 @@ export default function DatePicker({ onJump }: DatePickerProps) {
           </div>
         </div>
       )}
+
+      {/* 日期备注查看/编辑弹窗（长备注「全文」按钮触发） */}
+      <DateNoteModal
+        open={noteModalOpen}
+        onClose={() => setNoteModalOpen(false)}
+        date={noteModalDate}
+      />
     </>
   );
 }
