@@ -25,6 +25,10 @@ export function isSupabaseConfigured(): boolean {
 let _client: ReturnType<typeof createClient> | null = null;
 
 export function getSupabase() {
+  // 开发环境（npm run dev / localhost）禁用云同步，避免测试数据污染生产环境
+  // 生产环境（构建后的版本）正常启用
+  // 如需在 localhost 测试云同步功能，可临时注释此判断
+  if (import.meta.env.DEV) return null;
   if (!isSupabaseConfigured()) return null;
   if (!_client) {
     _client = createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!, {

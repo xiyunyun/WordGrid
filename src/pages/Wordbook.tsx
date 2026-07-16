@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+
 import { useSearchParams } from "react-router-dom";
 import {
   Eye,
@@ -30,13 +31,21 @@ import SpeakButton from "@/components/SpeakButton";
 import SelfCheckFlow from "@/components/SelfCheckFlow";
 import NoteModal from "@/components/NoteModal";
 import ExportModal from "@/components/ExportModal";
+import WordbookFilterBar, {
+  DEFAULT_FILTER,
+  type FilterState,
+} from "@/components/WordbookFilterBar";
 
 type ViewMode = "list" | "self_check" | "random" | "dictation";
 type ListTag = "due" | "difficult" | "mastered" | "recent7" | "all";
+/** 自我检测练习范围 */
+type SelfCheckScope = "due" | "all_difficult";
 
 // 模块级缓存：路由切换时模块不重新加载（保持状态），刷新页面时模块重新加载（重置到默认）
 let cachedMode: ViewMode | null = null;
 let cachedTag: ListTag | null = null;
+let cachedFilter: FilterState | null = null;
+let cachedSelfCheckScope: SelfCheckScope | null = null;
 
 export default function Wordbook() {
   const words = useWordStore((s) => s.words);
@@ -46,6 +55,18 @@ export default function Wordbook() {
   useEffect(() => {
     cachedMode = mode;
   }, [mode]);
+  // 筛选状态：模块级缓存，刷新页面时重置
+  const [filter, setFilter] = useState<FilterState>(() => cachedFilter ?? DEFAULT_FILTER);
+  useEffect(() => {
+    cachedFilter = filter;
+  }, [filter]);
+  // 自我检测练习范围：模块级缓存
+  const [selfCheckScope, setSelfCheckScope] = useState<SelfCheckScope>(
+    () => cachedSelfCheckScope ?? "due",
+  );
+  useEffect(() => {
+    cachedSelfCheckScope = selfCheckScope;
+  }, [selfCheckScope]);
   // 笔记查看弹窗
   const [noteModalOpen, setNoteModalOpen] = useState(false);
   const [noteWord, setNoteWord] = useState<Word | null>(null);
@@ -161,6 +182,48 @@ export default function Wordbook() {
         })}
       </nav>
 
+      {/* 共用筛选工具栏：根据当前 mode 显示不同筛选项 */}
+      {hasAnyWords && (
+        <WordbookFilterBar
+          filter={filter}
+          onChange={setFilter}
+          showStage={mode === "list" || mode === "random" || mode === "dictation"}
+          showPos={mode === "list" || mode === "random" || mode === "dictation"}
+          showExcludeMastered={mode === "random" || mode === "dictation"}
+          selfCheckPlaceholder={
+            mode === "self_check" ? (
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
+                  练习范围
+                </span>
+                <button
+                  onClick={() => setSelfCheckScope("due")}
+                  className={cn(
+                    "rounded-md border px-3 py-1.5 font-mono text-2xs uppercase tracking-editorial transition-colors",
+                    selfCheckScope === "due"
+                      ? "border-ink bg-ink text-paper"
+                      : "border-ink/20 text-ink-light hover:border-ink hover:text-ink",
+                  )}
+                >
+                  到期词 + 当日新词
+                </button>
+                <button
+                  onClick={() => setSelfCheckScope("all_difficult")}
+                  className={cn(
+                    "rounded-md border px-3 py-1.5 font-mono text-2xs uppercase tracking-editorial transition-colors",
+                    selfCheckScope === "all_difficult"
+                      ? "border-ink bg-ink text-paper"
+                      : "border-ink/20 text-ink-light hover:border-ink hover:text-ink",
+                  )}
+                >
+                  全部生词
+                </button>
+              </div>
+            ) : undefined
+          }
+        />
+      )}
+
       {/* 空状态 - 仅当完全没有任何单词时 */}
       {!hasAnyWords && (
         <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -189,6 +252,7 @@ export default function Wordbook() {
               masteredWords={masteredWords}
               recentWords={recentWords}
               allWords={words}
+              filter={filter}
               focusWordId={focusWordId}
               onConsumeFocus={() => {
                 // 定位完成后清除 URL 中的 focus，避免刷新重复滚动
@@ -200,7 +264,11 @@ export default function Wordbook() {
           {mode === "self_check" && (
             <SelfCheckView
               words={(() => {
-                // 自我检测列表 = 到期词 ∪ 当天新词
+                // 自我检测列表根据 selfCheckScope 决定
+                if (selfCheckScope === "all_difficult") {
+                  return difficultWords;
+                }
+                // 默认：到期词 ∪ 当天新词
                 // 当天新加的词 nextReview 是明天，isDue 返回 false，但用户当天应该先学习一次
                 const today = todayKey();
                 const todayNewWords = difficultWords.filter((w) => w.date === today);
@@ -211,8 +279,18 @@ export default function Wordbook() {
               })()}
             />
           )}
-          {mode === "random" && <RandomView words={words} />}
-          {mode === "dictation" && <DictationView words={words} />}
+          {mode === "random" && (
+            <RandomView
+              words={words}
+              filter={filter}
+            />
+          )}
+          {mode === "dictation" && (
+            <DictationView
+              words={words}
+              filter={filter}
+            />
+          )}
         </>
       )}
 
@@ -240,6 +318,7 @@ function ListView({
   masteredWords,
   recentWords,
   allWords,
+  filter,
   focusWordId,
   onConsumeFocus,
   onRequestNote,
@@ -249,6 +328,7 @@ function ListView({
   masteredWords: Word[];
   recentWords: Word[];
   allWords: Word[];
+  filter: FilterState;
   /** 搜索跳转传入的目标单词 id，定位完成后会调用 onConsumeFocus 清除 */
   focusWordId?: string;
   onConsumeFocus?: () => void;
@@ -299,6 +379,22 @@ function ListView({
           : activeTag === "recent7"
             ? recentWords
             : allWords;
+
+  // 应用筛选工具栏的筛选（记忆阶段 + 词性）
+  // 筛选为空时直接使用 tagWords，避免无谓的 filter 开销
+  const filteredWords = useMemo(() => {
+    if (!filter.stages && !filter.pos) return tagWords;
+    return tagWords.filter((w) => {
+      // 记忆阶段筛选：-1 表示已掌握，0-6 对应 reviewStage
+      if (filter.stages) {
+        const wordStage = w.isMastered ? -1 : w.reviewStage;
+        if (!filter.stages.includes(wordStage)) return false;
+      }
+      // 词性筛选
+      if (filter.pos && !filter.pos.includes(w.pos)) return false;
+      return true;
+    });
+  }, [tagWords, filter.stages, filter.pos]);
 
   // 复习标签下隐藏释义（点击显示），其余标签（含全部单词、近七日）直接显示
   const hideMeaning = activeTag === "due";
@@ -399,10 +495,10 @@ function ListView({
           })}
         </div>
 
-        {/* 当前标签下的单词列表 */}
-        {tagWords.length > 0 ? (
+        {/* 当前标签下的单词列表（应用筛选工具栏筛选后） */}
+        {filteredWords.length > 0 ? (
           <ul className="wordbook-grid divide-y divide-ink/8 border-y border-ink/10">
-            {tagWords.map((w) => (
+            {filteredWords.map((w) => (
               <MinimalRow
                 key={w.id}
                 word={w}
@@ -416,7 +512,7 @@ function ListView({
           </ul>
         ) : (
           <div className="flex items-center justify-center py-10 text-center font-body text-sm text-ink-light">
-            该标签下暂无单词
+            {tagWords.length > 0 ? "当前筛选条件下暂无单词" : "该标签下暂无单词"}
           </div>
         )}
       </section>
@@ -619,8 +715,21 @@ function getPracticeStats(
   return { today, total };
 }
 
-function RandomView({ words }: { words: Word[] }) {
-  const [queue, setQueue] = useState<Word[]>(() => shuffle(words));
+function RandomView({ words, filter }: { words: Word[]; filter: FilterState }) {
+  // 应用筛选：记忆阶段 + 词性 + 排除已掌握
+  const filteredWords = useMemo(() => {
+    return words.filter((w) => {
+      if (filter.excludeMastered && w.isMastered) return false;
+      if (filter.stages) {
+        const wordStage = w.isMastered ? -1 : w.reviewStage;
+        if (!filter.stages.includes(wordStage)) return false;
+      }
+      if (filter.pos && !filter.pos.includes(w.pos)) return false;
+      return true;
+    });
+  }, [words, filter]);
+
+  const [queue, setQueue] = useState<Word[]>(() => shuffle(filteredWords));
   const [idx, setIdx] = useState(0);
   const [revealed, setRevealed] = useState(false);
   const [sessionCount, setSessionCount] = useState(0);
@@ -634,14 +743,25 @@ function RandomView({ words }: { words: Word[] }) {
 
   // 词库变化时重新洗牌
   useEffect(() => {
-    setQueue(shuffle(words));
+    setQueue(shuffle(filteredWords));
     setIdx(0);
     setRevealed(false);
-  }, [words.length]);
+  }, [filteredWords.length]);
 
   const current = queue[idx];
 
-  if (!current) return null;
+  // 筛选后无可用单词
+  if (!current) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <Shuffle className="mb-4 h-10 w-10 text-ink-light" strokeWidth={1} />
+        <div className="eyebrow mb-2">No Words Match</div>
+        <p className="font-body text-sm text-ink-muted">
+          当前筛选条件下没有可用的单词，请调整筛选后重试。
+        </p>
+      </div>
+    );
+  }
 
   const handle = (correct: boolean) => {
     // 记录复习日志（计入统计页面熟练度排行，不推进艾宾浩斯节点）
@@ -653,7 +773,7 @@ function RandomView({ words }: { words: Word[] }) {
     setRevealed(false);
     const nextIdx = idx + 1;
     if (nextIdx >= queue.length) {
-      setQueue(shuffle(words));
+      setQueue(shuffle(filteredWords));
       setIdx(0);
     } else {
       setIdx(nextIdx);
@@ -661,7 +781,7 @@ function RandomView({ words }: { words: Word[] }) {
   };
 
   const reshuffle = () => {
-    setQueue(shuffle(words));
+    setQueue(shuffle(filteredWords));
     setIdx(0);
     setRevealed(false);
   };
@@ -764,8 +884,21 @@ function RandomView({ words }: { words: Word[] }) {
 
 /* ============ 听写测试模式 - 基于全部单词的无限听写练习 ============ */
 
-function DictationView({ words }: { words: Word[] }) {
-  const [queue, setQueue] = useState<Word[]>(() => shuffle(words));
+function DictationView({ words, filter }: { words: Word[]; filter: FilterState }) {
+  // 应用筛选：记忆阶段 + 词性 + 排除已掌握
+  const filteredWords = useMemo(() => {
+    return words.filter((w) => {
+      if (filter.excludeMastered && w.isMastered) return false;
+      if (filter.stages) {
+        const wordStage = w.isMastered ? -1 : w.reviewStage;
+        if (!filter.stages.includes(wordStage)) return false;
+      }
+      if (filter.pos && !filter.pos.includes(w.pos)) return false;
+      return true;
+    });
+  }, [words, filter]);
+
+  const [queue, setQueue] = useState<Word[]>(() => shuffle(filteredWords));
   const [idx, setIdx] = useState(0);
   const [input, setInput] = useState("");
   const [result, setResult] = useState<"idle" | "correct" | "wrong">("idle");
@@ -782,18 +915,30 @@ function DictationView({ words }: { words: Word[] }) {
 
   // 词库变化时重新洗牌
   useEffect(() => {
-    setQueue(shuffle(words));
+    setQueue(shuffle(filteredWords));
     setIdx(0);
     setInput("");
     setResult("idle");
-  }, [words.length]);
+  }, [filteredWords.length]);
 
   useEffect(() => {
     inputRef.current?.focus();
   }, [idx]);
 
   const current = queue[idx];
-  if (!current) return null;
+
+  // 筛选后无可用单词
+  if (!current) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <Keyboard className="mb-4 h-10 w-10 text-ink-light" strokeWidth={1} />
+        <div className="eyebrow mb-2">No Words Match</div>
+        <p className="font-body text-sm text-ink-muted">
+          当前筛选条件下没有可用的单词，请调整筛选后重试。
+        </p>
+      </div>
+    );
+  }
 
   const advance = () => {
     setInput("");
@@ -801,7 +946,7 @@ function DictationView({ words }: { words: Word[] }) {
     const nextIdx = idx + 1;
     // 队列耗尽则自动重新洗牌（无限练习）
     if (nextIdx >= queue.length) {
-      setQueue(shuffle(words));
+      setQueue(shuffle(filteredWords));
       setIdx(0);
     } else {
       setIdx(nextIdx);
@@ -855,7 +1000,7 @@ function DictationView({ words }: { words: Word[] }) {
   };
 
   const reshuffle = () => {
-    setQueue(shuffle(words));
+    setQueue(shuffle(filteredWords));
     setIdx(0);
     setInput("");
     setResult("idle");

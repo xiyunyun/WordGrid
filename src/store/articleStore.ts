@@ -103,7 +103,8 @@ export const useArticleStore = create<ArticleStore>()(
     (set, get) => ({
       archives: [],
       lastReadArchiveId: null,
-      syncEnabled: true,
+      // 开发环境（localhost）默认关闭云同步，避免测试数据污染生产环境
+      syncEnabled: !import.meta.env.DEV,
 
       addArchive: (input) => {
         const id = genId();

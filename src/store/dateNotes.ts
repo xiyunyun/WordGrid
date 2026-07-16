@@ -31,7 +31,8 @@ export const useDateNotesStore = create<DateNotesStore>()(
   persist(
     (set, get) => ({
       notes: {},
-      syncEnabled: true,
+      // 开发环境（localhost）默认关闭云同步，避免测试数据污染生产环境
+      syncEnabled: !import.meta.env.DEV,
 
       setNote: (date, text) => {
         const trimmed = text.trim();

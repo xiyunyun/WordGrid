@@ -87,6 +87,15 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
       console.log("[云同步] 等待 store hydrated...");
       return;
     }
+    // 开发环境（npm run dev / localhost）禁用云同步，避免测试数据污染生产环境
+    // 生产环境（构建后的版本）正常启用云同步
+    // 如需在 localhost 测试云同步功能，可临时注释此判断
+    if (import.meta.env.DEV) {
+      console.warn(
+        "[云同步] 开发模式（localhost），已禁用云同步以隔离测试数据与生产数据",
+      );
+      return;
+    }
     if (!isSupabaseConfigured()) {
       console.warn(
         "[云同步] Supabase 未配置，URL:",

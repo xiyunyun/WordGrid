@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { X, Archive, Calendar, FileText, ChevronRight, Trash2, Award } from "lucide-react";
 import type { ArticleArchive } from "@/store/articleStore";
 import { cn } from "@/lib/utils";
@@ -24,6 +24,13 @@ export default function ArchiveListModal({
   onOpenArchive,
   onDeleteArchive,
 }: ArchiveListModalProps) {
+  // 按 createdAt 降序稳定排序（最新的在最前）
+  // 避免云端拉取顺序不稳定导致每次刷新排序都变化
+  const sortedArchives = useMemo(
+    () => [...archives].sort((a, b) => b.createdAt - a.createdAt),
+    [archives],
+  );
+
   if (!open) return null;
 
   return (
@@ -68,7 +75,7 @@ export default function ArchiveListModal({
             </div>
           ) : (
             <ul className="space-y-2">
-              {archives.map((a) => (
+              {sortedArchives.map((a) => (
                 <ArchiveRow
                   key={a.id}
                   archive={a}

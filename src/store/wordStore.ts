@@ -86,7 +86,9 @@ export const useWordStore = create<WordStore>()(
       words: [],
       logs: [],
       hydrated: false,
-      syncEnabled: true, // 默认开启；Realtime 回调更新本地时临时关闭
+      // 开发环境（localhost）默认关闭云同步，避免测试数据污染生产环境
+      // 生产环境默认开启
+      syncEnabled: !import.meta.env.DEV,
 
       addWord: (input) => {
         const trimmedWord = input.word.trim();
