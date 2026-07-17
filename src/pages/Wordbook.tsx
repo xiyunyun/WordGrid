@@ -927,6 +927,8 @@ function DictationView({ words, filter }: { words: Word[]; filter: FilterState }
   const [sessionCount, setSessionCount] = useState(0);
   const [speaking, setSpeaking] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  // 记录上次提交答案的时间戳，防止键盘连发导致刚出结果就自动跳到下一题
+  const lastActionRef = useRef(0);
   const logReview = useWordStore((s) => s.logReview);
   // 统计直接从 logs 聚合（已同步），无需独立 localStorage
   const logs = useWordStore((s) => s.logs);
@@ -968,11 +970,14 @@ function DictationView({ words, filter }: { words: Word[]; filter: FilterState }
   };
 
   // 答题后回车连贯操作：答对→下一题，答错/显示答案→再来一次
+  // 防抖：提交答案后 500ms 内的回车忽略，避免键盘连发导致结果一闪而过
   useEffect(() => {
     if (result === "idle") return;
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Enter") {
         e.preventDefault();
+        // 提交瞬间键盘连发的回车不应触发跳转，等用户松手后再按
+        if (Date.now() - lastActionRef.current < 500) return;
         if (result === "correct") {
           advance();
         } else {
@@ -1009,6 +1014,7 @@ function DictationView({ words, filter }: { words: Word[]; filter: FilterState }
     if (!input.trim() || result !== "idle") return;
     const correct = input.trim().toLowerCase() === current.word.toLowerCase();
     setResult(correct ? "correct" : "wrong");
+    lastActionRef.current = Date.now();
     // 记录复习日志（计入统计页面熟练度排行，不推进艾宾浩斯节点）
     logReview(current.id, correct, "dictation");
     bumpStats();
@@ -1017,6 +1023,7 @@ function DictationView({ words, filter }: { words: Word[]; filter: FilterState }
   const showAnswer = () => {
     if (result !== "idle") return;
     setResult("wrong");
+    lastActionRef.current = Date.now();
     // 显示答案视为答错
     logReview(current.id, false, "dictation");
     bumpStats();
