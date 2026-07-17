@@ -9,23 +9,23 @@ export default {
     },
     extend: {
       colors: {
-        // 纸张色板
+        // 纸张色板 - 通过 CSS 变量实现主题切换
         paper: {
-          DEFAULT: "#F5F1E8", // 奶油纸张底色
-          warm: "#EFE9DA",   // 略深的纸面
-          card: "#FAF7F0",   // 米白卡片
-          deep: "#E8E0CC",   // 深纸边
+          DEFAULT: "hsl(var(--c-paper) / <alpha-value>)",
+          warm: "hsl(var(--c-paper-warm) / <alpha-value>)",
+          card: "hsl(var(--c-paper-card) / <alpha-value>)",
+          deep: "hsl(var(--c-paper-deep) / <alpha-value>)",
         },
         ink: {
-          DEFAULT: "#1A1A1A", // 墨黑正文
-          soft: "#3A3A38",   // 软墨
-          muted: "#6B655C",  // 灰墨次要文字
-          light: "#8B8378",  // 暖灰
+          DEFAULT: "hsl(var(--c-ink) / <alpha-value>)",
+          soft: "hsl(var(--c-ink-soft) / <alpha-value>)",
+          muted: "hsl(var(--c-ink-muted) / <alpha-value>)",
+          light: "hsl(var(--c-ink-light) / <alpha-value>)",
         },
         accent: {
-          red: "#C8543B",    // 赭石红 - 生词
-          green: "#3D5A4A",  // 墨绿 - 已掌握
-          gold: "#B8860B",   // 烫金 - 强调
+          red: "hsl(var(--c-accent-red) / <alpha-value>)",
+          green: "hsl(var(--c-accent-green) / <alpha-value>)",
+          gold: "hsl(var(--c-accent-gold) / <alpha-value>)",
         },
       },
       fontFamily: {

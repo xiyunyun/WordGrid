@@ -13,6 +13,8 @@ import {
 import type { Word } from "@/types";
 import { cn } from "@/lib/utils";
 import { COMMON_POS } from "@/lib/pos";
+import { useDateNotesStore } from "@/store/dateNotes";
+import DatePickerCalendar from "@/components/DatePickerCalendar";
 import QuizPanel, { QuizLoading } from "@/components/QuizPanel";
 import ArchiveListModal from "@/components/ArchiveListModal";
 import DictionaryModal from "@/components/DictionaryModal";
@@ -408,14 +410,17 @@ function SelectPhase({
   onGenerate: () => void;
 }) {
   // ====== 筛选状态 ======
-  /** 日期筛选，空字符串表示不限 */
-  const [filterDate, setFilterDate] = useState("");
+  /** 日期筛选（多选），空数组表示不限 */
+  const [filterDates, setFilterDates] = useState<string[]>([]);
   /** 字母数上限，0 表示不限；>0 表示 word.length <= N */
   const [filterMaxLength, setFilterMaxLength] = useState(0);
   /** 词性筛选集合，空集合表示不限 */
   const [filterPos, setFilterPos] = useState<Set<string>>(new Set());
   /** 错误率筛选开关，启用时只显示做错过的词并按错误次数降序 */
   const [wrongOnly, setWrongOnly] = useState(false);
+
+  // 日期备注数据（用于日历中显示小圆点）
+  const dateNotes = useDateNotesStore((s) => s.notes);
 
   // 词性筛选项使用固定的 15 个标准词性列表，保证向下兼容：
   // 即使单词的 pos 是 "num. adj. n." 这样的合集，拆分后也能被 num./adj./n. 单独筛出
@@ -433,7 +438,8 @@ function SelectPhase({
   // 综合筛选
   const filteredWords = useMemo(() => {
     let list = words;
-    if (filterDate) list = list.filter((w) => w.date === filterDate);
+    if (filterDates.length > 0)
+      list = list.filter((w) => filterDates.includes(w.date));
     if (filterMaxLength > 0) list = list.filter((w) => w.word.length <= filterMaxLength);
     if (filterPos.size > 0) {
       list = list.filter((w) => {
@@ -451,13 +457,13 @@ function SelectPhase({
         );
     }
     return list;
-  }, [words, filterDate, filterMaxLength, filterPos, wrongOnly, wrongCountMap]);
+  }, [words, filterDates, filterMaxLength, filterPos, wrongOnly, wrongCountMap]);
 
   const anyFilterActive =
-    !!filterDate || filterMaxLength > 0 || filterPos.size > 0 || wrongOnly;
+    filterDates.length > 0 || filterMaxLength > 0 || filterPos.size > 0 || wrongOnly;
 
   const clearFilters = () => {
-    setFilterDate("");
+    setFilterDates([]);
     setFilterMaxLength(0);
     setFilterPos(new Set());
     setWrongOnly(false);
@@ -559,27 +565,15 @@ function SelectPhase({
         </div>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {/* 日期筛选 */}
+          {/* 日期筛选 - 日历多选 */}
           <div>
-            <label className="eyebrow mb-2 block">Date · 添加日期</label>
-            <div className="flex items-center gap-2">
-              <input
-                type="date"
-                value={filterDate}
-                onChange={(e) => setFilterDate(e.target.value)}
-                className="input-paper flex-1 font-mono text-sm"
-                placeholder="选择日期"
-              />
-              {filterDate && (
-                <button
-                  onClick={() => setFilterDate("")}
-                  className="rounded-md border border-ink/15 px-2 py-1 font-mono text-2xs text-ink-light hover:border-ink/30 hover:text-ink"
-                  title="清除日期"
-                >
-                  清除
-                </button>
-              )}
-            </div>
+            <label className="eyebrow mb-2 block">Date · 添加日期（可多选）</label>
+            <DatePickerCalendar
+              selected={filterDates}
+              onChange={setFilterDates}
+              notes={dateNotes}
+              label="日期"
+            />
           </div>
 
           {/* 字母数筛选 */}

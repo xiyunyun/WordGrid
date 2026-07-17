@@ -8,14 +8,17 @@
  * - 记忆阶段（多选）：0-6 + 已掌握
  * - 词性（多选）：n./v./adj./...
  * - 排除已掌握（开关）
+ * - 日期（多选日历）：按添加日期筛选
  *
- * 自我检测页面无筛选项，由 selfCheckPlaceholder 提供占位内容。
+ * 自我检测页面由 selfCheckPlaceholder 提供占位内容，日期筛选仍可使用。
  */
 import { useState, useRef, useEffect } from "react";
 import { Filter, Check, X } from "lucide-react";
 import { COMMON_POS } from "@/lib/pos";
 import { STAGE_LABELS } from "@/types";
 import { cn } from "@/lib/utils";
+import { useDateNotesStore } from "@/store/dateNotes";
+import DatePickerCalendar from "@/components/DatePickerCalendar";
 
 export interface FilterState {
   /** 选中的记忆阶段（0-6 对应艾宾浩斯节点，-1 表示已掌握）。null 表示不筛选 */
@@ -24,12 +27,15 @@ export interface FilterState {
   pos: string[] | null;
   /** 排除已掌握的单词（仅 random/dictation 有效） */
   excludeMastered: boolean;
+  /** 选中的日期列表（YYYY-MM-DD）。null 表示不筛选 */
+  dates: string[] | null;
 }
 
 export const DEFAULT_FILTER: FilterState = {
   stages: null,
   pos: null,
   excludeMastered: false,
+  dates: null,
 };
 
 interface WordbookFilterBarProps {
@@ -39,6 +45,8 @@ interface WordbookFilterBarProps {
   showStage?: boolean;
   showPos?: boolean;
   showExcludeMastered?: boolean;
+  /** 是否显示日期筛选日历 */
+  showDates?: boolean;
   /** 自我检测页面的占位内容 */
   selfCheckPlaceholder?: React.ReactNode;
   /** 当前页面 mode，用于决定是否显示任何筛选 */
@@ -63,18 +71,36 @@ export default function WordbookFilterBar({
   showStage = false,
   showPos = false,
   showExcludeMastered = false,
+  showDates = false,
   selfCheckPlaceholder,
   hasFilter = true,
 }: WordbookFilterBarProps) {
+  // 日期备注数据（用于日历中显示小圆点）
+  const dateNotes = useDateNotesStore((s) => s.notes);
+
   // 如果没有任何筛选项且没有占位内容，则不渲染工具栏
   if (!hasFilter && !selfCheckPlaceholder) return null;
-  // 自我检测页面：只渲染占位内容
-  if (selfCheckPlaceholder && !showStage && !showPos && !showExcludeMastered) {
+  // 自我检测页面：如果没有日期筛选，只渲染占位内容
+  if (selfCheckPlaceholder && !showStage && !showPos && !showExcludeMastered && !showDates) {
     return <div className="flex flex-wrap items-center gap-2">{selfCheckPlaceholder}</div>;
   }
 
+  const anyFilterActive =
+    !!filter.stages || !!filter.pos || filter.excludeMastered || (filter.dates && filter.dates.length > 0);
+
   return (
     <div className="flex flex-wrap items-center gap-2">
+      {/* 日期筛选统一放在第一位，保证四个页面 UI 对齐 */}
+      {showDates && (
+        <DatePickerCalendar
+          selected={filter.dates ?? []}
+          onChange={(next) => {
+            onChange({ ...filter, dates: next.length > 0 ? next : null });
+          }}
+          notes={dateNotes}
+          label="日期"
+        />
+      )}
       {showStage && (
         <MultiSelectDropdown
           label="记忆阶段"
@@ -112,7 +138,7 @@ export default function WordbookFilterBar({
         </button>
       )}
       {/* 重置按钮：任一筛选激活时显示 */}
-      {(filter.stages || filter.pos || filter.excludeMastered) && (
+      {anyFilterActive && (
         <button
           onClick={() => onChange({ ...DEFAULT_FILTER })}
           className="flex items-center gap-1 rounded-md border border-ink/15 px-2.5 py-1.5 font-mono text-2xs uppercase tracking-editorial text-ink-light transition-colors hover:border-accent-red/40 hover:text-accent-red"

@@ -4,15 +4,38 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * 主题色彩系统 - 通过 CSS 变量在 :root 上定义
+ * 主题切换时，由 JS（src/store/theme.ts）覆盖这些变量
+ * 变量值格式：H S L（不带 hsl() 包裹），便于使用 hsl(var(--c-x) / <alpha>) 语法
+ */
 :root {
+  /* 默认主题：纸张墨韵（warm cream paper · dark ink · ocher accents） */
+  --c-paper: 42 30% 93%;
+  --c-paper-warm: 42 27% 89%;
+  --c-paper-card: 43 33% 96%;
+  --c-paper-deep: 43 33% 85%;
+
+  --c-ink: 0 0% 10%;
+  --c-ink-soft: 60 3% 22%;
+  --c-ink-muted: 39 7% 39%;
+  --c-ink-light: 37 9% 51%;
+
+  --c-accent-red: 11 56% 51%;
+  --c-accent-green: 144 19% 30%;
+  --c-accent-gold: 43 89% 38%;
+
+  /* 备注高亮色（用于 hover 提示框边框等，跟随 gold 主题色） */
+  --c-accent-note: var(--c-accent-gold);
+
   font-family: "Noto Serif SC", "Lora", serif;
   /* 根字号从默认 16px 放大至 20px，整体字号 +2 级 */
   font-size: 20px;
   line-height: 1.6;
   /* 字重从 400 提升至 500（medium），低分辨率屏上笔画更清晰 */
   font-weight: 500;
-  color: #1a1a1a;
-  background-color: #f5f1e8;
+  color: hsl(var(--c-ink));
+  background-color: hsl(var(--c-paper));
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -49,13 +72,15 @@ body,
 }
 
 body {
-  background-color: #f5f1e8;
-  /* 纸张噪点纹理叠加 */
+  background-color: hsl(var(--c-paper));
+  /* 纸张噪点纹理叠加 - 使用 CSS 变量适配主题 */
   background-image:
-    radial-gradient(circle at 20% 10%, rgba(184, 134, 11, 0.04) 0%, transparent 40%),
-    radial-gradient(circle at 80% 80%, rgba(200, 84, 59, 0.03) 0%, transparent 45%),
+    radial-gradient(circle at 20% 10%, hsl(var(--c-accent-gold) / 0.04) 0%, transparent 40%),
+    radial-gradient(circle at 80% 80%, hsl(var(--c-accent-red) / 0.03) 0%, transparent 45%),
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.4 0 0 0 0 0.36 0 0 0 0 0.3 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
   background-attachment: fixed;
+  /* 主题切换时平滑过渡 */
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* 滚动条样式 - 学术笔记本风 */
@@ -67,20 +92,20 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(139, 131, 120, 0.3);
+  background: hsl(var(--c-ink-light) / 0.3);
   border-radius: 0;
   border: 2px solid transparent;
   background-clip: content-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(139, 131, 120, 0.5);
+  background: hsl(var(--c-ink-light) / 0.5);
   background-clip: content-box;
 }
 
 /* 选中文本 */
 ::selection {
-  background: rgba(200, 84, 59, 0.18);
-  color: #1a1a1a;
+  background: hsl(var(--c-accent-red) / 0.18);
+  color: hsl(var(--c-ink));
 }
 
 @layer components {

@@ -9,6 +9,7 @@ import UpdateNotice from "@/components/UpdateNotice";
 import ImportantNoticeFloat from "@/components/ImportantNoticeFloat";
 import WordSearchModal from "@/components/WordSearchModal";
 import PWAUpdatePrompt from "@/components/PWAUpdatePrompt";
+import ThemePanel from "@/components/ThemePanel";
 import DailyGrid from "@/pages/DailyGrid";
 import Wordbook from "@/pages/Wordbook";
 import ArticleBuilder from "@/pages/ArticleBuilder";
@@ -18,6 +19,7 @@ import LoginPage from "@/pages/Login";
 import { useWordStore, selectDueWords, selectTomorrowWords } from "@/store/wordStore";
 import { useArticleStore } from "@/store/articleStore";
 import { useDateNotesStore } from "@/store/dateNotes";
+import { useThemeStore } from "@/store/theme";
 import { buildSeedWords } from "@/store/seedData";
 import { isAuthenticated, logout, getCurrentUser } from "@/lib/auth";
 import { isSupabaseConfigured } from "@/lib/supabase";
@@ -67,9 +69,18 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
   // 全局搜索结果弹窗 —— 顶部搜索栏选中单词后弹出
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [searchWord, setSearchWord] = useState<Word | null>(null);
+  // 主题选择面板
+  const [themePanelOpen, setThemePanelOpen] = useState(false);
 
   const words = useWordStore((s) => s.words);
   const hydrated = useWordStore((s) => s.hydrated);
+
+  // 主题应用：监听 themeId 和 customHue 变化，写入 CSS 变量
+  const themeId = useThemeStore((s) => s.themeId);
+  const customHue = useThemeStore((s) => s.customHue);
+  useEffect(() => {
+    useThemeStore.getState().apply();
+  }, [themeId, customHue]);
 
   // 首次启动注入示例数据
   useEffect(() => {
@@ -240,7 +251,12 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
 
   return (
     <>
-      <AppShell onQuickAdd={() => openDrawer()} onLogout={onLogout} onPickWord={openSearchModal}>
+      <AppShell
+        onQuickAdd={() => openDrawer()}
+        onLogout={onLogout}
+        onPickWord={openSearchModal}
+        onOpenTheme={() => setThemePanelOpen(true)}
+      >
         <Routes>
           <Route
             path="/"
@@ -294,6 +310,12 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
         word={searchWord}
         onClose={() => setSearchModalOpen(false)}
         onGotoWordbook={gotoWordbookFromSearch}
+      />
+
+      {/* 主题选择面板 */}
+      <ThemePanel
+        open={themePanelOpen}
+        onClose={() => setThemePanelOpen(false)}
       />
     </>
   );

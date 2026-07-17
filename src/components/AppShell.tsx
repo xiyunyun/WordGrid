@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Grid3x3, BookOpen, BarChart3, Blocks, Plus, LogOut, Info } from "lucide-react";
+import { Grid3x3, BookOpen, BarChart3, Blocks, Plus, LogOut, Info, Palette } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useWordStore } from "@/store/wordStore";
 import { selectDueWords } from "@/store/wordStore";
@@ -13,6 +13,8 @@ interface AppShellProps {
   onLogout?: () => void;
   /** 顶部搜索栏选中单词时触发（在 App.tsx 中打开搜索结果弹窗） */
   onPickWord?: (word: Word) => void;
+  /** 打开主题选择面板 */
+  onOpenTheme?: () => void;
 }
 
 const navItems = [
@@ -23,7 +25,7 @@ const navItems = [
   { to: "/about", label: "About", labelCN: "关于", icon: Info },
 ];
 
-export default function AppShell({ children, onQuickAdd, onLogout, onPickWord }: AppShellProps) {
+export default function AppShell({ children, onQuickAdd, onLogout, onPickWord, onOpenTheme }: AppShellProps) {
   const location = useLocation();
   const words = useWordStore((s) => s.words);
   const dueCount = selectDueWords(words).length;
@@ -57,6 +59,16 @@ export default function AppShell({ children, onQuickAdd, onLogout, onPickWord }:
                 <Plus className="h-3.5 w-3.5" strokeWidth={1.5} />
                 <span>Add</span>
               </button>
+              {onOpenTheme && (
+                <button
+                  onClick={onOpenTheme}
+                  className="btn-ghost"
+                  aria-label="主题"
+                  title="主题色彩"
+                >
+                  <Palette className="h-3.5 w-3.5" strokeWidth={1.5} />
+                </button>
+              )}
               {onLogout && (
                 <button
                   onClick={onLogout}

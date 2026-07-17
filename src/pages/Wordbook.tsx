@@ -189,7 +189,10 @@ export default function Wordbook() {
           onChange={setFilter}
           showStage={mode === "list" || mode === "random" || mode === "dictation"}
           showPos={mode === "list" || mode === "random" || mode === "dictation"}
-          showExcludeMastered={mode === "random" || mode === "dictation"}
+          showExcludeMastered={
+            mode === "list" || mode === "random" || mode === "dictation"
+          }
+          showDates={true}
           selfCheckPlaceholder={
             mode === "self_check" ? (
               <div className="flex items-center gap-2">
@@ -263,19 +266,32 @@ export default function Wordbook() {
           )}
           {mode === "self_check" && (
             <SelfCheckView
+              key={`${selfCheckScope}-${filter.dates?.join(",") ?? ""}`}
               words={(() => {
                 // 自我检测列表根据 selfCheckScope 决定
+                let baseWords: Word[];
                 if (selfCheckScope === "all_difficult") {
-                  return difficultWords;
+                  baseWords = difficultWords;
+                } else {
+                  // 默认：到期词 ∪ 当天新词
+                  // 当天新加的词 nextReview 是明天，isDue 返回 false，但用户当天应该先学习一次
+                  // 注意：difficultWords 包含所有 isDifficult && !isMastered 的词，
+                  // 当天新加的词默认 isDifficult=true，所以会被包含在 todayNewWords 中
+                  const today = todayKey();
+                  // 当日新词：所有今天添加的未掌握词（不限于 difficultWords，确保新词一定被纳入）
+                  const todayNewWords = words.filter(
+                    (w) => w.date === today && !w.isMastered,
+                  );
+                  // 合并去重（按 id）
+                  const seen = new Set(dueWords.map((w) => w.id));
+                  const merged = [...dueWords, ...todayNewWords.filter((w) => !seen.has(w.id))];
+                  baseWords = merged.length > 0 ? merged : difficultWords;
                 }
-                // 默认：到期词 ∪ 当天新词
-                // 当天新加的词 nextReview 是明天，isDue 返回 false，但用户当天应该先学习一次
-                const today = todayKey();
-                const todayNewWords = difficultWords.filter((w) => w.date === today);
-                // 合并去重（按 id）
-                const seen = new Set(dueWords.map((w) => w.id));
-                const merged = [...dueWords, ...todayNewWords.filter((w) => !seen.has(w.id))];
-                return merged.length > 0 ? merged : difficultWords;
+                // 应用日期筛选（如果工具栏启用了日期筛选）
+                if (filter.dates && filter.dates.length > 0) {
+                  return baseWords.filter((w) => filter.dates!.includes(w.date));
+                }
+                return baseWords;
               })()}
             />
           )}
@@ -380,11 +396,13 @@ function ListView({
             ? recentWords
             : allWords;
 
-  // 应用筛选工具栏的筛选（记忆阶段 + 词性）
+  // 应用筛选工具栏的筛选（记忆阶段 + 词性 + 排除已掌握 + 日期）
   // 筛选为空时直接使用 tagWords，避免无谓的 filter 开销
   const filteredWords = useMemo(() => {
-    if (!filter.stages && !filter.pos) return tagWords;
+    if (!filter.stages && !filter.pos && !filter.excludeMastered && !filter.dates) return tagWords;
     return tagWords.filter((w) => {
+      // 排除已掌握
+      if (filter.excludeMastered && w.isMastered) return false;
       // 记忆阶段筛选：-1 表示已掌握，0-6 对应 reviewStage
       if (filter.stages) {
         const wordStage = w.isMastered ? -1 : w.reviewStage;
@@ -392,9 +410,11 @@ function ListView({
       }
       // 词性筛选
       if (filter.pos && !filter.pos.includes(w.pos)) return false;
+      // 日期筛选（多选）
+      if (filter.dates && filter.dates.length > 0 && !filter.dates.includes(w.date)) return false;
       return true;
     });
-  }, [tagWords, filter.stages, filter.pos]);
+  }, [tagWords, filter.stages, filter.pos, filter.excludeMastered, filter.dates]);
 
   // 复习标签下隐藏释义（点击显示），其余标签（含全部单词、近七日）直接显示
   const hideMeaning = activeTag === "due";
@@ -716,7 +736,7 @@ function getPracticeStats(
 }
 
 function RandomView({ words, filter }: { words: Word[]; filter: FilterState }) {
-  // 应用筛选：记忆阶段 + 词性 + 排除已掌握
+  // 应用筛选：记忆阶段 + 词性 + 排除已掌握 + 日期
   const filteredWords = useMemo(() => {
     return words.filter((w) => {
       if (filter.excludeMastered && w.isMastered) return false;
@@ -725,6 +745,7 @@ function RandomView({ words, filter }: { words: Word[]; filter: FilterState }) {
         if (!filter.stages.includes(wordStage)) return false;
       }
       if (filter.pos && !filter.pos.includes(w.pos)) return false;
+      if (filter.dates && filter.dates.length > 0 && !filter.dates.includes(w.date)) return false;
       return true;
     });
   }, [words, filter]);
@@ -885,7 +906,7 @@ function RandomView({ words, filter }: { words: Word[]; filter: FilterState }) {
 /* ============ 听写测试模式 - 基于全部单词的无限听写练习 ============ */
 
 function DictationView({ words, filter }: { words: Word[]; filter: FilterState }) {
-  // 应用筛选：记忆阶段 + 词性 + 排除已掌握
+  // 应用筛选：记忆阶段 + 词性 + 排除已掌握 + 日期
   const filteredWords = useMemo(() => {
     return words.filter((w) => {
       if (filter.excludeMastered && w.isMastered) return false;
@@ -894,6 +915,7 @@ function DictationView({ words, filter }: { words: Word[]; filter: FilterState }
         if (!filter.stages.includes(wordStage)) return false;
       }
       if (filter.pos && !filter.pos.includes(w.pos)) return false;
+      if (filter.dates && filter.dates.length > 0 && !filter.dates.includes(w.date)) return false;
       return true;
     });
   }, [words, filter]);
@@ -925,21 +947,7 @@ function DictationView({ words, filter }: { words: Word[]; filter: FilterState }
     inputRef.current?.focus();
   }, [idx]);
 
-  const current = queue[idx];
-
-  // 筛选后无可用单词
-  if (!current) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 text-center">
-        <Keyboard className="mb-4 h-10 w-10 text-ink-light" strokeWidth={1} />
-        <div className="eyebrow mb-2">No Words Match</div>
-        <p className="font-body text-sm text-ink-muted">
-          当前筛选条件下没有可用的单词，请调整筛选后重试。
-        </p>
-      </div>
-    );
-  }
-
+  // 以下函数和 hooks 必须在条件 return 之前定义（React Hooks 规则）
   const advance = () => {
     setInput("");
     setResult("idle");
@@ -976,6 +984,21 @@ function DictationView({ words, filter }: { words: Word[]; filter: FilterState }
     return () => window.removeEventListener("keydown", handler);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [result, idx, queue.length, words]);
+
+  const current = queue[idx];
+
+  // 筛选后无可用单词
+  if (!current) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <Keyboard className="mb-4 h-10 w-10 text-ink-light" strokeWidth={1} />
+        <div className="eyebrow mb-2">No Words Match</div>
+        <p className="font-body text-sm text-ink-muted">
+          当前筛选条件下没有可用的单词，请调整筛选后重试。
+        </p>
+      </div>
+    );
+  }
 
   const bumpStats = () => {
     // 今日/累计从 logs 自动聚合，这里只计本轮
@@ -1114,7 +1137,10 @@ function DictationView({ words, filter }: { words: Word[]; filter: FilterState }
               </div>
               {result === "wrong" && (
                 <div className="mt-2">
-                  <div className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
+                  <div className="font-mono text-2xs uppercase tracking-editorial text-accent-red">
+                    ✗ 答错了
+                  </div>
+                  <div className="mt-1 font-mono text-2xs uppercase tracking-editorial text-ink-light">
                     正确答案
                   </div>
                   <div className="font-serif text-3xl font-medium tracking-word text-accent-green">

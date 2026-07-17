@@ -73,7 +73,23 @@ export default function SelfCheckFlow({
   const logs = useWordStore((s) => s.logs);
 
   // 挂载时锁定快照（之后不受 props 变化影响）
-  const [initialWords] = useState<Word[]>(() => words);
+  // 但当 words prop 中出现新词（如用户在 SelfCheck 期间添加了新词）时，追加到 initialWords
+  const [initialWords, setInitialWords] = useState<Word[]>(() => words);
+
+  // 当 words prop 中的 ID 集合变化时，将新词追加到 initialWords 末尾
+  // 这样用户在 SelfCheck 期间添加的"当日新词"也能进入队列
+  const wordsIdSignature = useMemo(
+    () => words.map((w) => w.id).sort().join(","),
+    [words],
+  );
+  useEffect(() => {
+    setInitialWords((prev) => {
+      const existingIds = new Set(prev.map((w) => w.id));
+      const newWords = words.filter((w) => !existingIds.has(w.id));
+      if (newWords.length === 0) return prev;
+      return [...prev, ...newWords];
+    });
+  }, [wordsIdSignature]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 本地状态：只记录"本轮重问"的临时队列（不持久化，因为进度从 logs 派生）
   // 当用户点"不认识"时，词会被追加到 reaskQueue 末尾再次提问
@@ -106,10 +122,11 @@ export default function SelfCheckFlow({
   const total = initialWords.length;
   const current = queue[0];
 
-  // done 判断
+  // done 判断：所有词都已消费 且 重问队列清空
+  // 修复：之前只判断 consumedIds.size >= total，但答错的词在 reaskQueue 中还没重问就判定完成
   const done = restarted
-    ? restartedConsumed >= total
-    : !dryRun && consumedIds.size >= total;
+    ? restartedConsumed >= total && reaskQueue.length === 0
+    : !dryRun && consumedIds.size >= total && reaskQueue.length === 0;
 
   // 统计展示
   const stats = restarted
@@ -267,9 +284,8 @@ export default function SelfCheckFlow({
     );
   }
 
-  // 计算进度条位置（基于已消费数 + 本轮重问位置）
+  // 计算进度条位置（基于已消费数）
   const consumedCount = restarted ? restartedConsumed : (dryRun ? 0 : consumedIds.size);
-  const progressIdx = consumedCount + (queue.length - reaskQueue.length > 0 ? 0 : 0);
 
   return (
     <div className="animate-fade-in">
