@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   BarChart,
   Bar,
@@ -9,7 +9,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
 } from "recharts";
 import {
   Plus,
@@ -22,7 +21,6 @@ import {
 import { useWordStore } from "@/store/wordStore";
 import {
   selectDueWords,
-  selectDifficultWords,
   selectMasteredWords,
 } from "@/store/wordStore";
 import {
@@ -31,6 +29,7 @@ import {
   addDays,
 } from "@/lib/review";
 import { cn } from "@/lib/utils";
+import DateRangePicker from "@/components/DateRangePicker";
 
 export default function Stats() {
   const words = useWordStore((s) => s.words);
@@ -39,12 +38,36 @@ export default function Stats() {
   const today = todayKey();
   const todayAdded = words.filter((w) => w.date === today).length;
   const dueWords = selectDueWords(words);
-  const difficultWords = selectDifficultWords(words);
   const masteredWords = selectMasteredWords(words);
   // 学习中：所有未掌握的单词（含初识到长期，不含已掌握）
   const learningCount = words.filter((w) => !w.isMastered).length;
 
-  // 近 14 天每日新增数据
+  // 日期范围筛选：默认为空（空表示"最近 14 天"）
+  // 用户选择起止日期后，图表按所选区间显示
+  const [dateRange, setDateRange] = useState<{ start: string; end: string } | null>(null);
+
+  // 计算实际显示的日期范围
+  // - 无筛选时：最近 14 天
+  // - 有筛选时：[start, end]，按日期升序
+  const chartDates = useMemo(() => {
+    if (dateRange && dateRange.start && dateRange.end) {
+      const list: string[] = [];
+      let cur = dateRange.start;
+      while (cur <= dateRange.end) {
+        list.push(cur);
+        cur = addDays(cur, 1);
+      }
+      return list;
+    }
+    // 默认：最近 14 天
+    const recent: string[] = [];
+    for (let i = 13; i >= 0; i--) {
+      recent.push(addDays(today, -i));
+    }
+    return recent;
+  }, [dateRange, today]);
+
+  // 每日新增数据
   const dailyData = useMemo(() => {
     const days: Array<{
       date: string;
@@ -55,8 +78,7 @@ export default function Stats() {
       cumulative: number;
     }> = [];
     let cum = 0;
-    for (let i = 13; i >= 0; i--) {
-      const d = addDays(today, -i);
+    for (const d of chartDates) {
       const dayWords = words.filter((w) => w.date === d);
       const added = dayWords.length;
       const difficult = dayWords.filter((w) => w.isDifficult).length;
@@ -72,7 +94,7 @@ export default function Stats() {
       });
     }
     return days;
-  }, [words, today]);
+  }, [words, chartDates]);
 
   // 累计折线图数据
   const cumulativeData = useMemo(() => {
@@ -88,6 +110,9 @@ export default function Stats() {
       };
     });
   }, [dailyData]);
+
+  // 熟练度排行显示数量：默认 8，可选 5/10/20/50/全部
+  const [rankLimit, setRankLimit] = useState<number | "all">(8);
 
   // 今日复习统计
   const todayReviews = logs.filter(
@@ -188,6 +213,42 @@ export default function Stats() {
             </div>
           );
         })}
+      </section>
+
+      {/* 图表日期范围筛选 - 同时控制下方两个图表 */}
+      <section className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-ink/15 bg-paper-card p-3 md:p-4 shadow-paper">
+        <div className="flex items-center gap-2">
+          <TrendingUp className="h-4 w-4 text-ink-light" strokeWidth={1.5} />
+          <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
+            日期范围
+          </span>
+          {dateRange ? (
+            <span className="font-mono text-xs tabular-nums text-ink">
+              {dateRange.start} → {dateRange.end}
+              <span className="ml-2 text-ink-light">
+                共 {chartDates.length} 天
+              </span>
+            </span>
+          ) : (
+            <span className="font-mono text-xs text-ink-light">
+              最近 14 天 · 点击日历选择自定义范围
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <DateRangePicker
+            value={dateRange}
+            onChange={(range) => setDateRange(range)}
+          />
+          {dateRange && (
+            <button
+              onClick={() => setDateRange(null)}
+              className="rounded-md border border-ink/15 px-2 py-1 font-mono text-2xs uppercase tracking-editorial text-ink-light transition-colors hover:border-accent-red/40 hover:text-accent-red"
+            >
+              重置
+            </button>
+          )}
+        </div>
       </section>
 
       {/* 每日新增柱状图 */}
@@ -372,16 +433,42 @@ export default function Stats() {
 
       {/* 熟练度排行 - 错误最多 / 正确最多 */}
       <section className="rounded-md border border-ink/15 bg-paper-card p-4 md:p-6 shadow-paper">
-        <div className="mb-5 flex items-center justify-between">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <div>
             <div className="eyebrow mb-1">Mastery Ranking</div>
             <h3 className="font-display text-2xl font-medium text-ink">
               熟练度排行
             </h3>
           </div>
-          <Archive className="h-5 w-5 text-ink-light" strokeWidth={1.5} />
+          <div className="flex items-center gap-3">
+            {/* 显示数量选择器 */}
+            <div className="flex items-center gap-1">
+              <span className="mr-1 font-mono text-2xs uppercase tracking-editorial text-ink-light">
+                显示
+              </span>
+              {([5, 10, 20, 50, "all"] as const).map((opt) => (
+                <button
+                  key={opt}
+                  onClick={() => setRankLimit(opt)}
+                  className={cn(
+                    "rounded border px-2 py-0.5 font-mono text-2xs tabular-nums transition-colors",
+                    rankLimit === opt
+                      ? "border-ink bg-ink text-paper"
+                      : "border-ink/15 text-ink-light hover:border-ink/30 hover:text-ink",
+                  )}
+                >
+                  {opt === "all" ? "全部" : opt}
+                </button>
+              ))}
+            </div>
+            <Archive className="h-5 w-5 text-ink-light" strokeWidth={1.5} />
+          </div>
         </div>
-        <MasteryRanking words={words} logs={logs} />
+        <MasteryRanking
+          words={words}
+          logs={logs}
+          limit={rankLimit}
+        />
       </section>
     </div>
   );
@@ -390,9 +477,12 @@ export default function Stats() {
 function MasteryRanking({
   words,
   logs,
+  limit = 8,
 }: {
   words: import("@/types").Word[];
   logs: import("@/types").ReviewLog[];
+  /** 显示数量：数字表示前 N 个，"all" 表示全部 */
+  limit?: number | "all";
 }) {
   // 按单词聚合正确/错误次数
   const ranked = useMemo(() => {
@@ -411,14 +501,19 @@ function MasteryRanking({
       .filter((r) => r.correct > 0 || r.wrong > 0);
   }, [words, logs]);
 
-  const mostWrong = [...ranked]
-    .filter((r) => r.wrong > 0)
-    .sort((a, b) => b.wrong - a.wrong || b.correct - a.correct)
-    .slice(0, 8);
-  const mostCorrect = [...ranked]
-    .filter((r) => r.correct > 0)
-    .sort((a, b) => b.correct - a.correct || a.wrong - b.wrong)
-    .slice(0, 8);
+  const applyLimit = <T,>(arr: T[]) =>
+    limit === "all" ? arr : arr.slice(0, limit);
+
+  const mostWrong = applyLimit(
+    [...ranked]
+      .filter((r) => r.wrong > 0)
+      .sort((a, b) => b.wrong - a.wrong || b.correct - a.correct),
+  );
+  const mostCorrect = applyLimit(
+    [...ranked]
+      .filter((r) => r.correct > 0)
+      .sort((a, b) => b.correct - a.correct || a.wrong - b.wrong),
+  );
 
   if (ranked.length === 0) {
     return (
