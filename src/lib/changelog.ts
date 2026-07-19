@@ -24,7 +24,7 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     version: "2.0.0",
-    date: "2026-07-17",
+    date: "2026-07-20",
     items: [
       "统计页熟练度排行支持显示数量选择：5/10/20/50/全部，可查看完整错误率榜单",
       "统计页两图表新增日期范围筛选：使用日历样式选择起止日期，默认最近 14 天",
