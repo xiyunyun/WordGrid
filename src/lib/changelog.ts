@@ -23,6 +23,13 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "2.1.3",
+    date: "2026-07-20",
+    items: [
+      "彻底修复进入随笔页强制弹出添加菜单的 bug：根因为 React StrictMode 在开发模式下会双重执行 effect，先前的 mountedRef 方案在第二次执行时误触发了抽屉打开；改用 prevTriggerRef 比较前后值，仅当 addTrigger 真正递增时才打开抽屉，StrictMode 二次执行（同值）和路由切回（值未变化）都不会触发",
+    ],
+  },
+  {
     version: "2.1.2",
     date: "2026-07-20",
     items: [

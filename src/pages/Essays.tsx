@@ -61,17 +61,21 @@ export default function Essays({ addTrigger }: EssaysProps) {
   const [editEssay, setEditEssay] = useState<Essay | null>(null);
 
   // 监听外部添加触发（AppShell 的 Add 按钮）
-  // 首次挂载时跳过，避免进入随笔页就强制弹出添加菜单
-  // 不论 addTrigger 当前值是多少，组件重新挂载时第一次都只记录不触发
-  const mountedRef = useRef(false);
+  // 仅当 addTrigger 真正递增时才打开抽屉
+  // 通过比较前后值避免：
+  //   1. 首次挂载时误触发（prevRef 未初始化）
+  //   2. StrictMode 双重执行 effect 导致的二次触发（同值不递增）
+  //   3. 路由切走再回来时 addTrigger 保持非零但未变化的误触发
+  const prevTriggerRef = useRef<number | undefined>(undefined);
   useEffect(() => {
     if (addTrigger === undefined) return;
-    if (!mountedRef.current) {
-      // 首次挂载：仅记录已挂载，不打开抽屉
-      mountedRef.current = true;
+    // 首次记录或值未变化（StrictMode 二次执行 / 路由切回）都不触发
+    if (prevTriggerRef.current === undefined) {
+      prevTriggerRef.current = addTrigger;
       return;
     }
-    // 后续 addTrigger 变化（用户点击 Add 按钮）才打开抽屉
+    if (addTrigger <= prevTriggerRef.current) return;
+    prevTriggerRef.current = addTrigger;
     setEditEssay(null);
     setDrawerDate(undefined);
     setDrawerOpen(true);
