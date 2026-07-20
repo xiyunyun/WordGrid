@@ -47,9 +47,11 @@ export default {
         // 让阴影自然带主题色调（林间书桌→淡绿色，远洋日志→淡蓝色，玫瑰信笺→淡粉色等），
         // 而非固定的中性灰白色。--c-ink 提供深色基底层保证对比度，
         // 深色主题中 ink 是亮色，自然形成发光效果而非暗影。
-        paper: "0 1px 2px hsl(var(--c-ink) / 0.04), 0 4px 12px hsl(var(--c-paper-deep) / 0.55)",
-        card: "0 1px 3px hsl(var(--c-ink) / 0.05), 0 8px 24px -8px hsl(var(--c-paper-deep) / 0.50)",
-        deep: "0 2px 8px hsl(var(--c-ink) / 0.08), 0 16px 48px -12px hsl(var(--c-paper-deep) / 0.45)",
+        // v2.3.8：提升 opacity 至 0.7-0.8，配合 paper-deep 降至 70-75% L，
+        // 让发光色在所有主题下都清晰可见（不再像纯白）
+        paper: "0 1px 2px hsl(var(--c-ink) / 0.05), 0 4px 14px hsl(var(--c-paper-deep) / 0.70)",
+        card: "0 1px 3px hsl(var(--c-ink) / 0.06), 0 10px 28px -8px hsl(var(--c-paper-deep) / 0.65)",
+        deep: "0 2px 8px hsl(var(--c-ink) / 0.10), 0 20px 56px -12px hsl(var(--c-paper-deep) / 0.60)",
       },
       backgroundImage: {
         "paper-grain":

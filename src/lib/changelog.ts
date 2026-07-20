@@ -23,6 +23,13 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "2.3.8",
+    date: "2026-07-20",
+    items: [
+      "修复卡片边缘发光显示为纯白的问题，发光色现在跟随主题主色变化（林间书桌淡绿、远洋日志淡蓝、玫瑰信笺淡粉等）",
+    ],
+  },
+  {
     version: "2.3.7",
     date: "2026-07-20",
     items: [
