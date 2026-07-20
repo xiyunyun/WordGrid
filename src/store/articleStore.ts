@@ -68,6 +68,9 @@ interface ArticleStore {
   /** 记录一次作答 */
   setAttempt: (archiveId: string, attempt: QuizAttempt) => void;
 
+  /** 清除作答记录（追加题目后旧作答不再适用） */
+  clearAttempt: (archiveId: string) => void;
+
   /** 删除归档（若删除的是 lastReadArchiveId 则一并清除） */
   removeArchive: (id: string) => void;
 
@@ -146,6 +149,18 @@ export const useArticleStore = create<ArticleStore>()(
         set((s) => ({
           archives: s.archives.map((a) =>
             a.id === archiveId ? { ...a, attempt } : a,
+          ),
+        }));
+        if (get().syncEnabled) {
+          const updated = get().archives.find((a) => a.id === archiveId);
+          if (updated) pushArticle(updated).catch((e) => console.error("[云同步] 文章推送异常:", e));
+        }
+      },
+
+      clearAttempt: (archiveId) => {
+        set((s) => ({
+          archives: s.archives.map((a) =>
+            a.id === archiveId ? { ...a, attempt: undefined } : a,
           ),
         }));
         if (get().syncEnabled) {

@@ -55,6 +55,8 @@ interface WordStore {
   // 生词标记
   toggleDifficult: (id: string) => void;
   markMastered: (id: string) => void;
+  /** 取消已掌握状态：恢复为生词，回到「初识」阶段，下次到期需复习 */
+  unmarkMastered: (id: string) => void;
 
   // 复习
   reviewWord: (id: string, correct: boolean, mode: ReviewMode) => void;
@@ -227,6 +229,30 @@ export const useWordStore = create<WordStore>()(
                   isDifficult: false,
                   nextReview: "",
                   reviewStage: -1,
+                }
+              : w,
+          ),
+        }));
+        // 云同步：推送状态变更
+        if (get().syncEnabled) {
+          const updated = get().words.find((w) => w.id === id);
+          if (updated) pushWord(updated).catch((e) => console.error("[云同步] 推送异常:", e));
+        }
+      },
+
+      unmarkMastered: (id) => {
+        const { nextReview, reviewStage } = initReview();
+        set((s) => ({
+          words: s.words.map((w) =>
+            w.id === id
+              ? {
+                  ...w,
+                  isMastered: false,
+                  isDifficult: true,
+                  nextReview,
+                  reviewStage,
+                  // 清除今日复习标记，允许今日重新开始推进阶段
+                  lastReviewDate: "",
                 }
               : w,
           ),

@@ -1,4 +1,4 @@
-import { Check, Trash2, NotebookPen, Pencil, Eye } from "lucide-react";
+import { Check, Trash2, NotebookPen, Pencil, Eye, Brain } from "lucide-react";
 import type { Word } from "@/types";
 import { useWordStore } from "@/store/wordStore";
 import { STAGE_LABELS } from "@/types";
@@ -34,6 +34,7 @@ export default function WordCell({
   onRequestNote,
 }: WordCellProps) {
   const markMastered = useWordStore((s) => s.markMastered);
+  const unmarkMastered = useWordStore((s) => s.unmarkMastered);
   const removeWord = useWordStore((s) => s.removeWord);
   const { showPos, showPhonetic, showMeaning, showStage, showNote } =
     useDisplaySettingsStore();
@@ -122,7 +123,18 @@ export default function WordCell({
               <Pencil className="h-3 w-3" strokeWidth={1.5} />
             </button>
           )}
-          {!word.isMastered && (
+          {word.isMastered ? (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                unmarkMastered(word.id);
+              }}
+              className="rounded p-1 text-accent-red/70 hover:bg-accent-red/10 hover:text-accent-red"
+              title="标记为已遗忘（恢复为生词）"
+            >
+              <Brain className="h-3 w-3" strokeWidth={2} />
+            </button>
+          ) : (
             <button
               onClick={(e) => {
                 e.stopPropagation();

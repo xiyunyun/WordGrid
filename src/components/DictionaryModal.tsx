@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { X, Search, Volume2, Loader2, BookOpen, AlertCircle } from "lucide-react";
+import { X, Search, Volume2, Loader2, BookOpen, AlertCircle, NotebookPen } from "lucide-react";
 import {
   lookupWord,
   getFirstPhonetic,
@@ -10,6 +10,7 @@ import {
 } from "@/lib/dictionary";
 import { lookupWordMeaning, type CnMeaning } from "@/lib/deepseek";
 import { speakWord } from "@/lib/tts";
+import { useWordStore } from "@/store/wordStore";
 
 interface DictionaryModalProps {
   open: boolean;
@@ -39,6 +40,22 @@ export default function DictionaryModal({
   const inputRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  // 词库中的所有单词，用于查词时匹配用户自己的笔记
+  const words = useWordStore((s) => s.words);
+
+  // 当前查询词在用户词库中的匹配记录（大小写不敏感）
+  // 如果匹配到的词有笔记，则在词典结果区显示笔记卡片
+  const matchedUserWord = useMemo(() => {
+    const clean = query.trim().toLowerCase();
+    if (!clean) return null;
+    return words.find((w) => w.word.toLowerCase() === clean) ?? null;
+  }, [words, query]);
+
+  const userNote = useMemo(() => {
+    const note = matchedUserWord?.note?.trim();
+    return note && note.length > 0 ? note : null;
+  }, [matchedUserWord]);
+
   // 当弹窗打开或 initialWord 变化时自动查询
   useEffect(() => {
     if (open && initialWord) {
@@ -54,7 +71,6 @@ export default function DictionaryModal({
       setLoading(false);
       setCnLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initialWord]);
 
   const doLookup = async (word: string) => {
@@ -273,6 +289,29 @@ export default function DictionaryModal({
                       ))}
                     </ul>
                   )}
+                </div>
+              )}
+
+              {/* 我的笔记：若单词在用户词库中且有笔记，则显示 */}
+              {userNote && (
+                <div className="rounded-md border border-accent-gold/30 bg-accent-gold/5 p-3 md:p-4 animate-fade-in">
+                  <div className="mb-2 flex items-center gap-2">
+                    <NotebookPen
+                      className="h-3.5 w-3.5 text-accent-gold"
+                      strokeWidth={1.5}
+                    />
+                    <span className="font-mono text-2xs uppercase tracking-editorial text-accent-gold">
+                      我的笔记
+                    </span>
+                    {matchedUserWord && (
+                      <span className="ml-auto font-mono text-2xs uppercase tracking-editorial text-ink-light">
+                        {matchedUserWord.isMastered ? "已掌握" : `阶段 ${matchedUserWord.reviewStage + 1}`}
+                      </span>
+                    )}
+                  </div>
+                  <p className="whitespace-pre-wrap font-body text-sm leading-relaxed text-ink-soft">
+                    {userNote}
+                  </p>
                 </div>
               )}
 

@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
-import { Blocks, Check, Loader2, RotateCcw, BookOpen, AlertCircle, Archive, FileQuestion, Languages, Search } from "lucide-react";
+import { Blocks, Check, Loader2, RotateCcw, BookOpen, AlertCircle, Archive, FileQuestion, Languages, Search, Filter } from "lucide-react";
 import { useWordStore } from "@/store/wordStore";
 import { useArticleStore } from "@/store/articleStore";
 import type { ArticleArchive } from "@/store/articleStore";
@@ -41,6 +41,7 @@ export default function ArticleBuilder() {
   const addArchive = useArticleStore((s) => s.addArchive);
   const setQuestions = useArticleStore((s) => s.setQuestions);
   const setAttempt = useArticleStore((s) => s.setAttempt);
+  const clearAttempt = useArticleStore((s) => s.clearAttempt);
   const removeArchive = useArticleStore((s) => s.removeArchive);
 
   const [phase, setPhase] = useState<Phase>("select");
@@ -218,6 +219,33 @@ export default function ArticleBuilder() {
     }
   };
 
+  /** 追加生成题目：在现有题目基础上，再生成一批新题追加到末尾
+   *  - 累加题目数量：合并旧题和新题
+   *  - 归档保存记录：调用 setQuestions 持久化合并后的完整题目列表
+   *  - 作答记录清空：题目集变化后旧作答不再适用，调用 clearAttempt 清除归档中的 attempt
+   */
+  const handleAppendQuiz = async () => {
+    if (!activeArticle || activeWords.length === 0) return;
+    setQuizLoading(true);
+    setQuizError("");
+    try {
+      const newQs = await generateQuiz(activeArticle, activeWords);
+      // 合并：旧题 + 新题（避免 id 冲突，generateQuiz 已用时间戳生成 id）
+      const merged = [...questions, ...newQs];
+      setQuestionsState(merged);
+      // 同步到归档
+      if (activeArchiveId) {
+        setQuestions(activeArchiveId, merged);
+        // 追加题目后旧作答记录不再适用，清除归档中的 attempt
+        clearAttempt(activeArchiveId);
+      }
+    } catch (e) {
+      setQuizError(e instanceof Error ? e.message : "题目生成失败，请稍后重试");
+    } finally {
+      setQuizLoading(false);
+    }
+  };
+
   /** 作答完成，持久化到归档 */
   const handleAttempt = (attempt: {
     answers: Record<string, string>;
@@ -325,6 +353,7 @@ export default function ArticleBuilder() {
           quizError={quizError}
           questions={questions}
           onGenerateQuiz={handleGenerateQuiz}
+          onAppendQuiz={handleAppendQuiz}
           onAttempt={handleAttempt}
           translation={translation}
           translating={translating}
@@ -348,6 +377,7 @@ export default function ArticleBuilder() {
           quizError={quizError}
           questions={questions}
           onGenerateQuiz={handleGenerateQuiz}
+          onAppendQuiz={handleAppendQuiz}
           onAttempt={handleAttempt}
           translation={translation}
           translating={translating}
@@ -418,6 +448,8 @@ function SelectPhase({
   const [filterPos, setFilterPos] = useState<Set<string>>(new Set());
   /** 错误率筛选开关，启用时只显示做错过的词并按错误次数降序 */
   const [wrongOnly, setWrongOnly] = useState(false);
+  /** 排除已掌握开关，启用时隐藏 isMastered 的词 */
+  const [excludeMastered, setExcludeMastered] = useState(true);
 
   // 日期备注数据（用于日历中显示小圆点）
   const dateNotes = useDateNotesStore((s) => s.notes);
@@ -438,6 +470,7 @@ function SelectPhase({
   // 综合筛选
   const filteredWords = useMemo(() => {
     let list = words;
+    if (excludeMastered) list = list.filter((w) => !w.isMastered);
     if (filterDates.length > 0)
       list = list.filter((w) => filterDates.includes(w.date));
     if (filterMaxLength > 0) list = list.filter((w) => w.word.length <= filterMaxLength);
@@ -457,16 +490,21 @@ function SelectPhase({
         );
     }
     return list;
-  }, [words, filterDates, filterMaxLength, filterPos, wrongOnly, wrongCountMap]);
+  }, [words, filterDates, filterMaxLength, filterPos, wrongOnly, wrongCountMap, excludeMastered]);
 
   const anyFilterActive =
-    filterDates.length > 0 || filterMaxLength > 0 || filterPos.size > 0 || wrongOnly;
+    filterDates.length > 0 ||
+    filterMaxLength > 0 ||
+    filterPos.size > 0 ||
+    wrongOnly ||
+    !excludeMastered;
 
   const clearFilters = () => {
     setFilterDates([]);
     setFilterMaxLength(0);
     setFilterPos(new Set());
     setWrongOnly(false);
+    setExcludeMastered(true);
   };
 
   return (
@@ -630,8 +668,8 @@ function SelectPhase({
           </div>
         )}
 
-        {/* 错误率筛选按钮 */}
-        <div className="mt-4 border-t border-ink/10 pt-4">
+        {/* 错误率筛选 + 排除已掌握（同一行） */}
+        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-ink/10 pt-4">
           <button
             onClick={() => setWrongOnly((v) => !v)}
             className={cn(
@@ -649,6 +687,20 @@ function SelectPhase({
                 · 已开启（按错误次数排序）
               </span>
             )}
+          </button>
+          <button
+            onClick={() => setExcludeMastered((v) => !v)}
+            className={cn(
+              "inline-flex items-center gap-2 rounded-md border px-3 py-1.5 font-mono text-2xs uppercase tracking-editorial transition-all",
+              excludeMastered
+                ? "border-ink bg-ink text-paper"
+                : "border-ink/20 text-ink-light hover:border-ink hover:text-ink",
+            )}
+            title="隐藏已掌握的单词"
+          >
+            <Filter className="h-3 w-3" strokeWidth={1.5} />
+            排除已掌握
+            {excludeMastered && <Check className="h-3 w-3" strokeWidth={2} />}
           </button>
         </div>
       </section>
@@ -808,6 +860,7 @@ function ReadingPhase({
   quizError = "",
   questions = [],
   onGenerateQuiz,
+  onAppendQuiz,
   onAttempt,
   initialQuestions,
   initialAttempt,
@@ -827,6 +880,8 @@ function ReadingPhase({
   quizError?: string;
   questions?: QuizQuestion[];
   onGenerateQuiz?: () => void;
+  /** 在现有题目基础上追加生成新题 */
+  onAppendQuiz?: () => void;
   onAttempt?: (attempt: {
     answers: Record<string, string>;
     results: Record<string, boolean>;
@@ -1039,17 +1094,39 @@ function ReadingPhase({
             <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
               Quiz · 阅读理解
             </span>
+            {hasQuestions && (
+              <span className="ml-1 font-mono text-2xs uppercase tracking-editorial text-accent-gold tabular-nums">
+                共 {activeQuestions.length} 题
+              </span>
+            )}
           </div>
-          {!hasQuestions && onGenerateQuiz && (
-            <button
-              onClick={onGenerateQuiz}
-              disabled={quizLoading}
-              className="btn-gold disabled:opacity-40"
-            >
-              <FileQuestion className="h-3.5 w-3.5" strokeWidth={1.5} />
-              生成题目
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {!hasQuestions && onGenerateQuiz && (
+              <button
+                onClick={onGenerateQuiz}
+                disabled={quizLoading}
+                className="btn-gold disabled:opacity-40"
+              >
+                <FileQuestion className="h-3.5 w-3.5" strokeWidth={1.5} />
+                生成题目
+              </button>
+            )}
+            {hasQuestions && onAppendQuiz && (
+              <button
+                onClick={onAppendQuiz}
+                disabled={quizLoading}
+                className="btn-ghost disabled:opacity-40"
+                title="追加生成 4 道新题，合并到现有题目末尾"
+              >
+                {quizLoading ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={1.5} />
+                ) : (
+                  <FileQuestion className="h-3.5 w-3.5" strokeWidth={1.5} />
+                )}
+                追加题目
+              </button>
+            )}
+          </div>
         </div>
 
         {/* 题目内容 */}
