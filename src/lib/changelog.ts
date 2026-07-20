@@ -23,6 +23,13 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "2.1.2",
+    date: "2026-07-20",
+    items: [
+      "再次修复进入随笔页强制弹出添加菜单的问题：先前修复仅处理初始 addTrigger=0 情况，当用户曾在随笔页点过 Add 按钮后再切走又回来时仍会误触发；改用 mountedRef 标记首次挂载，不论 addTrigger 当前值如何，组件重新挂载时第一次都只记录不打开抽屉",
+    ],
+  },
+  {
     version: "2.1.1",
     date: "2026-07-20",
     items: [
