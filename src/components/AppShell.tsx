@@ -34,8 +34,11 @@ export default function AppShell({ children, onQuickAdd, onLogout, onPickWord, o
 
   return (
     <div className="flex min-h-screen flex-col pt-[env(safe-area-inset-top)]">
-      {/* 顶部导航 - 编辑杂志刊头 */}
-      <header className="border-b border-ink/15 bg-paper/80 backdrop-blur-sm">
+      {/* 顶部导航 - 编辑杂志刊头
+       * 不设背景色，让 body 的主题纹理完整透过 header（避免主题割裂），
+       * 仅用 backdrop-blur 形成磨砂玻璃效果，滚动时让 header 后面的纹理轻微糊化
+       */}
+      <header className="border-b border-ink/15 backdrop-blur-sm">
         <div className="mx-auto max-w-[1400px] px-4 py-3 md:px-6 md:py-4 lg:px-10">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-baseline gap-3 md:gap-4">
@@ -134,16 +137,19 @@ export default function AppShell({ children, onQuickAdd, onLogout, onPickWord, o
         </div>
       </main>
 
-      {/* 页脚 - 仅桌面端显示 */}
-      <footer className="hidden border-t border-ink/15 bg-paper/60 md:block">
+      {/* 页脚 - 仅桌面端显示
+       * 透明背景让 body 纹理透过，与主题统一 */}
+      <footer className="hidden border-t border-ink/15 backdrop-blur-sm md:block">
         <div className="mx-auto flex max-w-[1400px] flex-col items-start justify-between gap-2 px-6 py-4 font-mono text-2xs uppercase tracking-editorial text-ink-light sm:flex-row sm:items-center lg:px-10">
           <span>WordGrid © 2026 · A Vocabulary Archive</span>
           <span>Ebbinghaus Review Engine · Local-First</span>
         </div>
       </footer>
 
-      {/* 手机端底部导航栏 - fixed 固定在屏幕底部 */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-ink/15 bg-paper/95 backdrop-blur-sm md:hidden">
+      {/* 手机端底部导航栏 - fixed 固定在屏幕底部
+       * 不设 bg-paper，靠 backdrop-blur-md 形成磨砂玻璃，
+       * 既让主题纹理透过保持统一，又能在滚动时让按钮文字清晰可读 */}
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-ink/15 backdrop-blur-md md:hidden">
         <div className="flex items-stretch justify-around">
           {navItems.map((item) => {
             const Icon = item.icon;
