@@ -414,8 +414,8 @@ function EssayCard({
   return (
     <article
       className={cn(
-        "group flex w-full break-inside-avoid flex-col overflow-hidden rounded-md border bg-paper p-4 shadow-paper transition-all hover:shadow-deep",
-        // 卡片自带轻微的纸张质感
+        // v2.3.7：背景从 bg-paper（最亮，接近纯白）改为 bg-paper-card/60，与每日网格日期卡片一致
+        "group flex w-full break-inside-avoid flex-col overflow-hidden rounded-md border bg-paper-card/60 p-4 shadow-paper transition-all hover:shadow-deep",
         "border-ink/15",
       )}
     >

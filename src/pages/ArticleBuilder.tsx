@@ -1028,8 +1028,8 @@ function ReadingPhase({
         </div>
       </div>
 
-      {/* 文章阅读区 */}
-      <article className="rounded-md border border-ink/15 bg-paper-card p-4 shadow-paper md:p-8 lg:p-12">
+      {/* 文章阅读区 - 与下方 Word List / Quiz 区块同款背景 */}
+      <article className="rounded-md border border-ink/15 bg-paper-warm/40 p-4 shadow-paper md:p-6 lg:p-8">
         <div className="mx-auto max-w-2xl">{renderArticle()}</div>
       </article>
 
@@ -1062,8 +1062,8 @@ function ReadingPhase({
         </div>
       )}
 
-      {/* 高亮单词速查表 */}
-      <section className="rounded-md border border-ink/10 bg-paper-warm/40 p-3 md:p-5">
+      {/* 高亮单词速查表 - 与文章区/题目区同款背景 */}
+      <section className="rounded-md border border-ink/15 bg-paper-warm/40 p-4 shadow-paper md:p-6">
         <div className="mb-3 flex items-center gap-2">
           <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
             Word List · 本文单词
@@ -1085,8 +1085,8 @@ function ReadingPhase({
         </div>
       </section>
 
-      {/* 题目区 */}
-      <section className="rounded-md border border-ink/15 bg-paper-warm/30 p-3 md:p-5">
+      {/* 题目区 - 与文章区/单词区同款背景 */}
+      <section className="rounded-md border border-ink/15 bg-paper-warm/40 p-4 shadow-paper md:p-6">
         {/* 题目区头部 */}
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
