@@ -43,25 +43,6 @@ export const AUTH_USERS: AuthUser[] = [
     passwordHash: "d8201ddbb8a2eac86d466c78cb9d8e4c2cd97172f4aec32bd99c4e27ff406526",
     displayName: "管理员熙云",
   },
-  {
-    username: "hujie",
-    // 密码 "123456" 的哈希
-    passwordHash: "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
-    displayName: "胡姐",
-  },
-  // 添加更多用户：
-  {
-    username: "lianggan",
-    // 密码 "lg123" 的哈希
-    passwordHash: "5cc5057444a9c3ec3b3d700c813bff07fb3e20a5231599112d168553242de232",
-    displayName: "梁淦",
-  },
-  {
-    username: "liujing",
-    // 密码 "498890" 的哈希
-    passwordHash: "404463501d3f4dddb20b0affa5003f2610c7bfb1c8cf47de4f45ea9a54f732d6",
-    displayName: "刘静",
-  },
 ];
 
 /** localStorage 存储登录状态的 key */
