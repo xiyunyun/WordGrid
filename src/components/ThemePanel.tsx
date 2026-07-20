@@ -13,6 +13,7 @@ import { X, Check, RotateCcw, Palette } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useThemeStore, ALL_THEMES } from "@/store/theme";
 import { getThemeById } from "@/lib/themes";
+import { getThemeTexture } from "@/lib/themeTextures";
 import type { Theme } from "@/lib/themes";
 
 interface ThemePanelProps {
@@ -170,32 +171,46 @@ function ThemeCard({
           : "border-ink/15 hover:border-ink/40 hover:shadow-paper",
       )}
     >
-      {/* 色板预览 */}
-      <div className="flex h-12 overflow-hidden rounded">
-        <div
-          className="flex-1"
-          style={{ background: `hsl(${theme.vars["--c-paper"]})` }}
-        />
-        <div
-          className="flex-1"
-          style={{ background: `hsl(${theme.vars["--c-paper-card"]})` }}
-        />
-        <div
-          className="flex-1"
-          style={{ background: `hsl(${theme.vars["--c-ink"]})` }}
-        />
-        <div
-          className="flex-1"
-          style={{ background: `hsl(${theme.vars["--c-accent-gold"]})` }}
-        />
-        <div
-          className="flex-1"
-          style={{ background: `hsl(${theme.vars["--c-accent-red"]})` }}
-        />
-        <div
-          className="flex-1"
-          style={{ background: `hsl(${theme.vars["--c-accent-green"]})` }}
-        />
+      {/* 纹理预览 - 显示主题色 + 纹理质感（径向光晕 + 图案 + 噪点） */}
+      <div
+        className="relative h-16 overflow-hidden rounded"
+        style={{
+          backgroundColor: `hsl(${theme.vars["--c-paper"]})`,
+          backgroundImage: getThemeTexture(theme),
+          backgroundSize: "100% 100%, 100% 100%, auto, auto, auto, auto",
+        }}
+      >
+        {/* 墨色样本字（仿字母块）+ 强调色点 */}
+        <div className="absolute inset-0 flex items-center justify-between px-3">
+          <div className="flex items-baseline gap-1.5">
+            <span
+              className="font-serif text-base font-medium"
+              style={{ color: `hsl(${theme.vars["--c-ink"]})` }}
+            >
+              Aa
+            </span>
+            <span
+              className="font-mono text-2xs uppercase tracking-editorial"
+              style={{ color: `hsl(${theme.vars["--c-ink-light"]})` }}
+            >
+              Sample
+            </span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span
+              className="h-2 w-2 rounded-full"
+              style={{ background: `hsl(${theme.vars["--c-accent-gold"]})` }}
+            />
+            <span
+              className="h-2 w-2 rounded-full"
+              style={{ background: `hsl(${theme.vars["--c-accent-red"]})` }}
+            />
+            <span
+              className="h-2 w-2 rounded-full"
+              style={{ background: `hsl(${theme.vars["--c-accent-green"]})` }}
+            />
+          </div>
+        </div>
       </div>
 
       {/* 名称 */}

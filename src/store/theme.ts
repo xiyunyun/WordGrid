@@ -18,6 +18,7 @@ import {
   applyCustomHue,
   type Theme,
 } from "@/lib/themes";
+import { getThemeTexture } from "@/lib/themeTextures";
 
 export interface ThemeState {
   /** 当前主题 id */
@@ -69,6 +70,9 @@ export const useThemeStore = create<ThemeState>()(
         }
         // 同步 --c-accent-note 跟随 gold
         root.style.setProperty("--c-accent-note", vars["--c-accent-gold"]);
+        // 应用主题对应的背景纹理（径向光晕 + 图案 + 噪点）
+        // 自定义色相模式下沿用基础主题的纹理，仅强调色变化
+        document.body.style.backgroundImage = getThemeTexture(base);
       },
 
       getTheme: () => getThemeById(get().themeId),

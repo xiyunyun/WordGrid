@@ -1,18 +1,24 @@
 /**
  * 主题色彩定义
  *
- * 每个主题定义 11 个 CSS 变量值（HSL 格式，不带 hsl() 包裹）：
- * - paper / paper-warm / paper-card / paper-deep：纸张底色阶
- * - ink / ink-soft / ink-muted / ink-light：墨色阶
- * - accent-red / accent-green / accent-gold：强调色（生词/已掌握/烫金）
+ * 每个主题定义：
+ *   - 11 个 CSS 变量值（HSL 格式，不带 hsl() 包裹）：
+ *     * paper / paper-warm / paper-card / paper-deep：纸张底色阶
+ *     * ink / ink-soft / ink-muted / ink-light：墨色阶
+ *     * accent-red / accent-green / accent-gold：强调色（生词/已掌握/烫金）
+ *   - texture：背景纹理预设键（见 themeTextures.ts），决定径向光晕、图案、噪点风格
  *
- * 主题切换时，由 store/theme.ts 将这些值写入 :root 的 CSS 变量。
+ * 主题切换时，由 store/theme.ts 将这些值写入 :root 的 CSS 变量，
+ * 并把对应纹理写入 body 的 background-image。
+ *
  * 主题设计原则：
- *   1. 纸张色保持高亮度（85%+ L），保证正文可读性
- *   2. 墨色保持低亮度（10–25% L），与纸张形成强对比
+ *   1. 浅色主题：纸张色保持高亮度（85%+ L），墨色保持低亮度（10–25% L）
+ *   2. 深色主题（midnight）：纸张色低亮度（10–20% L），墨色高亮度（80–90% L）
  *   3. 强调色与主题色相和谐，用于按钮/高亮/标记
- *   4. 整体保持"学术笔记本"质感，不刺眼
+ *   4. 每个主题都搭配独特的纹理质感，避免"批量换色"感
  */
+
+import type { TextureKey } from "@/lib/themeTextures";
 
 export interface Theme {
   /** 主题唯一标识 */
@@ -23,6 +29,8 @@ export interface Theme {
   nameEn: string;
   /** 主题简短描述 */
   description: string;
+  /** 背景纹理预设键 */
+  texture: TextureKey;
   /** CSS 变量值映射 */
   vars: {
     "--c-paper": string;
@@ -40,11 +48,13 @@ export interface Theme {
 }
 
 export const THEMES: Theme[] = [
+  // ============ 默认主题：纸张墨韵 ============
   {
     id: "paper",
     name: "纸张墨韵",
     nameEn: "Paper & Ink",
     description: "暖奶油纸张配深墨黑字，赭石红与烫金为强调",
+    texture: "paper",
     vars: {
       "--c-paper": "42 30% 93%",
       "--c-paper-warm": "42 27% 89%",
@@ -59,156 +69,180 @@ export const THEMES: Theme[] = [
       "--c-accent-gold": "43 89% 38%",
     },
   },
+
+  // ============ 羊皮古卷 - 老化羊皮纸感 ============
+  {
+    id: "parchment",
+    name: "羊皮古卷",
+    nameEn: "Parchment Scroll",
+    description: "做旧羊皮纸配深褐墨，琥珀光晕与边缘老化晕染",
+    texture: "parchment",
+    vars: {
+      "--c-paper": "36 38% 88%",
+      "--c-paper-warm": "32 36% 84%",
+      "--c-paper-card": "38 40% 92%",
+      "--c-paper-deep": "30 35% 78%",
+      "--c-ink": "25 35% 12%",
+      "--c-ink-soft": "25 28% 22%",
+      "--c-ink-muted": "30 18% 38%",
+      "--c-ink-light": "35 18% 50%",
+      "--c-accent-red": "18 65% 42%",
+      "--c-accent-green": "95 28% 28%",
+      "--c-accent-gold": "33 82% 38%",
+    },
+  },
+
+  // ============ 林间书桌 - 苔绿冷调 ============
   {
     id: "forest",
-    name: "林间晨曦",
-    nameEn: "Forest Dawn",
-    description: "苔绿纸张配深松墨色，森林绿与琥珀强调",
+    name: "林间书桌",
+    nameEn: "Forest Desk",
+    description: "苔绿冷调纸配深松墨色，森林绿与琥珀强调",
+    texture: "forest",
     vars: {
       "--c-paper": "85 22% 92%",
       "--c-paper-warm": "80 20% 88%",
       "--c-paper-card": "85 25% 95%",
       "--c-paper-deep": "85 22% 83%",
-      "--c-ink": "150 18% 12%",
-      "--c-ink-soft": "150 14% 22%",
-      "--c-ink-muted": "140 10% 38%",
-      "--c-ink-light": "100 12% 50%",
+      "--c-ink": "150 22% 12%",
+      "--c-ink-soft": "150 16% 22%",
+      "--c-ink-muted": "140 12% 38%",
+      "--c-ink-light": "100 14% 50%",
       "--c-accent-red": "20 65% 48%",
-      "--c-accent-green": "145 35% 30%",
-      "--c-accent-gold": "38 75% 40%",
+      "--c-accent-green": "145 38% 28%",
+      "--c-accent-gold": "38 75% 38%",
     },
   },
+
+  // ============ 子夜静读 - 深色反转 ============
+  {
+    id: "midnight",
+    name: "子夜静读",
+    nameEn: "Midnight Reader",
+    description: "深墨蓝纸配奶白银墨，星点光斑与霓虹金强调",
+    texture: "midnight",
+    vars: {
+      "--c-paper": "225 35% 12%",
+      "--c-paper-warm": "225 30% 16%",
+      "--c-paper-card": "225 38% 16%",
+      "--c-paper-deep": "225 32% 20%",
+      "--c-ink": "40 30% 90%",
+      "--c-ink-soft": "40 22% 78%",
+      "--c-ink-muted": "40 14% 62%",
+      "--c-ink-light": "45 12% 50%",
+      "--c-accent-red": "10 75% 62%",
+      "--c-accent-green": "150 50% 58%",
+      "--c-accent-gold": "45 85% 62%",
+    },
+  },
+
+  // ============ 远洋日志 - 冷青海蓝 ============
+  {
+    id: "ocean",
+    name: "远洋日志",
+    nameEn: "Ocean Journal",
+    description: "冷青纸张配深海军墨，波浪纹理与海蓝珊瑚强调",
+    texture: "ocean",
+    vars: {
+      "--c-paper": "200 24% 93%",
+      "--c-paper-warm": "195 22% 89%",
+      "--c-paper-card": "200 30% 96%",
+      "--c-paper-deep": "200 24% 84%",
+      "--c-ink": "210 38% 14%",
+      "--c-ink-soft": "210 30% 24%",
+      "--c-ink-muted": "210 18% 40%",
+      "--c-ink-light": "205 18% 52%",
+      "--c-accent-red": "8 72% 52%",
+      "--c-accent-green": "165 48% 30%",
+      "--c-accent-gold": "195 72% 42%",
+    },
+  },
+
+  // ============ 玫瑰信笺 - 浪漫信纸 ============
   {
     id: "rose",
-    name: "暮色玫瑰",
-    nameEn: "Twilight Rose",
-    description: "浅玫瑰纸配深紫墨，玫红与紫罗兰强调",
+    name: "玫瑰信笺",
+    nameEn: "Rose Letter",
+    description: "玫瑰粉纸配深紫墨，花瓣点缀与玫红强调",
+    texture: "rose",
     vars: {
-      "--c-paper": "340 25% 94%",
-      "--c-paper-warm": "335 22% 90%",
-      "--c-paper-card": "340 30% 96%",
-      "--c-paper-deep": "340 25% 85%",
-      "--c-ink": "320 25% 14%",
-      "--c-ink-soft": "320 20% 24%",
-      "--c-ink-muted": "320 12% 40%",
-      "--c-ink-light": "330 14% 52%",
-      "--c-accent-red": "345 70% 50%",
+      "--c-paper": "340 28% 94%",
+      "--c-paper-warm": "335 24% 90%",
+      "--c-paper-card": "340 32% 96%",
+      "--c-paper-deep": "340 28% 85%",
+      "--c-ink": "320 28% 14%",
+      "--c-ink-soft": "320 22% 24%",
+      "--c-ink-muted": "320 14% 40%",
+      "--c-ink-light": "330 16% 52%",
+      "--c-accent-red": "345 72% 50%",
       "--c-accent-green": "160 35% 35%",
       "--c-accent-gold": "285 55% 48%",
     },
   },
+
+  // ============ 炭笔素描 - 中性灰阶 ============
   {
-    id: "ocean",
-    name: "深海沉静",
-    nameEn: "Ocean Depth",
-    description: "淡青纸配深海军墨，海洋蓝与珊瑚红强调",
+    id: "charcoal",
+    name: "炭笔素描",
+    nameEn: "Charcoal Sketch",
+    description: "中性灰纸配炭灰墨，铅笔排线纹理与赭红强调",
+    texture: "charcoal",
     vars: {
-      "--c-paper": "200 22% 93%",
-      "--c-paper-warm": "195 20% 89%",
-      "--c-paper-card": "200 28% 96%",
-      "--c-paper-deep": "200 22% 84%",
-      "--c-ink": "210 35% 14%",
-      "--c-ink-soft": "210 28% 24%",
-      "--c-ink-muted": "210 16% 40%",
-      "--c-ink-light": "205 16% 52%",
-      "--c-accent-red": "8 70% 52%",
-      "--c-accent-green": "165 45% 32%",
-      "--c-accent-gold": "195 70% 42%",
+      "--c-paper": "220 8% 94%",
+      "--c-paper-warm": "220 6% 90%",
+      "--c-paper-card": "220 12% 97%",
+      "--c-paper-deep": "220 8% 85%",
+      "--c-ink": "220 10% 14%",
+      "--c-ink-soft": "220 8% 24%",
+      "--c-ink-muted": "220 6% 40%",
+      "--c-ink-light": "220 6% 52%",
+      "--c-accent-red": "5 60% 48%",
+      "--c-accent-green": "200 22% 38%",
+      "--c-accent-gold": "210 28% 42%",
     },
   },
-  {
-    id: "amber",
-    name: "古道茶香",
-    nameEn: "Ancient Tea",
-    description: "暖棕纸配深褐墨，琥珀金与赭石红强调",
-    vars: {
-      "--c-paper": "32 28% 91%",
-      "--c-paper-warm": "28 25% 87%",
-      "--c-paper-card": "32 32% 95%",
-      "--c-paper-deep": "32 26% 82%",
-      "--c-ink": "25 30% 12%",
-      "--c-ink-soft": "25 22% 22%",
-      "--c-ink-muted": "28 14% 40%",
-      "--c-ink-light": "32 14% 52%",
-      "--c-accent-red": "15 60% 48%",
-      "--c-accent-green": "100 22% 32%",
-      "--c-accent-gold": "35 85% 40%",
-    },
-  },
-  {
-    id: "snow",
-    name: "极简雪夜",
-    nameEn: "Snowy Night",
-    description: "纯净白纸配炭灰墨，银灰与冷蓝强调",
-    vars: {
-      "--c-paper": "220 15% 96%",
-      "--c-paper-warm": "220 12% 92%",
-      "--c-paper-card": "220 20% 98%",
-      "--c-paper-deep": "220 12% 88%",
-      "--c-ink": "220 16% 14%",
-      "--c-ink-soft": "220 12% 24%",
-      "--c-ink-muted": "220 8% 42%",
-      "--c-ink-light": "220 8% 55%",
-      "--c-accent-red": "355 60% 50%",
-      "--c-accent-green": "200 30% 38%",
-      "--c-accent-gold": "210 55% 48%",
-    },
-  },
-  {
-    id: "midnight",
-    name: "夜阑人静",
-    nameEn: "Midnight",
-    description: "深墨蓝纸配浅银墨，反转配色，适合夜间阅读",
-    vars: {
-      "--c-paper": "225 30% 14%",
-      "--c-paper-warm": "225 26% 18%",
-      "--c-paper-card": "225 32% 18%",
-      "--c-paper-deep": "225 28% 22%",
-      "--c-ink": "40 25% 88%",
-      "--c-ink-soft": "40 18% 75%",
-      "--c-ink-muted": "40 12% 60%",
-      "--c-ink-light": "45 10% 50%",
-      "--c-accent-red": "10 70% 60%",
-      "--c-accent-green": "150 45% 55%",
-      "--c-accent-gold": "45 80% 60%",
-    },
-  },
+
+  // ============ 紫藤诗笺 - 紫罗兰文学 ============
   {
     id: "wisteria",
-    name: "紫藤夜话",
-    nameEn: "Wisteria Whisper",
-    description: "浅紫罗兰纸配深紫墨，紫罗兰与品红强调",
+    name: "紫藤诗笺",
+    nameEn: "Wisteria Poem",
+    description: "浅紫罗兰纸配深紫墨，墨韵水痕与紫罗兰强调",
+    texture: "wisteria",
     vars: {
-      "--c-paper": "270 22% 93%",
-      "--c-paper-warm": "268 20% 89%",
-      "--c-paper-card": "270 27% 96%",
-      "--c-paper-deep": "270 22% 84%",
-      "--c-ink": "275 30% 14%",
-      "--c-ink-soft": "275 22% 24%",
-      "--c-ink-muted": "275 14% 40%",
-      "--c-ink-light": "275 14% 52%",
-      "--c-accent-red": "325 65% 50%",
-      "--c-accent-green": "155 30% 38%",
-      "--c-accent-gold": "280 55% 48%",
+      "--c-paper": "270 24% 93%",
+      "--c-paper-warm": "268 22% 89%",
+      "--c-paper-card": "270 30% 96%",
+      "--c-paper-deep": "270 24% 84%",
+      "--c-ink": "275 32% 14%",
+      "--c-ink-soft": "275 24% 24%",
+      "--c-ink-muted": "275 16% 40%",
+      "--c-ink-light": "275 16% 52%",
+      "--c-accent-red": "325 68% 50%",
+      "--c-accent-green": "155 32% 38%",
+      "--c-accent-gold": "280 58% 48%",
     },
   },
+
+  // ============ 落日手记 - 暖橙日落 ============
   {
     id: "sunset",
-    name: "落日余晖",
-    nameEn: "Sunset Glow",
-    description: "暖橙纸配深褐墨，橙红与金黄强调",
+    name: "落日手记",
+    nameEn: "Sunset Diary",
+    description: "暖桃纸配深褐墨，落日晕染与橙红金黄强调",
+    texture: "sunset",
     vars: {
-      "--c-paper": "28 35% 92%",
-      "--c-paper-warm": "22 32% 88%",
-      "--c-paper-card": "28 38% 95%",
-      "--c-paper-deep": "28 30% 83%",
-      "--c-ink": "20 35% 14%",
-      "--c-ink-soft": "20 25% 24%",
-      "--c-ink-muted": "22 16% 40%",
-      "--c-ink-light": "28 16% 52%",
-      "--c-accent-red": "12 75% 50%",
-      "--c-accent-green": "120 25% 35%",
-      "--c-accent-gold": "32 90% 45%",
+      "--c-paper": "28 38% 91%",
+      "--c-paper-warm": "22 35% 87%",
+      "--c-paper-card": "28 42% 95%",
+      "--c-paper-deep": "28 33% 82%",
+      "--c-ink": "20 38% 14%",
+      "--c-ink-soft": "20 28% 24%",
+      "--c-ink-muted": "22 18% 40%",
+      "--c-ink-light": "28 18% 52%",
+      "--c-accent-red": "12 78% 50%",
+      "--c-accent-green": "120 28% 32%",
+      "--c-accent-gold": "32 92% 45%",
     },
   },
 ];

@@ -73,7 +73,11 @@ body,
 
 body {
   background-color: hsl(var(--c-paper));
-  /* 纸张噪点纹理叠加 - 使用 CSS 变量适配主题 */
+  /*
+   * 默认纸张纹理（paper 主题）—— 作为首次渲染 fallback，
+   * 之后由 store/theme.ts apply() 根据 theme.texture 覆盖为对应主题纹理。
+   * 每个主题的纹理由径向光晕 + 可选图案层（星点/波浪/排线/墨晕等）+ 噪点叠加而成。
+   */
   background-image:
     radial-gradient(circle at 20% 10%, hsl(var(--c-accent-gold) / 0.04) 0%, transparent 40%),
     radial-gradient(circle at 80% 80%, hsl(var(--c-accent-red) / 0.03) 0%, transparent 45%),
