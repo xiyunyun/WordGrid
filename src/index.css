@@ -161,12 +161,19 @@ body {
     @apply bg-paper-card border border-ink/10 shadow-paper;
   }
 
-  /* 单词列表网格 - 所有行共享同一组列宽 */
+  /* 单词列表网格 - 所有行共享同一组列宽
+   * v2.3.6：使用 column-gap 控制列间距，row-gap 设为 0
+   * 因为 <li> 自身已有 py-2.5/py-3 padding 控制行高，
+   * 若 grid row-gap > 0 会在行间产生透明空隙，导致：
+   *   1. hover 高亮无法紧密相连（行间断开）
+   *   2. 视觉上每行内容显得未居中（上 gap 下 padding 不对称）
+   */
   .wordbook-grid {
     display: grid;
     /* 手机端：等级 单词 释义 语音 操作 */
     grid-template-columns: 2rem 7rem 1fr auto auto;
-    gap: 0.5rem;
+    column-gap: 0.5rem;
+    row-gap: 0;
   }
   .wordbook-grid > li {
     display: grid;
@@ -178,7 +185,8 @@ body {
     .wordbook-grid {
       /* 桌面端：等级 单词 词性(max-content取最宽) 释义 语音 笔记 操作 */
       grid-template-columns: 3rem 13rem max-content 1fr auto auto auto;
-      gap: 1rem;
+      column-gap: 1rem;
+      row-gap: 0;
     }
   }
 }

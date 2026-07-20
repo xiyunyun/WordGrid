@@ -23,6 +23,13 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "2.3.6",
+    date: "2026-07-20",
+    items: [
+      "修复生词本单词列表行间错位问题：grid 的 gap 同时作用在 row-gap 和 column-gap 上，row-gap 会在每行之间产生透明空隙，导致从第二行起每行上方多出一截，hover 高亮无法紧密相连，视觉上单词也未居中在自己的行内；改为 column-gap 控制列间距，row-gap 设为 0，行高完全由 li 自身的 py-2.5/py-3 padding 控制",
+    ],
+  },
+  {
     version: "2.3.5",
     date: "2026-07-20",
     items: [
