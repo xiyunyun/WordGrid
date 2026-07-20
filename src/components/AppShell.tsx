@@ -45,9 +45,6 @@ export default function AppShell({ children, onQuickAdd, onLogout, onPickWord, o
               <h1 className="font-display text-2xl font-semibold tracking-tightest text-ink md:text-3xl lg:text-4xl">
                 WordGrid
               </h1>
-              <span className="hidden font-mono text-2xs uppercase tracking-editorial text-ink-light sm:inline">
-                词汇网格 · Vol.I
-              </span>
             </div>
 
             <div className="flex items-center gap-3 md:gap-6">

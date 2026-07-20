@@ -23,6 +23,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "2.3.4",
+    date: "2026-07-20",
+    items: [
+      "调整远洋日志与炭笔素描纹理透明度：波浪/排线/噪点透明度降至 0.04-0.10，避免在单词列表等无背景文字块上产生干扰",
+      "简化玫瑰信笺与紫藤诗笺背景：去掉圆点、墨晕水痕与噪点装饰，仅保留渐变光晕，提升美感",
+      "精简重复页面标题：六个页面顶部 eyebrow 去掉中文后缀，仅保留英文标题（Daily Grid / Wordbook / Essays / Blocks / Statistics / About）",
+      "去掉顶部「词汇网格 · Vol.I」副标题，仅保留 WordGrid logo",
+      "生词本单词列表每行加可见背景（bg-paper-card/50），统一与其他按键卡片视觉；同时修复 hover 高亮短一截问题，hover 改用 bg-paper-deep/50 完整覆盖整行",
+    ],
+  },
+  {
     version: "2.3.3",
     date: "2026-07-20",
     items: [

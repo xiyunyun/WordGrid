@@ -246,7 +246,7 @@ export default function DailyGrid({
       {/* 顶部摘要条 */}
       <section className="flex flex-wrap items-end justify-between gap-4 border-b border-ink/15 pb-5">
         <div>
-          <div className="eyebrow mb-1">Daily Grid · 每日网格</div>
+          <div className="eyebrow mb-1">Daily Grid</div>
           <h2 className="font-display text-3xl font-medium tracking-tightest text-ink lg:text-4xl">
             每日网格
             <span className="ml-3 font-serif text-lg italic text-ink-light">

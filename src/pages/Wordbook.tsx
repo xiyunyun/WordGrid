@@ -94,7 +94,7 @@ export default function Wordbook() {
     <div className="space-y-6">
       {/* 头部 */}
       <section className="border-b border-ink/15 pb-5">
-        <div className="eyebrow mb-1">Wordbook · 生词本</div>
+        <div className="eyebrow mb-1">Wordbook</div>
         <div className="flex flex-wrap items-end justify-between gap-4">
           <h2 className="font-display text-2xl md:text-3xl font-medium tracking-tightest text-ink lg:text-4xl">
             温故而知新
@@ -574,9 +574,12 @@ function MinimalRow({
     <li
       id={`word-${word.id}`}
       className={cn(
-        "group px-2 py-2.5 md:py-3 transition-colors hover:bg-paper-warm/40",
-        highlighted && "bg-accent-red/5",
-        flash && "ring-2 ring-accent-gold ring-offset-2 ring-offset-paper bg-accent-gold/5",
+        // v2.3.4：每行加可见背景，统一与其他按键卡片视觉；
+        // hover 改为 bg-paper-deep/50 让高亮完全覆盖整行（grid 子项 + padding），
+        // 解决之前 hover 高亮"短一截"问题
+        "group px-2 py-2.5 md:py-3 transition-colors bg-paper-card/50 hover:bg-paper-deep/50",
+        highlighted && "bg-accent-red/10",
+        flash && "ring-2 ring-accent-gold ring-offset-2 ring-offset-paper bg-accent-gold/10",
       )}
     >
       {/* 等级 - 已掌握显示加深颜色的对勾 */}

@@ -164,7 +164,7 @@ export default function Stats() {
     <div className="space-y-8">
       {/* 头部 */}
       <section className="border-b border-ink/15 pb-5">
-        <div className="eyebrow mb-1">Statistics · 学习统计</div>
+        <div className="eyebrow mb-1">Statistics</div>
         <div className="flex flex-wrap items-end justify-between gap-4">
           <h2 className="font-display text-2xl md:text-3xl font-medium tracking-tightest text-ink lg:text-4xl">
             进度档案

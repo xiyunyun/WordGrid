@@ -164,36 +164,38 @@ export const THEME_TEXTURES: Record<TextureKey, string> = {
     noise("0 0 0 0 0.85 0 0 0 0 0.82 0 0 0 0 0.75 0 0 0 0.10 0", 0.10, 200, 0.95),
   ].join(", "),
 
-  /** 远洋日志 - 冷青光晕 + 波浪线纹理 */
+  /** 远洋日志 - 冷青光晕 + 波浪线纹理
+   * v2.3.4 调整：波浪与噪点透明度从 0.18/0.08 降至 0.10/0.05，
+   * 避免在单词列表等无背景文字块上产生干扰
+   */
   ocean: [
-    "radial-gradient(circle at 25% 20%, hsl(var(--c-accent-gold) / 0.12) 0%, transparent 55%)",
-    "radial-gradient(circle at 75% 80%, hsl(var(--c-accent-red) / 0.08) 0%, transparent 55%)",
-    waves("0 0 0 0 0.20 0 0 0 0 0.32 0 0 0 0 0.42 0 0 0 0.8 0", 0.18, 220),
-    noise("0 0 0 0 0.25 0 0 0 0 0.34 0 0 0 0 0.42 0 0 0 0.08 0", 0.08, 160, 0.85),
+    "radial-gradient(circle at 25% 20%, hsl(var(--c-accent-gold) / 0.10) 0%, transparent 55%)",
+    "radial-gradient(circle at 75% 80%, hsl(var(--c-accent-red) / 0.06) 0%, transparent 55%)",
+    waves("0 0 0 0 0.20 0 0 0 0 0.32 0 0 0 0 0.42 0 0 0 0.8 0", 0.10, 220),
+    noise("0 0 0 0 0.25 0 0 0 0 0.34 0 0 0 0 0.42 0 0 0 0.05 0", 0.05, 160, 0.85),
   ].join(", "),
 
-  /** 玫瑰信笺 - 玫红光晕 + 花瓣点缀 */
+  /** 玫瑰信笺 - 仅保留玫红与金色光晕（v2.3.4 去掉圆点与噪点，提升美感） */
   rose: [
-    "radial-gradient(circle at 20% 15%, hsl(var(--c-accent-red) / 0.12) 0%, transparent 55%)",
-    "radial-gradient(circle at 80% 85%, hsl(var(--c-accent-gold) / 0.10) 0%, transparent 55%)",
-    dots(60, "0 0 0 0 0.65 0 0 0 0 0.35 0 0 0 0 0.50 0 0 0 1 0", 0.16, 280),
-    noise("0 0 0 0 0.55 0 0 0 0 0.32 0 0 0 0 0.42 0 0 0 0.08 0", 0.08, 160, 0.85),
+    "radial-gradient(circle at 20% 15%, hsl(var(--c-accent-red) / 0.14) 0%, transparent 55%)",
+    "radial-gradient(circle at 80% 85%, hsl(var(--c-accent-gold) / 0.12) 0%, transparent 55%)",
   ].join(", "),
 
-  /** 炭笔素描 - 中性灰 + 斜线纹理（素描排线感） */
+  /** 炭笔素描 - 中性灰 + 斜线纹理（素描排线感）
+   * v2.3.4 调整：排线与噪点透明度从 0.08/0.08 降至 0.05/0.04，
+   * 避免在单词列表等无背景文字块上产生干扰
+   */
   charcoal: [
-    "radial-gradient(circle at 30% 20%, hsl(var(--c-ink) / 0.08) 0%, transparent 55%)",
-    "radial-gradient(circle at 70% 80%, hsl(var(--c-ink-light) / 0.10) 0%, transparent 60%)",
-    hatching("0 0 0 0 0.2 0 0 0 0 0.2 0 0 0 0 0.2 0 0 0 1 0", 0.08, 160, 45, 9),
-    noise("0 0 0 0 0.25 0 0 0 0 0.24 0 0 0 0 0.22 0 0 0 0.08 0", 0.08, 160, 0.9),
+    "radial-gradient(circle at 30% 20%, hsl(var(--c-ink) / 0.06) 0%, transparent 55%)",
+    "radial-gradient(circle at 70% 80%, hsl(var(--c-ink-light) / 0.08) 0%, transparent 60%)",
+    hatching("0 0 0 0 0.2 0 0 0 0 0.2 0 0 0 0 0.2 0 0 0 1 0", 0.05, 160, 45, 9),
+    noise("0 0 0 0 0.25 0 0 0 0 0.24 0 0 0 0 0.22 0 0 0 0.04 0", 0.04, 160, 0.9),
   ].join(", "),
 
-  /** 紫藤诗笺 - 紫罗兰光晕 + 大块墨晕水痕 */
+  /** 紫藤诗笺 - 仅保留紫罗兰光晕（v2.3.4 去掉墨晕水痕与噪点，提升美感） */
   wisteria: [
-    "radial-gradient(circle at 25% 20%, hsl(var(--c-accent-gold) / 0.14) 0%, transparent 55%)",
-    "radial-gradient(circle at 75% 80%, hsl(var(--c-accent-red) / 0.10) 0%, transparent 55%)",
-    inkBlots("0 0 0 0 0.35 0 0 0 0 0.20 0 0 0 0 0.45 0 0 0 0.8 0", 0.12, 320),
-    noise("0 0 0 0 0.45 0 0 0 0 0.30 0 0 0 0 0.50 0 0 0 0.08 0", 0.08, 160, 0.85),
+    "radial-gradient(circle at 25% 20%, hsl(var(--c-accent-gold) / 0.16) 0%, transparent 55%)",
+    "radial-gradient(circle at 75% 80%, hsl(var(--c-accent-red) / 0.12) 0%, transparent 55%)",
   ].join(", "),
 
   /** 落日手记 - 暖橙光晕 + 落日大圆晕染 */

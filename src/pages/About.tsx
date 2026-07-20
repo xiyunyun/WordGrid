@@ -130,7 +130,7 @@ export default function About() {
     <div className="space-y-6">
       {/* 头部 */}
       <section className="border-b border-ink/15 pb-5">
-        <div className="eyebrow mb-1">About · 关于</div>
+        <div className="eyebrow mb-1">About</div>
         <h2 className="font-display text-2xl md:text-3xl font-medium tracking-tightest text-ink lg:text-4xl">
           关于 WordGrid
           <span className="ml-3 font-serif text-lg italic text-ink-light">
