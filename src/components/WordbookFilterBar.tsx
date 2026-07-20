@@ -129,7 +129,7 @@ export default function WordbookFilterBar({
             "flex items-center gap-1.5 rounded-md border px-3 py-1.5 transition-colors font-mono text-2xs uppercase tracking-editorial",
             filter.excludeMastered
               ? "border-ink bg-ink text-paper"
-              : "border-ink/20 text-ink-light hover:border-ink hover:text-ink",
+              : "border-ink/15 bg-paper-card text-ink-light hover:border-ink/30 hover:text-ink",
           )}
         >
           <Filter className="h-3 w-3" strokeWidth={1.5} />
@@ -198,7 +198,7 @@ function MultiSelectDropdown({
           "flex items-center gap-1.5 rounded-md border px-3 py-1.5 transition-colors font-mono text-2xs uppercase tracking-editorial",
           isActive || open
             ? "border-ink bg-ink text-paper"
-            : "border-ink/20 text-ink-light hover:border-ink hover:text-ink",
+            : "border-ink/15 bg-paper-card text-ink-light hover:border-ink/30 hover:text-ink",
         )}
       >
         <Filter className="h-3 w-3" strokeWidth={1.5} />

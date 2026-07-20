@@ -694,7 +694,7 @@ function SelectPhase({
               "inline-flex items-center gap-2 rounded-md border px-3 py-1.5 font-mono text-2xs uppercase tracking-editorial transition-all",
               excludeMastered
                 ? "border-ink bg-ink text-paper"
-                : "border-ink/20 text-ink-light hover:border-ink hover:text-ink",
+                : "border-ink/15 bg-paper-card text-ink-light hover:border-ink/30 hover:text-ink",
             )}
             title="隐藏已掌握的单词"
           >

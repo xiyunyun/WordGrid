@@ -169,7 +169,7 @@ export default function Wordbook() {
                 "flex items-center gap-2 rounded-md border px-3 py-2 transition-all",
                 active
                   ? "border-ink bg-ink text-paper"
-                  : "border-ink/20 text-ink-light hover:border-ink hover:text-ink",
+                  : "border-ink/15 bg-paper-card text-ink-light hover:border-ink/30 hover:text-ink",
               )}
             >
               <Icon className="h-3.5 w-3.5" strokeWidth={1.5} />
@@ -205,7 +205,7 @@ export default function Wordbook() {
                     "rounded-md border px-3 py-1.5 font-mono text-2xs uppercase tracking-editorial transition-colors",
                     selfCheckScope === "due"
                       ? "border-ink bg-ink text-paper"
-                      : "border-ink/20 text-ink-light hover:border-ink hover:text-ink",
+                      : "border-ink/15 bg-paper-card text-ink-light hover:border-ink/30 hover:text-ink",
                   )}
                 >
                   到期词 + 当日新词
@@ -216,7 +216,7 @@ export default function Wordbook() {
                     "rounded-md border px-3 py-1.5 font-mono text-2xs uppercase tracking-editorial transition-colors",
                     selfCheckScope === "all_difficult"
                       ? "border-ink bg-ink text-paper"
-                      : "border-ink/20 text-ink-light hover:border-ink hover:text-ink",
+                      : "border-ink/15 bg-paper-card text-ink-light hover:border-ink/30 hover:text-ink",
                   )}
                 >
                   全部生词
@@ -486,14 +486,14 @@ function ListView({
               t.accent === "accent-red"
                 ? active
                   ? "border-accent-red/40 bg-accent-red/10 text-accent-red"
-                  : "border-ink/15 text-ink-light hover:border-accent-red/30 hover:text-accent-red"
+                  : "border-ink/15 bg-paper-card text-ink-light hover:border-accent-red/30 hover:text-accent-red"
                 : t.accent === "accent-green"
                   ? active
                     ? "border-accent-green/40 bg-accent-green/10 text-accent-green"
-                    : "border-ink/15 text-ink-light hover:border-accent-green/30 hover:text-accent-green"
+                    : "border-ink/15 bg-paper-card text-ink-light hover:border-accent-green/30 hover:text-accent-green"
                   : active
                     ? "border-accent-gold/40 bg-accent-gold/10 text-accent-gold"
-                    : "border-ink/15 text-ink-light hover:border-accent-gold/30 hover:text-accent-gold";
+                    : "border-ink/15 bg-paper-card text-ink-light hover:border-accent-gold/30 hover:text-accent-gold";
             return (
               <button
                 key={t.key}

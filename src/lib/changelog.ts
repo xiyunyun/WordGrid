@@ -23,6 +23,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "2.3.3",
+    date: "2026-07-20",
+    items: [
+      "修复阴影/边缘发光颜色不跟随主题的问题：原先 shadow-paper/card/deep 使用硬编码 rgba(26,26,26,...) 中性灰，在所有主题下都是同一种灰白色发光；改为使用 --c-paper-deep 作为发光色，每个主题的卡片阴影现在自然带主题色调（林间书桌→淡绿色光晕，远洋日志→淡蓝色光晕，玫瑰信笺→淡粉色光晕等）",
+      "修复生词本按钮背景透明问题：4 个主模式按钮（单词列表/自我检测/随机抽查/听写测试）+ 工具栏所有筛选按钮（日期/记忆阶段/词性/排除已掌握）+ 自我检测练习范围切换 + 标签筛选条，原先未激活状态没有背景色导致文字与背景融合难辨；现统一为 bg-paper-card 与每日网格工具栏一致的可见按键背景",
+      "顺带修复：积木造文「排除已掌握」按钮、AddWordDrawer 词性选择按钮、DateRangePicker 触发按钮也同样添加 bg-paper-card 背景",
+      "统一统计页五个撞色卡片背景：需复习/学习中/已认识/答对次数/答错次数五个卡片原先使用 accent-red/5、accent-green/5、accent-gold/5 等彩色撞色背景与其他卡片不一致；现统一为 bg-paper-card，与今日添加卡片和图表卡片保持视觉一致",
+    ],
+  },
+  {
     version: "2.3.2",
     date: "2026-07-20",
     items: [

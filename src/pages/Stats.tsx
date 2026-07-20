@@ -129,7 +129,7 @@ export default function Stats() {
       icon: Plus,
       iconClass: "text-ink",
       valueClass: "text-ink",
-      bg: "border-ink/20 bg-paper-card",
+      bg: "border-ink/15 bg-paper-card",
     },
     {
       label: "需复习",
@@ -138,7 +138,7 @@ export default function Stats() {
       icon: AlarmClock,
       iconClass: "text-accent-red",
       valueClass: "text-accent-red",
-      bg: "border-accent-red/30 bg-accent-red/5",
+      bg: "border-ink/15 bg-paper-card",
     },
     {
       label: "学习中",
@@ -147,7 +147,7 @@ export default function Stats() {
       icon: BookOpen,
       iconClass: "text-accent-gold",
       valueClass: "text-accent-gold",
-      bg: "border-accent-gold/30 bg-accent-gold/5",
+      bg: "border-ink/15 bg-paper-card",
     },
     {
       label: "已认识",
@@ -156,7 +156,7 @@ export default function Stats() {
       icon: Check,
       iconClass: "text-accent-green",
       valueClass: "text-accent-green",
-      bg: "border-accent-green/30 bg-accent-green/5",
+      bg: "border-ink/15 bg-paper-card",
     },
   ];
 
@@ -411,7 +411,7 @@ export default function Stats() {
             今日总复习次数
           </div>
         </div>
-        <div className="rounded-md border border-accent-green/30 bg-accent-green/5 p-5">
+        <div className="rounded-md border border-ink/15 bg-paper-card p-5 shadow-paper">
           <div className="eyebrow mb-2 text-accent-green">Correct</div>
           <div className="font-display text-2xl md:text-4xl font-medium text-accent-green">
             {todayCorrect}
@@ -420,7 +420,7 @@ export default function Stats() {
             答对次数
           </div>
         </div>
-        <div className="rounded-md border border-accent-red/30 bg-accent-red/5 p-5">
+        <div className="rounded-md border border-ink/15 bg-paper-card p-5 shadow-paper">
           <div className="eyebrow mb-2 text-accent-red">Wrong</div>
           <div className="font-display text-2xl md:text-4xl font-medium text-accent-red">
             {todayWrong}

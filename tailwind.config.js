@@ -43,9 +43,13 @@ export default {
         word: "0.01em",
       },
       boxShadow: {
-        paper: "0 1px 2px rgba(26,26,26,0.04), 0 4px 12px rgba(26,26,26,0.06)",
-        card: "0 1px 3px rgba(26,26,26,0.05), 0 8px 24px -8px rgba(26,26,26,0.08)",
-        deep: "0 2px 8px rgba(26,26,26,0.08), 0 16px 48px -12px rgba(26,26,26,0.12)",
+        // 主题色化阴影：使用 --c-paper-deep 作为发光色（每个主题中比 paper 暗一阶的色调），
+        // 让阴影自然带主题色调（林间书桌→淡绿色，远洋日志→淡蓝色，玫瑰信笺→淡粉色等），
+        // 而非固定的中性灰白色。--c-ink 提供深色基底层保证对比度，
+        // 深色主题中 ink 是亮色，自然形成发光效果而非暗影。
+        paper: "0 1px 2px hsl(var(--c-ink) / 0.04), 0 4px 12px hsl(var(--c-paper-deep) / 0.55)",
+        card: "0 1px 3px hsl(var(--c-ink) / 0.05), 0 8px 24px -8px hsl(var(--c-paper-deep) / 0.50)",
+        deep: "0 2px 8px hsl(var(--c-ink) / 0.08), 0 16px 48px -12px hsl(var(--c-paper-deep) / 0.45)",
       },
       backgroundImage: {
         "paper-grain":
