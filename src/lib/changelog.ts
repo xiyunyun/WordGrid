@@ -23,6 +23,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "2.3.5",
+    date: "2026-07-20",
+    items: [
+      "修复生词本单词列表背景断开问题：原方案每行 li 独立背景，行间有间隙显得割裂；改为 ul 自身承载统一背景 bg-paper-card/60，行间仅用一条主题色细线 border-ink/5 分隔",
+      "修复 hover 高亮覆盖范围：整行高亮 bg-paper-deep/40 完整覆盖 subgrid 子项，行间连成一体",
+    ],
+  },
+  {
     version: "2.3.4",
     date: "2026-07-20",
     items: [

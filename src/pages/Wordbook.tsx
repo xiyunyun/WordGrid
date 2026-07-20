@@ -515,9 +515,12 @@ function ListView({
           })}
         </div>
 
-        {/* 当前标签下的单词列表（应用筛选工具栏筛选后） */}
+        {/* 当前标签下的单词列表（应用筛选工具栏筛选后）
+         * v2.3.5：ul 自身承载统一背景 bg-paper-card/60，li 之间用 border-b 主题色细分隔线，
+         * hover 时整行高亮 bg-paper-deep/40，背景无断开，行间分隔仅靠一条细线
+         */}
         {filteredWords.length > 0 ? (
-          <ul className="wordbook-grid divide-y divide-ink/8 border-y border-ink/10">
+          <ul className="wordbook-grid overflow-hidden rounded-md border border-ink/10 bg-paper-card/60">
             {filteredWords.map((w) => (
               <MinimalRow
                 key={w.id}
@@ -574,12 +577,11 @@ function MinimalRow({
     <li
       id={`word-${word.id}`}
       className={cn(
-        // v2.3.4：每行加可见背景，统一与其他按键卡片视觉；
-        // hover 改为 bg-paper-deep/50 让高亮完全覆盖整行（grid 子项 + padding），
-        // 解决之前 hover 高亮"短一截"问题
-        "group px-2 py-2.5 md:py-3 transition-colors bg-paper-card/50 hover:bg-paper-deep/50",
+        // v2.3.5：背景由父 ul 统一承载，行间仅用一条主题色细线分隔
+        // hover 整行高亮（subgrid 子项全部覆盖）
+        "group px-2 py-2.5 md:py-3 border-b border-ink/5 last:border-b-0 transition-colors hover:bg-paper-deep/40",
         highlighted && "bg-accent-red/10",
-        flash && "ring-2 ring-accent-gold ring-offset-2 ring-offset-paper bg-accent-gold/10",
+        flash && "ring-2 ring-accent-gold ring-offset-2 ring-offset-paper-card bg-accent-gold/10",
       )}
     >
       {/* 等级 - 已掌握显示加深颜色的对勾 */}
