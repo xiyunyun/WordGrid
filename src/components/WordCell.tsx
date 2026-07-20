@@ -61,6 +61,7 @@ export default function WordCell({
             {word.word}
           </span>
           {/* 记忆状态标签 - 无图标、固定小尺寸、七色方案、靠右边界 */}
+          {/* 永久阶段即已掌握，但 DailyGrid 中保留「永」字标记 */}
           {showStage && (
             <span
               className={cn(
@@ -71,12 +72,12 @@ export default function WordCell({
               )}
               title={
                 word.isMastered
-                  ? "已掌握"
+                  ? "永久（已掌握）"
                   : `记忆阶段：${STAGE_LABELS[word.reviewStage] || "初识"}`
               }
             >
               {word.isMastered
-                ? "掌握"
+                ? STAGE_LABELS[6]?.[0] || "永"
                 : STAGE_LABELS[word.reviewStage]?.[0] || "初"}
             </span>
           )}

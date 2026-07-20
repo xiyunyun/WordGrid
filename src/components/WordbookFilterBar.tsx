@@ -1,11 +1,8 @@
 /**
  * 生词本共用筛选工具栏
  *
- * 在「单词列表 / 自我检测 / 随机抽查 / 听写测试」四个二级页面之间共用，
- * 切换页面时位置一致，视觉无跳变。各页面通过 props 控制显示哪些筛选项。
- *
  * 筛选项：
- * - 记忆阶段（多选）：0-6 + 已掌握
+ * - 记忆阶段（多选）：0-5 + 永久（已掌握）
  * - 词性（多选）：n./v./adj./...
  * - 排除已掌握（开关）
  * - 日期（多选日历）：按添加日期筛选
@@ -53,7 +50,13 @@ interface WordbookFilterBarProps {
   hasFilter?: boolean;
 }
 
-/** 所有可选的记忆阶段（含已掌握） */
+/**
+ * 所有可选的记忆阶段
+ * 注意：「永久」阶段（stage=6）与「已掌握」（stage=-1）在新逻辑下语义等价 ——
+ * 推进到永久阶段时直接标记为已掌握，不再停留。
+ * 因此筛选项合并为一个 value=-1，label=「永久（已掌握）」。
+ * 单词筛选逻辑中已掌握的词 wordStage = -1，所以选 value=-1 即可匹配。
+ */
 const ALL_STAGES: Array<{ value: number; label: string }> = [
   { value: 0, label: STAGE_LABELS[0] },
   { value: 1, label: STAGE_LABELS[1] },
@@ -61,8 +64,7 @@ const ALL_STAGES: Array<{ value: number; label: string }> = [
   { value: 3, label: STAGE_LABELS[3] },
   { value: 4, label: STAGE_LABELS[4] },
   { value: 5, label: STAGE_LABELS[5] },
-  { value: 6, label: STAGE_LABELS[6] },
-  { value: -1, label: "已掌握" },
+  { value: -1, label: "永久（已掌握）" },
 ];
 
 export default function WordbookFilterBar({

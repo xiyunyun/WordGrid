@@ -288,12 +288,13 @@ export const useWordStore = create<WordStore>()(
         if (word.lastReviewDate === today) return;
 
         if (correct) {
-          if (word.reviewStage >= 6) {
-            // 已达最高阶段，标记为掌握
+          const next = advanceReview(word.reviewStage);
+          if (next.reviewStage >= 6) {
+            // 推进到「永久」阶段即视为已掌握
+            // 「永久」语义等同于「已掌握」，不再停留在 stage=6 等待下一次复习
             get().markMastered(id);
             get().updateWord(id, { lastReviewDate: today });
           } else {
-            const next = advanceReview(word.reviewStage);
             get().updateWord(id, {
               ...next,
               isMastered: false,
@@ -329,8 +330,11 @@ export const useWordStore = create<WordStore>()(
 
       setHydrated: () => {
         set({ hydrated: true });
-        // 一次性数据迁移：旧数据中存在 !isMastered && !isDifficult 的词
-        // （即未点亮的新词）。按新逻辑，所有未掌握的词默认就是生词状态。
+        // 一次性数据迁移
+        // 1. 旧数据中存在 !isMastered && !isDifficult 的词（未点亮的新词）
+        //    按新逻辑，所有未掌握的词默认就是生词状态。
+        // 2. 旧数据中存在 reviewStage === 6 && !isMastered 的词（停留在「永久」阶段）
+        //    按新逻辑，「永久」即「已掌握」，应直接转为已掌握状态。
         const state = get();
         let needsMigration = false;
         const newWords = state.words.map((w) => {
@@ -338,6 +342,16 @@ export const useWordStore = create<WordStore>()(
             needsMigration = true;
             const { nextReview, reviewStage } = initReview();
             return { ...w, isDifficult: true, nextReview, reviewStage };
+          }
+          if (w.reviewStage === 6 && !w.isMastered) {
+            needsMigration = true;
+            return {
+              ...w,
+              isMastered: true,
+              isDifficult: false,
+              nextReview: "",
+              reviewStage: -1,
+            };
           }
           return w;
         });

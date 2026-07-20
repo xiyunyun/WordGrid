@@ -1,7 +1,7 @@
 /**
  * 全量数据导入导出工具
  *
- * 导出范围：单词本、文章归档、种子标记（即用户产生的所有数据）
+ * 导出范围：单词本、文章归档、随笔、种子标记（即用户产生的所有数据）
  * 不导出：登录状态（wordgrid-auth，属于会话信息）、TTS 音频缓存（IndexedDB，体积大且可自动重建）
  *
  * 导出格式：JSON 文件，包含版本号和导出时间，方便后续兼容性处理
@@ -14,6 +14,7 @@ const EXPORT_VERSION = 1;
 const EXPORT_KEYS = [
   "wordgrid-store", // 单词本 + 复习记录
   "wordgrid-article-archive", // 文章归档 + 题目 + 作答
+  "wordgrid-essays", // 随笔摘录
   "wordgrid-seeded", // 种子数据标记
 ];
 
@@ -174,7 +175,7 @@ export function getDataStats(): {
 /**
  * 删除所有用户学习数据
  *
- * 清除范围：单词本、复习记录、文章归档、题目作答、种子标记、TTS 音频缓存
+ * 清除范围：单词本、复习记录、文章归档、题目作答、随笔摘录、种子标记、TTS 音频缓存
  * 保留范围：登录状态（wordgrid-auth），避免删除后被迫重新登录
  */
 export async function clearAllData(): Promise<void> {

@@ -19,6 +19,7 @@ import { selectDueAndTodayNewCount } from "@/store/wordStore";
 import { useDateNotesStore, truncateNote } from "@/store/dateNotes";
 import { useDisplaySettingsStore } from "@/store/displaySettings";
 import { COMMON_POS } from "@/lib/pos";
+import { STAGE_LABELS } from "@/types";
 import {
   todayKey,
   formatMD,
@@ -52,6 +53,21 @@ let cachedSortAsc = false;
 let cachedFilterDueOnly = false;
 let cachedFilterNoteKeyword = "";
 let cachedFilterPos: Set<string> | null = null;
+let cachedFilterStages: Set<number> | null = null;
+
+/**
+ * 记忆阶段筛选项（与 WordbookFilterBar 一致）
+ * value=-1 表示「永久（已掌握）」，与 stage=6 合并
+ */
+const DAILY_GRID_STAGE_OPTIONS: Array<{ value: number; label: string }> = [
+  { value: 0, label: STAGE_LABELS[0] },
+  { value: 1, label: STAGE_LABELS[1] },
+  { value: 2, label: STAGE_LABELS[2] },
+  { value: 3, label: STAGE_LABELS[3] },
+  { value: 4, label: STAGE_LABELS[4] },
+  { value: 5, label: STAGE_LABELS[5] },
+  { value: -1, label: "永久（已掌握）" },
+];
 
 export default function DailyGrid({
   onRequestAdd,
@@ -112,6 +128,10 @@ export default function DailyGrid({
   const [filterPos, setFilterPos] = useState<Set<string>>(() => cachedFilterPos ?? new Set());
   useEffect(() => { cachedFilterPos = filterPos; }, [filterPos]);
 
+  // 记忆阶段筛选（多选，与生词本一致：-1 表示「永久（已掌握）」）
+  const [filterStages, setFilterStages] = useState<Set<number>>(() => cachedFilterStages ?? new Set());
+  useEffect(() => { cachedFilterStages = filterStages; }, [filterStages]);
+
   // 词性筛选面板展开/收起
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
 
@@ -155,19 +175,33 @@ export default function DailyGrid({
     });
   };
 
+  // 切换记忆阶段选中（value=-1 表示「永久（已掌握）」）
+  const toggleStage = (s: number) => {
+    setFilterStages((prev) => {
+      const next = new Set(prev);
+      if (next.has(s)) next.delete(s);
+      else next.add(s);
+      return next;
+    });
+  };
+
   // 是否有任何筛选条件激活
   const hasActiveFilter =
-    filterDueOnly || filterNoteKeyword.trim().length > 0 || filterPos.size > 0;
+    filterDueOnly ||
+    filterNoteKeyword.trim().length > 0 ||
+    filterPos.size > 0 ||
+    filterStages.size > 0;
 
   // 清空所有筛选
   const clearAllFilters = () => {
     setFilterDueOnly(false);
     setFilterNoteKeyword("");
     setFilterPos(new Set());
+    setFilterStages(new Set());
   };
 
   // 按日期分组（先按筛选条件过滤单词，再按日期分组）
-  // 注意：词性筛选在单词层生效后，对应的日期板块会自动展开以显示筛选结果
+  // 注意：词性/记忆阶段筛选在单词层生效后，对应的日期板块会自动展开以显示筛选结果
   const groups: DateGroup[] = useMemo(() => {
     const keyword = filterNoteKeyword.trim().toLowerCase();
 
@@ -179,6 +213,11 @@ export default function DailyGrid({
         if (!w.pos) continue;
         const wPos = w.pos.split(/\s+/).filter(Boolean);
         if (!wPos.some((p) => filterPos.has(p))) continue;
+      }
+      // 记忆阶段筛选：value=-1 表示「永久（已掌握）」
+      if (filterStages.size > 0) {
+        const wordStage = w.isMastered ? -1 : w.reviewStage;
+        if (!filterStages.has(wordStage)) continue;
       }
       if (!map.has(w.date)) map.set(w.date, []);
       map.get(w.date)!.push(w);
@@ -202,11 +241,11 @@ export default function DailyGrid({
     return entries.sort((a, b) =>
       sortAsc ? (a.date < b.date ? -1 : 1) : a.date < b.date ? 1 : -1,
     );
-  }, [words, filterPos, filterDueOnly, filterNoteKeyword, dateNotes, sortAsc]);
+  }, [words, filterPos, filterStages, filterDueOnly, filterNoteKeyword, dateNotes, sortAsc]);
 
-  // 词性筛选激活时，自动展开所有（筛选后的）日期板块，让筛选结果立即可见
+  // 词性/记忆阶段筛选激活时，自动展开所有（筛选后的）日期板块，让筛选结果立即可见
   // 使用派生值而非副作用修改 collapsed，避免与用户手动折叠冲突
-  const effectiveCollapsed = filterPos.size > 0 ? new Set<string>() : collapsed;
+  const effectiveCollapsed = (filterPos.size > 0 || filterStages.size > 0) ? new Set<string>() : collapsed;
 
   const toggleCollapse = (date: string) => {
     setCollapsed((prev) => {
@@ -380,7 +419,8 @@ export default function DailyGrid({
                 <span className="ml-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent-gold px-1 font-mono text-2xs text-paper">
                   {(filterDueOnly ? 1 : 0) +
                     (filterNoteKeyword.trim() ? 1 : 0) +
-                    (filterPos.size > 0 ? 1 : 0)}
+                    (filterPos.size > 0 ? 1 : 0) +
+                    (filterStages.size > 0 ? 1 : 0)}
                 </span>
               )}
             </button>
@@ -495,6 +535,37 @@ export default function DailyGrid({
                 )}
               </div>
             )}
+
+            {/* 记忆阶段多选筛选 —— 与生词本一致：0-5 + 永久（已掌握） */}
+            <div>
+              <label className="eyebrow mb-1.5 block">
+                Stage · 记忆阶段筛选（可多选）
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {DAILY_GRID_STAGE_OPTIONS.map((opt) => {
+                  const active = filterStages.has(opt.value);
+                  return (
+                    <button
+                      key={opt.value}
+                      onClick={() => toggleStage(opt.value)}
+                      className={cn(
+                        "rounded-md border px-2.5 py-1 font-mono text-2xs transition-all",
+                        active
+                          ? "border-accent-gold/50 bg-accent-gold/10 text-accent-gold"
+                          : "border-ink/15 text-ink-light hover:border-accent-gold/30 hover:text-ink",
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+              {filterStages.size > 0 && (
+                <p className="mt-1.5 font-mono text-2xs uppercase tracking-editorial text-ink-light">
+                  已选 {filterStages.size} 项 · 筛选时所有日期自动展开
+                </p>
+              )}
+            </div>
           </div>
         )}
 

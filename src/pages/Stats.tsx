@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { useWordStore } from "@/store/wordStore";
 import {
-  selectDueWords,
+  selectDueAndTodayNewCount,
   selectMasteredWords,
 } from "@/store/wordStore";
 import {
@@ -37,7 +37,9 @@ export default function Stats() {
 
   const today = todayKey();
   const todayAdded = words.filter((w) => w.date === today).length;
-  const dueWords = selectDueWords(words);
+  // 需复习统计：与导航红点、DailyGrid Due Today、自我检测「到期词+当日新词」逻辑保持一致
+  // （包含今日新加未掌握且未复习的词，与 selectDueAndTodayNewCount 一致）
+  const dueCount = selectDueAndTodayNewCount(words);
   const masteredWords = selectMasteredWords(words);
   // 学习中：所有未掌握的单词（含初识到长期，不含已掌握）
   const learningCount = words.filter((w) => !w.isMastered).length;
@@ -134,7 +136,7 @@ export default function Stats() {
     {
       label: "需复习",
       labelEn: "Due Today",
-      value: dueWords.length,
+      value: dueCount,
       icon: AlarmClock,
       iconClass: "text-accent-red",
       valueClass: "text-accent-red",
