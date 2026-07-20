@@ -23,6 +23,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "2.3.1",
+    date: "2026-07-20",
+    items: [
+      "修复背景色断层 bug：页面超过视口出现滚动条时，下方背景色会突变变暗",
+      "修复纹理不显示 bug：AppShell 根 div 的 bg-paper 不透明色盖住了 body 的纹理背景",
+      "增强主题对比度：浅色主题纸张亮度提升至 95-97%，墨色降至 8-11%，强调色饱和度提升至 70-90%",
+      "增强纹理可见度：光晕透明度从 0.04 提升至 0.08-0.28，噪点透明度从 0.04 提升至 0.08-0.12，星点数量从 80 颗增至 120 颗",
+    ],
+  },
+  {
     version: "2.3.0",
     date: "2026-07-20",
     items: [

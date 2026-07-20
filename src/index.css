@@ -58,10 +58,17 @@
 html,
 body,
 #root {
-  height: 100%;
+  /* 不限制 height: 100%，否则内容超过视口时背景断层 */
+  min-height: 100%;
   margin: 0;
   /* 防止手机端水平溢出 */
   overflow-x: hidden;
+}
+
+/* html 始终持有 paper 背景色作为兜底
+ * 防止内容溢出 body 范围时露出浏览器默认白色 */
+html {
+  background-color: hsl(var(--c-paper));
 }
 
 /* 手机端根字号缩小至 16px，避免 UI 元素过大 */
@@ -77,11 +84,12 @@ body {
    * 默认纸张纹理（paper 主题）—— 作为首次渲染 fallback，
    * 之后由 store/theme.ts apply() 根据 theme.texture 覆盖为对应主题纹理。
    * 每个主题的纹理由径向光晕 + 可选图案层（星点/波浪/排线/墨晕等）+ 噪点叠加而成。
+   * 透明度 0.08–0.10 保证视觉可见但不抢戏。
    */
   background-image:
-    radial-gradient(circle at 20% 10%, hsl(var(--c-accent-gold) / 0.04) 0%, transparent 40%),
-    radial-gradient(circle at 80% 80%, hsl(var(--c-accent-red) / 0.03) 0%, transparent 45%),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.4 0 0 0 0 0.36 0 0 0 0 0.3 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+    radial-gradient(circle at 20% 10%, hsl(var(--c-accent-gold) / 0.10) 0%, transparent 45%),
+    radial-gradient(circle at 80% 80%, hsl(var(--c-accent-red) / 0.08) 0%, transparent 50%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.4 0 0 0 0 0.36 0 0 0 0 0.3 0 0 0 0.08 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
   background-attachment: fixed;
   /* 主题切换时平滑过渡 */
   transition: background-color 0.3s ease, color 0.3s ease;

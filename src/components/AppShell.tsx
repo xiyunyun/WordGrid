@@ -33,7 +33,7 @@ export default function AppShell({ children, onQuickAdd, onLogout, onPickWord, o
   const today = todayKey();
 
   return (
-    <div className="flex h-full min-h-screen flex-col bg-paper pt-[env(safe-area-inset-top)]">
+    <div className="flex min-h-screen flex-col pt-[env(safe-area-inset-top)]">
       {/* 顶部导航 - 编辑杂志刊头 */}
       <header className="border-b border-ink/15 bg-paper/80 backdrop-blur-sm">
         <div className="mx-auto max-w-[1400px] px-4 py-3 md:px-6 md:py-4 lg:px-10">

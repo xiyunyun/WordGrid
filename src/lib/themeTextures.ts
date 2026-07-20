@@ -134,74 +134,74 @@ function inkBlots(
 
 /** 纹理预设：键 → CSS background-image 值 */
 export const THEME_TEXTURES: Record<TextureKey, string> = {
-  /** 纸张墨韵 - 默认暖奶油纸，温和金色与赭红光晕，细密噪点 */
+  /** 纸张墨韵 - 默认暖奶油纸，强烈金色与赭红光晕，细密噪点 */
   paper: [
-    "radial-gradient(circle at 20% 10%, hsl(var(--c-accent-gold) / 0.04) 0%, transparent 40%)",
-    "radial-gradient(circle at 80% 80%, hsl(var(--c-accent-red) / 0.03) 0%, transparent 45%)",
-    noise("0 0 0 0 0.4 0 0 0 0 0.36 0 0 0 0 0.3 0 0 0 0.04 0", 0.04),
+    "radial-gradient(circle at 20% 10%, hsl(var(--c-accent-gold) / 0.10) 0%, transparent 45%)",
+    "radial-gradient(circle at 80% 80%, hsl(var(--c-accent-red) / 0.08) 0%, transparent 50%)",
+    noise("0 0 0 0 0.4 0 0 0 0 0.36 0 0 0 0 0.3 0 0 0 0.08 0", 0.08),
   ].join(", "),
 
   /** 羊皮古卷 - 强化琥珀光晕与边缘老化，明显羊皮纹理 */
   parchment: [
-    "radial-gradient(ellipse at 30% 20%, hsl(var(--c-accent-gold) / 0.10) 0%, transparent 55%)",
-    "radial-gradient(ellipse at 70% 80%, hsl(var(--c-accent-red) / 0.06) 0%, transparent 60%)",
-    "radial-gradient(circle at 50% 50%, transparent 40%, hsl(var(--c-paper-deep) / 0.20) 100%)",
-    noise("0 0 0 0 0.5 0 0 0 0 0.42 0 0 0 0 0.28 0 0 0 0.07 0", 0.07, 180, 0.7),
+    "radial-gradient(ellipse at 30% 20%, hsl(var(--c-accent-gold) / 0.18) 0%, transparent 60%)",
+    "radial-gradient(ellipse at 70% 80%, hsl(var(--c-accent-red) / 0.12) 0%, transparent 65%)",
+    "radial-gradient(circle at 50% 50%, transparent 35%, hsl(var(--c-paper-deep) / 0.30) 100%)",
+    noise("0 0 0 0 0.5 0 0 0 0 0.42 0 0 0 0 0.28 0 0 0 0.12 0", 0.12, 180, 0.7),
   ].join(", "),
 
   /** 林间书桌 - 苔绿光晕，绿调噪点 */
   forest: [
-    "radial-gradient(circle at 25% 15%, hsl(var(--c-accent-green) / 0.07) 0%, transparent 50%)",
-    "radial-gradient(circle at 75% 75%, hsl(var(--c-accent-gold) / 0.05) 0%, transparent 50%)",
-    noise("0 0 0 0 0.28 0 0 0 0 0.35 0 0 0 0 0.22 0 0 0 0.06 0", 0.06, 160, 0.85),
+    "radial-gradient(circle at 25% 15%, hsl(var(--c-accent-green) / 0.14) 0%, transparent 55%)",
+    "radial-gradient(circle at 75% 75%, hsl(var(--c-accent-gold) / 0.10) 0%, transparent 55%)",
+    noise("0 0 0 0 0.28 0 0 0 0 0.35 0 0 0 0 0.22 0 0 0 0.10 0", 0.10, 160, 0.85),
   ].join(", "),
 
   /** 子夜静读 - 反转深色：奶白墨色噪点 + 星点光斑 */
   midnight: [
-    "radial-gradient(circle at 20% 30%, hsl(var(--c-accent-gold) / 0.10) 0%, transparent 45%)",
-    "radial-gradient(circle at 80% 70%, hsl(var(--c-accent-red) / 0.06) 0%, transparent 50%)",
-    dots(80, "0 0 0 0 0.95 0 0 0 0 0.92 0 0 0 0 0.85 0 0 0 1 0", 0.18, 320),
-    noise("0 0 0 0 0.85 0 0 0 0 0.82 0 0 0 0 0.75 0 0 0 0.06 0", 0.06, 200, 0.95),
+    "radial-gradient(circle at 20% 30%, hsl(var(--c-accent-gold) / 0.18) 0%, transparent 50%)",
+    "radial-gradient(circle at 80% 70%, hsl(var(--c-accent-red) / 0.12) 0%, transparent 55%)",
+    dots(120, "0 0 0 0 0.95 0 0 0 0 0.92 0 0 0 0 0.85 0 0 0 1 0", 0.25, 320),
+    noise("0 0 0 0 0.85 0 0 0 0 0.82 0 0 0 0 0.75 0 0 0 0.10 0", 0.10, 200, 0.95),
   ].join(", "),
 
   /** 远洋日志 - 冷青光晕 + 波浪线纹理 */
   ocean: [
-    "radial-gradient(circle at 25% 20%, hsl(var(--c-accent-gold) / 0.06) 0%, transparent 50%)",
-    "radial-gradient(circle at 75% 80%, hsl(var(--c-accent-red) / 0.04) 0%, transparent 50%)",
-    waves("0 0 0 0 0.20 0 0 0 0 0.32 0 0 0 0 0.42 0 0 0 0.8 0", 0.10, 220),
-    noise("0 0 0 0 0.25 0 0 0 0 0.34 0 0 0 0 0.42 0 0 0 0.05 0", 0.05, 160, 0.85),
+    "radial-gradient(circle at 25% 20%, hsl(var(--c-accent-gold) / 0.12) 0%, transparent 55%)",
+    "radial-gradient(circle at 75% 80%, hsl(var(--c-accent-red) / 0.08) 0%, transparent 55%)",
+    waves("0 0 0 0 0.20 0 0 0 0 0.32 0 0 0 0 0.42 0 0 0 0.8 0", 0.18, 220),
+    noise("0 0 0 0 0.25 0 0 0 0 0.34 0 0 0 0 0.42 0 0 0 0.08 0", 0.08, 160, 0.85),
   ].join(", "),
 
   /** 玫瑰信笺 - 玫红光晕 + 花瓣点缀 */
   rose: [
-    "radial-gradient(circle at 20% 15%, hsl(var(--c-accent-red) / 0.06) 0%, transparent 50%)",
-    "radial-gradient(circle at 80% 85%, hsl(var(--c-accent-gold) / 0.05) 0%, transparent 50%)",
-    dots(45, "0 0 0 0 0.65 0 0 0 0 0.35 0 0 0 0 0.50 0 0 0 1 0", 0.10, 280),
-    noise("0 0 0 0 0.55 0 0 0 0 0.32 0 0 0 0 0.42 0 0 0 0.05 0", 0.05, 160, 0.85),
+    "radial-gradient(circle at 20% 15%, hsl(var(--c-accent-red) / 0.12) 0%, transparent 55%)",
+    "radial-gradient(circle at 80% 85%, hsl(var(--c-accent-gold) / 0.10) 0%, transparent 55%)",
+    dots(60, "0 0 0 0 0.65 0 0 0 0 0.35 0 0 0 0 0.50 0 0 0 1 0", 0.16, 280),
+    noise("0 0 0 0 0.55 0 0 0 0 0.32 0 0 0 0 0.42 0 0 0 0.08 0", 0.08, 160, 0.85),
   ].join(", "),
 
   /** 炭笔素描 - 中性灰 + 斜线纹理（素描排线感） */
   charcoal: [
-    "radial-gradient(circle at 30% 20%, hsl(var(--c-ink) / 0.04) 0%, transparent 50%)",
-    "radial-gradient(circle at 70% 80%, hsl(var(--c-ink-light) / 0.05) 0%, transparent 55%)",
-    hatching("0 0 0 0 0.2 0 0 0 0 0.2 0 0 0 0 0.2 0 0 0 1 0", 0.04, 160, 45, 9),
-    noise("0 0 0 0 0.25 0 0 0 0 0.24 0 0 0 0 0.22 0 0 0 0.05 0", 0.05, 160, 0.9),
+    "radial-gradient(circle at 30% 20%, hsl(var(--c-ink) / 0.08) 0%, transparent 55%)",
+    "radial-gradient(circle at 70% 80%, hsl(var(--c-ink-light) / 0.10) 0%, transparent 60%)",
+    hatching("0 0 0 0 0.2 0 0 0 0 0.2 0 0 0 0 0.2 0 0 0 1 0", 0.08, 160, 45, 9),
+    noise("0 0 0 0 0.25 0 0 0 0 0.24 0 0 0 0 0.22 0 0 0 0.08 0", 0.08, 160, 0.9),
   ].join(", "),
 
   /** 紫藤诗笺 - 紫罗兰光晕 + 大块墨晕水痕 */
   wisteria: [
-    "radial-gradient(circle at 25% 20%, hsl(var(--c-accent-gold) / 0.07) 0%, transparent 50%)",
-    "radial-gradient(circle at 75% 80%, hsl(var(--c-accent-red) / 0.05) 0%, transparent 50%)",
-    inkBlots("0 0 0 0 0.35 0 0 0 0 0.20 0 0 0 0 0.45 0 0 0 0.8 0", 0.06, 320),
-    noise("0 0 0 0 0.45 0 0 0 0 0.30 0 0 0 0 0.50 0 0 0 0.05 0", 0.05, 160, 0.85),
+    "radial-gradient(circle at 25% 20%, hsl(var(--c-accent-gold) / 0.14) 0%, transparent 55%)",
+    "radial-gradient(circle at 75% 80%, hsl(var(--c-accent-red) / 0.10) 0%, transparent 55%)",
+    inkBlots("0 0 0 0 0.35 0 0 0 0 0.20 0 0 0 0 0.45 0 0 0 0.8 0", 0.12, 320),
+    noise("0 0 0 0 0.45 0 0 0 0 0.30 0 0 0 0 0.50 0 0 0 0.08 0", 0.08, 160, 0.85),
   ].join(", "),
 
   /** 落日手记 - 暖橙光晕 + 落日大圆晕染 */
   sunset: [
-    "radial-gradient(circle at 80% 15%, hsl(var(--c-accent-gold) / 0.16) 0%, transparent 35%)",
-    "radial-gradient(circle at 20% 80%, hsl(var(--c-accent-red) / 0.08) 0%, transparent 50%)",
-    "radial-gradient(circle at 80% 15%, transparent 5%, hsl(var(--c-accent-gold) / 0.05) 8%, transparent 12%)",
-    noise("0 0 0 0 0.55 0 0 0 0 0.32 0 0 0 0 0.20 0 0 0 0.06 0", 0.06, 160, 0.85),
+    "radial-gradient(circle at 80% 15%, hsl(var(--c-accent-gold) / 0.28) 0%, transparent 38%)",
+    "radial-gradient(circle at 20% 80%, hsl(var(--c-accent-red) / 0.14) 0%, transparent 55%)",
+    "radial-gradient(circle at 80% 15%, transparent 4%, hsl(var(--c-accent-gold) / 0.08) 8%, transparent 14%)",
+    noise("0 0 0 0 0.55 0 0 0 0 0.32 0 0 0 0 0.20 0 0 0 0.10 0", 0.10, 160, 0.85),
   ].join(", "),
 };
 
