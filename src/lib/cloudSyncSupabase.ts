@@ -20,6 +20,7 @@ import type {
   ReviewLogRow,
   ArticleArchiveRow,
   DateNoteRow,
+  EssayRow,
 } from "@/lib/supabase";
 import {
   toWordRow,
@@ -28,8 +29,10 @@ import {
   fromReviewLogRow,
   toArticleArchiveRow,
   fromArticleArchiveRow,
+  toEssayRow,
+  fromEssayRow,
 } from "@/lib/supabase";
-import type { Word, ReviewLog } from "@/types";
+import type { Word, ReviewLog, Essay } from "@/types";
 import type { ArticleArchive } from "@/store/articleStore";
 
 export interface CloudSyncResult {
@@ -47,6 +50,7 @@ export interface PulledData {
   logs: ReviewLog[];
   articles: ArticleArchive[];
   dateNotes: Record<string, string>;
+  essays: Essay[];
 }
 
 /* ============ 拉取 ============ */
@@ -60,12 +64,13 @@ export async function pullAll(): Promise<CloudSyncResult & { data?: PulledData }
 
   try {
     console.log("[云同步] pullAll: 开始查询，用户:", username);
-    // 并行拉取四类数据
-    const [wordsRes, logsRes, articlesRes, notesRes] = await Promise.all([
+    // 并行拉取五类数据
+    const [wordsRes, logsRes, articlesRes, notesRes, essaysRes] = await Promise.all([
       (supabase.from("words") as any).select("*").eq("username", username),
       (supabase.from("review_logs") as any).select("*").eq("username", username),
       (supabase.from("article_archives") as any).select("*").eq("username", username),
       (supabase.from("date_notes") as any).select("*").eq("username", username),
+      (supabase.from("essays") as any).select("*").eq("username", username),
     ]);
 
     // 逐个检查错误，打印详细信息
@@ -73,8 +78,9 @@ export async function pullAll(): Promise<CloudSyncResult & { data?: PulledData }
     if (logsRes.error) console.error("[云同步] pullAll logs 错误:", logsRes.error.message, "code:", logsRes.error.code);
     if (articlesRes.error) console.error("[云同步] pullAll articles 错误:", articlesRes.error.message, "code:", articlesRes.error.code);
     if (notesRes.error) console.error("[云同步] pullAll notes 错误:", notesRes.error.message, "code:", notesRes.error.code);
+    if (essaysRes.error) console.error("[云同步] pullAll essays 错误:", essaysRes.error.message, "code:", essaysRes.error.code);
 
-    const errors = [wordsRes.error, logsRes.error, articlesRes.error, notesRes.error].filter(
+    const errors = [wordsRes.error, logsRes.error, articlesRes.error, notesRes.error, essaysRes.error].filter(
       Boolean,
     );
     if (errors.length > 0) {
@@ -86,6 +92,7 @@ export async function pullAll(): Promise<CloudSyncResult & { data?: PulledData }
       logs: logsRes.data?.length,
       articles: articlesRes.data?.length,
       notes: notesRes.data?.length,
+      essays: essaysRes.data?.length,
     });
 
     const words = (wordsRes.data as WordRow[]).map(fromWordRow);
@@ -97,11 +104,12 @@ export async function pullAll(): Promise<CloudSyncResult & { data?: PulledData }
     for (const row of notesRes.data as DateNoteRow[]) {
       if (row.note) dateNotes[row.date] = row.note;
     }
+    const essays = (essaysRes.data as EssayRow[]).map(fromEssayRow);
 
     return {
       success: true,
-      data: { words, logs, articles, dateNotes },
-      count: words.length + logs.length + articles.length,
+      data: { words, logs, articles, dateNotes, essays },
+      count: words.length + logs.length + articles.length + essays.length,
     };
   } catch (e) {
     return { success: false, error: e instanceof Error ? e.message : "网络错误" };
@@ -249,6 +257,32 @@ export async function deleteDateNote(date: string): Promise<CloudSyncResult> {
   return { success: true };
 }
 
+/** 推送随笔（upsert by id） */
+export async function pushEssay(essay: Essay): Promise<CloudSyncResult> {
+  const supabase = getSupabase();
+  if (!supabase) return { success: false, error: "Supabase 未配置" };
+  const username = getCurrentUsername();
+  if (!username) return { success: false, error: "未登录" };
+
+  const row = toEssayRow(essay, username);
+  const { error } = await (supabase.from("essays") as any).upsert(row, { onConflict: "id" });
+  if (error) {
+    console.error("[云同步] pushEssay 失败:", error.message, "code:", error.code);
+    return { success: false, error: error.message };
+  }
+  return { success: true };
+}
+
+/** 删除随笔 */
+export async function deleteEssay(id: string): Promise<CloudSyncResult> {
+  const supabase = getSupabase();
+  if (!supabase) return { success: false, error: "Supabase 未配置" };
+
+  const { error } = await (supabase.from("essays") as any).delete().eq("id", id);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
 /* ============ Realtime 订阅 ============ */
 
 export interface RealtimeCallbacks {
@@ -265,6 +299,10 @@ export interface RealtimeCallbacks {
     type: "INSERT" | "UPDATE" | "DELETE",
     date: string,
     note: string | null,
+  ) => void;
+  onEssayChange: (
+    type: "INSERT" | "UPDATE" | "DELETE",
+    essay: Essay,
   ) => void;
 }
 
@@ -391,6 +429,34 @@ export function subscribeChanges(callbacks: RealtimeCallbacks): () => void {
     .subscribe();
   channels.push(noteChannel);
 
+  // 订阅 essays 表
+  const essayChannel = supabase
+    .channel(`essays:${username}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "essays",
+        filter: `username=eq.${username}`,
+      },
+      (payload) => {
+        const type = payload.eventType;
+        const row = payload.new as EssayRow | null;
+        const oldRow = payload.old as EssayRow | null;
+        if (type === "DELETE" && oldRow) {
+          callbacks.onEssayChange("DELETE", fromEssayRow(oldRow));
+        } else if (row) {
+          callbacks.onEssayChange(
+            type as "INSERT" | "UPDATE",
+            fromEssayRow(row),
+          );
+        }
+      },
+    )
+    .subscribe();
+  channels.push(essayChannel);
+
   // 返回 unsubscribe 函数
   return () => {
     channels.forEach((c) => c.unsubscribe());
@@ -421,6 +487,7 @@ export async function migrateFromLocal(
   localLogs: ReviewLog[],
   localArticles: ArticleArchive[],
   localDateNotes: Record<string, string>,
+  localEssays: Essay[],
 ): Promise<CloudSyncResult> {
   if (isMigratedToSupabase()) {
     return { success: true, skipped: true, message: "已迁移过，跳过" };
@@ -432,7 +499,7 @@ export async function migrateFromLocal(
   if (!username) return { success: false, error: "未登录" };
 
   const totalItems =
-    localWords.length + localLogs.length + localArticles.length + Object.keys(localDateNotes).length;
+    localWords.length + localLogs.length + localArticles.length + Object.keys(localDateNotes).length + localEssays.length;
   if (totalItems === 0) {
     setMigratedToSupabase();
     return { success: true, skipped: true, message: "本地无数据，无需迁移" };
@@ -472,6 +539,13 @@ export async function migrateFromLocal(
       );
       const { error } = await (supabase.from("date_notes") as any).upsert(rows, { onConflict: "username,date" });
       if (error) throw new Error(`notes: ${error.message}`);
+    }
+
+    // 批量上传 essays
+    if (localEssays.length > 0) {
+      const rows = localEssays.map((e) => toEssayRow(e, username));
+      const { error } = await (supabase.from("essays") as any).upsert(rows, { onConflict: "id" });
+      if (error) throw new Error(`essays: ${error.message}`);
     }
 
     setMigratedToSupabase();

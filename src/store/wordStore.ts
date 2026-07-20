@@ -429,14 +429,21 @@ export function selectDueWords(words: Word[]): Word[] {
  *
  * 当天新加的词 nextReview 通常是明天，isDue 返回 false，但用户当天应该先学习一次，
  * 所以红点应该把它们也算进来，与生词本「自我检测」逻辑保持一致。
+ *
+ * Bug 修复：今日新词被复习过后（lastReviewDate === today）就不再计入红点，
+ * 否则用户复习完所有词后红点仍显示数字，状态没有归零。
  */
 export function selectDueAndTodayNewCount(words: Word[]): number {
   const today = todayKey();
   let count = 0;
   const todayNewIds = new Set<string>();
   for (const w of words) {
-    // 当日新加且未掌握的词
-    if (w.date === today && !w.isMastered) {
+    // 当日新加且未掌握且今天还未复习过的词
+    if (
+      w.date === today &&
+      !w.isMastered &&
+      w.lastReviewDate !== today
+    ) {
       todayNewIds.add(w.id);
     }
   }

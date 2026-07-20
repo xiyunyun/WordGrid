@@ -20,6 +20,7 @@ import LoginPage from "@/pages/Login";
 import { useWordStore, selectDueWords, selectTomorrowWords, selectDifficultWords } from "@/store/wordStore";
 import { useArticleStore } from "@/store/articleStore";
 import { useDateNotesStore } from "@/store/dateNotes";
+import { useEssayStore } from "@/store/essayStore";
 import { useThemeStore } from "@/store/theme";
 import { buildSeedWords } from "@/store/seedData";
 import { todayKey } from "@/lib/review";
@@ -155,18 +156,21 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
 
       if (pullRes.success && pullRes.data && (pullRes.count ?? 0) > 0) {
         // 云端已有数据：用云端数据覆盖本地（云端是 source of truth）
-        const { words, logs, articles, dateNotes } = pullRes.data;
+        const { words, logs, articles, dateNotes, essays } = pullRes.data;
         useWordStore.getState().setSyncEnabled(false);
         useArticleStore.getState().setSyncEnabled(false);
         useDateNotesStore.getState().setSyncEnabled(false);
+        useEssayStore.getState().setSyncEnabled(false);
         try {
           useWordStore.getState().hydrateFromCloud(words, logs);
           useArticleStore.getState().hydrateFromCloud(articles);
           useDateNotesStore.getState().hydrateFromCloud(dateNotes);
+          useEssayStore.getState().hydrateFromCloud(essays);
         } finally {
           useWordStore.getState().setSyncEnabled(true);
           useArticleStore.getState().setSyncEnabled(true);
           useDateNotesStore.getState().setSyncEnabled(true);
+          useEssayStore.getState().setSyncEnabled(true);
         }
         // 标记为已迁移（云端已有数据，本地已同步）
         setMigratedToSupabase();
@@ -179,6 +183,7 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
           useWordStore.getState().logs,
           useArticleStore.getState().archives,
           useDateNotesStore.getState().notes,
+          useEssayStore.getState().essays,
         );
         if (cancelled) return;
         if (migrationRes.success) {
@@ -201,6 +206,9 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
         },
         onDateNoteChange: (type, date, note) => {
           useDateNotesStore.getState().applyRemoteNote(type, date, note);
+        },
+        onEssayChange: (type, essay) => {
+          useEssayStore.getState().applyRemoteEssay(type, essay);
         },
       });
     })();
@@ -260,8 +268,13 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
   const openDueModal = useCallback(() => {
     const dueWords = selectDueWords(words);
     const today = todayKey();
+    // 当日新词只包含今天还未复习过的，与红点逻辑保持一致
+    // 复习过的（lastReviewDate === today）已经推进过复习阶段，无需再计入
     const todayNewWords = words.filter(
-      (w) => w.date === today && !w.isMastered,
+      (w) =>
+        w.date === today &&
+        !w.isMastered &&
+        w.lastReviewDate !== today,
     );
     const seen = new Set(dueWords.map((w) => w.id));
     const merged = [

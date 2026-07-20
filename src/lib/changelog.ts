@@ -23,6 +23,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "2.2.0",
+    date: "2026-07-20",
+    items: [
+      "随笔功能接入 Supabase 云存档：新增/编辑/删除随笔会实时推送到云端，多设备登录后随笔自动同步（与单词、文章归档、日期备注逻辑一致）",
+      "修复红点状态不随复习归零的 bug：今日新词复习后（lastReviewDate === today）不再计入导航红点和 Due Today 提示，复习完所有词后红点会归零",
+      "DueTodayModal 弹窗的当日新词列表同步应用相同逻辑，只显示今天还未复习过的词",
+    ],
+  },
+  {
     version: "2.1.3",
     date: "2026-07-20",
     items: [

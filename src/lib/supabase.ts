@@ -89,9 +89,20 @@ export interface DateNoteRow {
   updated_at: string;
 }
 
+export interface EssayRow {
+  id: string;
+  username: string;
+  content: string;
+  translation: string | null;
+  date: string;
+  note: string | null;
+  created_at: number;
+  updated_at: string;
+}
+
 /* ============ 本地类型 ↔ 数据库行 转换函数 ============ */
 
-import type { Word, ReviewLog, ReviewMode } from "@/types";
+import type { Word, ReviewLog, ReviewMode, Essay } from "@/types";
 import type { ArticleArchive } from "@/store/articleStore";
 
 /** 当前登录用户名（作为 RLS 隔离键） */
@@ -198,5 +209,31 @@ export function fromArticleArchiveRow(r: ArticleArchiveRow): ArticleArchive {
     difficulty: (r.difficulty as ArticleArchive["difficulty"]) || "intermediate",
     questions: (r.questions as ArticleArchive["questions"]) || [],
     attempt: (r.attempt as ArticleArchive["attempt"]) || undefined,
+  };
+}
+
+/** Essay（本地）→ EssayRow（DB） */
+export function toEssayRow(e: Essay, username: string): EssayRow {
+  return {
+    id: e.id,
+    username,
+    content: e.content,
+    translation: e.translation || null,
+    date: e.date,
+    note: e.note || null,
+    created_at: e.createdAt,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+/** EssayRow（DB）→ Essay（本地） */
+export function fromEssayRow(r: EssayRow): Essay {
+  return {
+    id: r.id,
+    content: r.content,
+    translation: r.translation || undefined,
+    date: r.date,
+    note: r.note || undefined,
+    createdAt: r.created_at,
   };
 }
