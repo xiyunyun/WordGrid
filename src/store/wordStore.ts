@@ -424,6 +424,34 @@ export function selectDueWords(words: Word[]): Word[] {
   return words.filter((w) => w.isDifficult && !w.isMastered && isDue(w.nextReview));
 }
 
+/**
+ * 「到期词 ∪ 当日新词」合并数量 —— 用于导航红点与 DailyGrid 的 Due Today 提示
+ *
+ * 当天新加的词 nextReview 通常是明天，isDue 返回 false，但用户当天应该先学习一次，
+ * 所以红点应该把它们也算进来，与生词本「自我检测」逻辑保持一致。
+ */
+export function selectDueAndTodayNewCount(words: Word[]): number {
+  const today = todayKey();
+  let count = 0;
+  const todayNewIds = new Set<string>();
+  for (const w of words) {
+    // 当日新加且未掌握的词
+    if (w.date === today && !w.isMastered) {
+      todayNewIds.add(w.id);
+    }
+  }
+  // 先统计到期词，同时跳过当日新词（避免重复计数）
+  for (const w of words) {
+    if (w.isDifficult && !w.isMastered && isDue(w.nextReview)) {
+      count++;
+      todayNewIds.delete(w.id);
+    }
+  }
+  // 加上当日新词中未被计入到期词的部分
+  count += todayNewIds.size;
+  return count;
+}
+
 /** 明日到期的生词（nextReview == 明天） */
 export function selectTomorrowWords(words: Word[]): Word[] {
   const tomorrow = addDays(todayKey(), 1);

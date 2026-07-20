@@ -2,7 +2,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import { Grid3x3, BookOpen, BarChart3, Blocks, Plus, LogOut, Info, Palette, Quote } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useWordStore } from "@/store/wordStore";
-import { selectDueWords } from "@/store/wordStore";
+import { selectDueAndTodayNewCount } from "@/store/wordStore";
 import { formatMDShort, weekdayCN, todayKey } from "@/lib/review";
 import SearchBar from "@/components/SearchBar";
 import type { Word } from "@/types";
@@ -20,16 +20,16 @@ interface AppShellProps {
 const navItems = [
   { to: "/", label: "Grid", labelCN: "每日网格", icon: Grid3x3 },
   { to: "/wordbook", label: "Wordbook", labelCN: "生词本", icon: BookOpen },
+  { to: "/essays", label: "Essays", labelCN: "随笔", icon: Quote },
   { to: "/blocks", label: "Blocks", labelCN: "积木造文", icon: Blocks },
   { to: "/stats", label: "Stats", labelCN: "统计", icon: BarChart3 },
-  { to: "/essays", label: "Essays", labelCN: "随笔", icon: Quote },
   { to: "/about", label: "About", labelCN: "关于", icon: Info },
 ];
 
 export default function AppShell({ children, onQuickAdd, onLogout, onPickWord, onOpenTheme }: AppShellProps) {
   const location = useLocation();
   const words = useWordStore((s) => s.words);
-  const dueCount = selectDueWords(words).length;
+  const dueCount = selectDueAndTodayNewCount(words);
   const today = todayKey();
 
   return (

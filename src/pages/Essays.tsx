@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import {
   ChevronDown,
   Plus,
@@ -61,8 +61,14 @@ export default function Essays({ addTrigger }: EssaysProps) {
   const [editEssay, setEditEssay] = useState<Essay | null>(null);
 
   // 监听外部添加触发（AppShell 的 Add 按钮）
+  // 首次挂载时跳过，避免进入随笔页就强制弹出添加菜单
+  const lastTriggerRef = useRef<number | undefined>(undefined);
   useEffect(() => {
     if (addTrigger === undefined) return;
+    if (lastTriggerRef.current === addTrigger) return;
+    lastTriggerRef.current = addTrigger;
+    // 第一次记录后不触发，仅后续变化才打开抽屉
+    if (lastTriggerRef.current === 0) return;
     setEditEssay(null);
     setDrawerDate(undefined);
     setDrawerOpen(true);
@@ -163,7 +169,7 @@ export default function Essays({ addTrigger }: EssaysProps) {
         <div className="eyebrow mb-1">Essays · 随笔摘录</div>
         <div className="flex flex-wrap items-end justify-between gap-4">
           <h2 className="font-display text-2xl md:text-3xl font-medium tracking-tightest text-ink lg:text-4xl">
-            句子便签
+            时光随笔
             <span className="ml-3 font-serif text-lg italic text-ink-light">
               {essays.length} entries
             </span>
@@ -401,7 +407,7 @@ function EssayCard({
   return (
     <article
       className={cn(
-        "group flex break-inside-avoid flex-col rounded-md border bg-paper p-4 shadow-paper transition-all hover:shadow-deep",
+        "group flex w-full break-inside-avoid flex-col overflow-hidden rounded-md border bg-paper p-4 shadow-paper transition-all hover:shadow-deep",
         // 卡片自带轻微的纸张质感
         "border-ink/15",
       )}
@@ -412,15 +418,15 @@ function EssayCard({
           className="mt-1 h-3.5 w-3.5 flex-shrink-0 text-accent-gold/60"
           strokeWidth={1.5}
         />
-        <p className="flex-1 whitespace-pre-wrap font-serif text-base leading-relaxed text-ink md:text-lg">
+        <p className="min-w-0 flex-1 break-words whitespace-pre-wrap font-serif text-base leading-relaxed text-ink md:text-lg">
           {essay.content}
         </p>
       </div>
 
       {/* 翻译 */}
       {essay.translation && (
-        <div className="mt-1 mb-2 border-l-2 border-accent-gold/40 pl-3">
-          <p className="whitespace-pre-wrap font-body text-sm leading-relaxed text-ink-soft">
+        <div className="mt-1 mb-2 min-w-0 border-l-2 border-accent-gold/40 pl-3">
+          <p className="break-words whitespace-pre-wrap font-body text-sm leading-relaxed text-ink-soft">
             {essay.translation}
           </p>
         </div>
@@ -433,7 +439,7 @@ function EssayCard({
             <StickyNote className="h-3 w-3" strokeWidth={1.5} />
             Note
           </div>
-          <p className="whitespace-pre-wrap font-body text-xs leading-relaxed text-ink-muted">
+          <p className="break-words whitespace-pre-wrap font-body text-xs leading-relaxed text-ink-muted">
             {essay.note}
           </p>
         </div>

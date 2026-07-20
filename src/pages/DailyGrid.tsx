@@ -15,7 +15,7 @@ import {
   EyeOff,
 } from "lucide-react";
 import { useWordStore } from "@/store/wordStore";
-import { selectDueWords } from "@/store/wordStore";
+import { selectDueAndTodayNewCount } from "@/store/wordStore";
 import { useDateNotesStore, truncateNote } from "@/store/dateNotes";
 import { useDisplaySettingsStore } from "@/store/displaySettings";
 import { COMMON_POS } from "@/lib/pos";
@@ -127,7 +127,9 @@ export default function DailyGrid({
     !displaySettings.showNote;
 
   const today = todayKey();
-  const dueWords = selectDueWords(words);
+  // 红点提示数量：到期词 ∪ 当日新加未掌握词（与生词本「自我检测」和导航红点逻辑一致）
+  // 当天新加的 10 个词会让红点从 5 变成 15，而不是只反映到期词数量
+  const dueCount = selectDueAndTodayNewCount(words);
   const countdown = useMidnightCountdown();
 
   // 从所有单词中实际出现的词性集合（只显示有对应单词的词性）
@@ -246,7 +248,7 @@ export default function DailyGrid({
         <div>
           <div className="eyebrow mb-1">Daily Grid · 每日网格</div>
           <h2 className="font-display text-3xl font-medium tracking-tightest text-ink lg:text-4xl">
-            词汇档案
+            每日网格
             <span className="ml-3 font-serif text-lg italic text-ink-light">
               {words.length} entries
             </span>
@@ -257,7 +259,7 @@ export default function DailyGrid({
             onClick={() => onReviewDue?.()}
             className={cn(
               "flex items-center gap-3 rounded-md border px-4 py-2.5 transition-colors",
-              dueWords.length > 0
+              dueCount > 0
                 ? "border-accent-red/40 bg-accent-red/5 hover:bg-accent-red/10"
                 : "border-ink/15 bg-paper-card hover:border-ink/30",
             )}
@@ -265,25 +267,25 @@ export default function DailyGrid({
             <div
               className={cn(
                 "flex h-8 w-8 items-center justify-center rounded-full font-mono text-xs",
-                dueWords.length > 0
+                dueCount > 0
                   ? "bg-accent-red text-paper"
                   : "bg-ink/10 text-ink-light",
               )}
             >
-              {dueWords.length}
+              {dueCount}
             </div>
             <div className="text-left">
               <div
                 className={cn(
                   "font-mono text-2xs uppercase tracking-editorial",
-                  dueWords.length > 0 ? "text-accent-red" : "text-ink-light",
+                  dueCount > 0 ? "text-accent-red" : "text-ink-light",
                 )}
               >
                 Due Today
               </div>
               <div className="font-body text-sm text-ink">
-                {dueWords.length > 0
-                  ? `今日需复习 ${dueWords.length} 词`
+                {dueCount > 0
+                  ? `今日需复习 ${dueCount} 词`
                   : "今日无待复习词"}
               </div>
             </div>
@@ -792,7 +794,7 @@ function EmptyState({
       <Inbox className="mb-4 h-10 w-10 text-ink-light" strokeWidth={1} />
       <div className="eyebrow mb-2">Empty Archive</div>
       <h2 className="mb-2 font-display text-3xl font-medium text-ink">
-        开始你的词汇档案
+        开始你的每日网格
       </h2>
       <p className="mb-6 max-w-md font-body text-sm text-ink-muted">
         点击下方按钮添加第一个单词，或使用批量导入快速录入。
