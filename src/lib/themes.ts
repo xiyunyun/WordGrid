@@ -11,11 +11,14 @@
  * 主题切换时，由 store/theme.ts 将这些值写入 :root 的 CSS 变量，
  * 并把对应纹理写入 body 的 background-image。
  *
- * 主题设计原则（v2.3.1 增强）：
- *   1. 浅色主题：纸张亮度提升至 95–97%（更亮），墨色降至 8–11%（更暗），形成强对比
- *   2. 深色主题（midnight）：纸张亮度降至 8–10%（更深），墨色提至 92–95%（更亮）
- *   3. 强调色饱和度提升至 70–90%，亮度保持中等，确保视觉冲击力
- *   4. 每个主题搭配独特的纹理质感，纹理对比度也增强（光晕透明度 0.08–0.16）
+ * 主题设计原则（v2.3.2 修复主题一体化）：
+ *   1. 浅色主题：纸张亮度 94–96%，墨色 8–11%，形成强对比
+ *   2. 深色主题（midnight）：纸张亮度 8–10%，墨色 92–95%
+ *   3. 强调色饱和度 70–90%，亮度保持中等，确保视觉冲击力
+ *   4. 每个主题搭配独特的纹理质感（光晕透明度 0.08–0.28，噪点 0.08–0.12）
+ *   5. ⚠️ paper-card 亮度必须低于 paper（约低 4–5%），否则在浅色主题中
+ *      paper-card 亮度 ≥ 95% 会近似纯白，造成卡片背景与主题脱节（v2.3.1 bug）
+ *      修复后 paper-card 亮度调至 88–92%，使卡片呈现可见的主题色调
  */
 
 import type { TextureKey } from "@/lib/themeTextures";
@@ -58,8 +61,8 @@ export const THEMES: Theme[] = [
     vars: {
       "--c-paper": "42 32% 96%",
       "--c-paper-warm": "42 28% 92%",
-      "--c-paper-card": "43 36% 98%",
-      "--c-paper-deep": "43 35% 88%",
+      "--c-paper-card": "43 36% 92%",
+      "--c-paper-deep": "43 35% 86%",
       "--c-ink": "0 0% 8%",
       "--c-ink-soft": "60 4% 18%",
       "--c-ink-muted": "39 9% 35%",
@@ -80,8 +83,8 @@ export const THEMES: Theme[] = [
     vars: {
       "--c-paper": "36 42% 92%",
       "--c-paper-warm": "32 38% 88%",
-      "--c-paper-card": "38 44% 95%",
-      "--c-paper-deep": "30 38% 82%",
+      "--c-paper-card": "38 44% 88%",
+      "--c-paper-deep": "30 38% 80%",
       "--c-ink": "25 42% 8%",
       "--c-ink-soft": "25 32% 18%",
       "--c-ink-muted": "30 22% 35%",
@@ -102,8 +105,8 @@ export const THEMES: Theme[] = [
     vars: {
       "--c-paper": "85 28% 95%",
       "--c-paper-warm": "80 24% 91%",
-      "--c-paper-card": "85 32% 97%",
-      "--c-paper-deep": "85 28% 86%",
+      "--c-paper-card": "85 32% 91%",
+      "--c-paper-deep": "85 28% 84%",
       "--c-ink": "150 30% 8%",
       "--c-ink-soft": "150 22% 18%",
       "--c-ink-muted": "140 18% 35%",
@@ -146,8 +149,8 @@ export const THEMES: Theme[] = [
     vars: {
       "--c-paper": "200 30% 95%",
       "--c-paper-warm": "195 26% 91%",
-      "--c-paper-card": "200 36% 97%",
-      "--c-paper-deep": "200 30% 86%",
+      "--c-paper-card": "200 36% 91%",
+      "--c-paper-deep": "200 30% 84%",
       "--c-ink": "210 48% 8%",
       "--c-ink-soft": "210 38% 18%",
       "--c-ink-muted": "210 24% 35%",
@@ -168,8 +171,8 @@ export const THEMES: Theme[] = [
     vars: {
       "--c-paper": "340 34% 95%",
       "--c-paper-warm": "335 28% 91%",
-      "--c-paper-card": "340 38% 97%",
-      "--c-paper-deep": "340 34% 86%",
+      "--c-paper-card": "340 38% 91%",
+      "--c-paper-deep": "340 34% 84%",
       "--c-ink": "320 38% 8%",
       "--c-ink-soft": "320 30% 18%",
       "--c-ink-muted": "320 18% 35%",
@@ -190,8 +193,8 @@ export const THEMES: Theme[] = [
     vars: {
       "--c-paper": "220 10% 96%",
       "--c-paper-warm": "220 8% 92%",
-      "--c-paper-card": "220 14% 98%",
-      "--c-paper-deep": "220 10% 87%",
+      "--c-paper-card": "220 14% 92%",
+      "--c-paper-deep": "220 10% 85%",
       "--c-ink": "220 12% 8%",
       "--c-ink-soft": "220 10% 18%",
       "--c-ink-muted": "220 8% 35%",
@@ -212,8 +215,8 @@ export const THEMES: Theme[] = [
     vars: {
       "--c-paper": "270 30% 95%",
       "--c-paper-warm": "268 26% 91%",
-      "--c-paper-card": "270 36% 97%",
-      "--c-paper-deep": "270 30% 86%",
+      "--c-paper-card": "270 36% 91%",
+      "--c-paper-deep": "270 30% 84%",
       "--c-ink": "275 42% 8%",
       "--c-ink-soft": "275 32% 18%",
       "--c-ink-muted": "275 22% 35%",
@@ -234,8 +237,8 @@ export const THEMES: Theme[] = [
     vars: {
       "--c-paper": "28 46% 94%",
       "--c-paper-warm": "22 42% 90%",
-      "--c-paper-card": "28 50% 96%",
-      "--c-paper-deep": "28 40% 85%",
+      "--c-paper-card": "28 50% 90%",
+      "--c-paper-deep": "28 40% 83%",
       "--c-ink": "20 48% 8%",
       "--c-ink-soft": "20 38% 18%",
       "--c-ink-muted": "22 25% 35%",

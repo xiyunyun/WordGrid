@@ -271,22 +271,22 @@ export default function Stats() {
             >
               <CartesianGrid
                 strokeDasharray="2 4"
-                stroke="rgba(139,131,120,0.2)"
+                stroke="hsl(var(--c-ink-light) / 0.2)"
                 vertical={false}
               />
               <XAxis
                 dataKey="label"
                 tick={{
-                  fill: "#8B8378",
+                  fill: "hsl(var(--c-ink-light))",
                   fontSize: 11,
                   fontFamily: "JetBrains Mono",
                 }}
-                axisLine={{ stroke: "rgba(26,26,26,0.15)" }}
+                axisLine={{ stroke: "hsl(var(--c-ink) / 0.15)" }}
                 tickLine={false}
               />
               <YAxis
                 tick={{
-                  fill: "#8B8378",
+                  fill: "hsl(var(--c-ink-light))",
                   fontSize: 11,
                   fontFamily: "JetBrains Mono",
                 }}
@@ -295,20 +295,20 @@ export default function Stats() {
                 allowDecimals={false}
               />
               <Tooltip
-                cursor={{ fill: "rgba(26,26,26,0.04)" }}
+                cursor={{ fill: "hsl(var(--c-ink) / 0.04)" }}
                 contentStyle={{
-                  backgroundColor: "#FAF7F0",
-                  border: "1px solid rgba(26,26,26,0.15)",
+                  backgroundColor: "hsl(var(--c-paper-card))",
+                  border: "1px solid hsl(var(--c-ink) / 0.15)",
                   borderRadius: "6px",
                   fontFamily: "JetBrains Mono",
                   fontSize: "12px",
                 }}
-                labelStyle={{ color: "#1A1A1A", fontWeight: 600 }}
+                labelStyle={{ color: "hsl(var(--c-ink))", fontWeight: 600 }}
               />
               <Bar
                 dataKey="added"
                 name="新增"
-                fill="#1A1A1A"
+                fill="hsl(var(--c-ink))"
                 radius={[2, 2, 0, 0]}
                 maxBarSize={28}
               />
@@ -346,22 +346,22 @@ export default function Stats() {
             >
               <CartesianGrid
                 strokeDasharray="2 4"
-                stroke="rgba(139,131,120,0.2)"
+                stroke="hsl(var(--c-ink-light) / 0.2)"
                 vertical={false}
               />
               <XAxis
                 dataKey="label"
                 tick={{
-                  fill: "#8B8378",
+                  fill: "hsl(var(--c-ink-light))",
                   fontSize: 11,
                   fontFamily: "JetBrains Mono",
                 }}
-                axisLine={{ stroke: "rgba(26,26,26,0.15)" }}
+                axisLine={{ stroke: "hsl(var(--c-ink) / 0.15)" }}
                 tickLine={false}
               />
               <YAxis
                 tick={{
-                  fill: "#8B8378",
+                  fill: "hsl(var(--c-ink-light))",
                   fontSize: 11,
                   fontFamily: "JetBrains Mono",
                 }}
@@ -371,28 +371,28 @@ export default function Stats() {
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "#FAF7F0",
-                  border: "1px solid rgba(26,26,26,0.15)",
+                  backgroundColor: "hsl(var(--c-paper-card))",
+                  border: "1px solid hsl(var(--c-ink) / 0.15)",
                   borderRadius: "6px",
                   fontFamily: "JetBrains Mono",
                   fontSize: "12px",
                 }}
-                labelStyle={{ color: "#1A1A1A", fontWeight: 600 }}
+                labelStyle={{ color: "hsl(var(--c-ink))", fontWeight: 600 }}
               />
               <Line
                 type="monotone"
                 dataKey="生词"
-                stroke="#C8543B"
+                stroke="hsl(var(--c-accent-red))"
                 strokeWidth={2}
-                dot={{ r: 3, fill: "#C8543B", strokeWidth: 0 }}
+                dot={{ r: 3, fill: "hsl(var(--c-accent-red))", strokeWidth: 0 }}
                 activeDot={{ r: 5 }}
               />
               <Line
                 type="monotone"
                 dataKey="已掌握"
-                stroke="#3D5A4A"
+                stroke="hsl(var(--c-accent-green))"
                 strokeWidth={2}
-                dot={{ r: 3, fill: "#3D5A4A", strokeWidth: 0 }}
+                dot={{ r: 3, fill: "hsl(var(--c-accent-green))", strokeWidth: 0 }}
                 activeDot={{ r: 5 }}
               />
             </LineChart>

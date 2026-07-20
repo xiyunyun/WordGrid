@@ -10,11 +10,14 @@
  * 变量值格式：H S L（不带 hsl() 包裹），便于使用 hsl(var(--c-x) / <alpha>) 语法
  */
 :root {
-  /* 默认主题：纸张墨韵（warm cream paper · dark ink · ocher accents） */
+  /* 默认主题：纸张墨韵（warm cream paper · dark ink · ocher accents）
+   * ⚠️ paper-card 亮度必须低于 paper，否则浅色主题中卡片会近似纯白，
+   *    与主题纹理背景脱节（v2.3.2 修复此 bug）
+   */
   --c-paper: 42 30% 93%;
   --c-paper-warm: 42 27% 89%;
-  --c-paper-card: 43 33% 96%;
-  --c-paper-deep: 43 33% 85%;
+  --c-paper-card: 43 33% 89%;
+  --c-paper-deep: 43 33% 83%;
 
   --c-ink: 0 0% 10%;
   --c-ink-soft: 60 3% 22%;

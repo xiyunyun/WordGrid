@@ -23,6 +23,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "2.3.2",
+    date: "2026-07-20",
+    items: [
+      "严重 bug 修复：主题一体化适配不完整——多个页面 UI 元素显示为纯白色与主题脱节",
+      "根因：8 个浅色主题的 --c-paper-card 亮度设置过高（95-98%，近似纯白），且高于 --c-paper，导致所有 bg-paper-card 元素（积木造文文章区、统计今日添加卡片、关于页面所有卡片等）显示为纯白矩形",
+      "修复方案：将所有浅色主题的 --c-paper-card 亮度降至 88-92%（低于 paper 4-5%），使卡片呈现可见的主题色调，与纹理背景视觉融合",
+      "顺带修复：统计页图表（柱状图/折线图）的硬编码十六进制颜色（#FAF7F0/#8B8378/#1A1A1A/#C8543B/#3D5A4A 等）改为 CSS 变量引用，使图表也跟随主题切换",
+    ],
+  },
+  {
     version: "2.3.1",
     date: "2026-07-20",
     items: [
