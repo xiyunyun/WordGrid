@@ -15,12 +15,14 @@ import Wordbook from "@/pages/Wordbook";
 import ArticleBuilder from "@/pages/ArticleBuilder";
 import Stats from "@/pages/Stats";
 import About from "@/pages/About";
+import Essays from "@/pages/Essays";
 import LoginPage from "@/pages/Login";
-import { useWordStore, selectDueWords, selectTomorrowWords } from "@/store/wordStore";
+import { useWordStore, selectDueWords, selectTomorrowWords, selectDifficultWords } from "@/store/wordStore";
 import { useArticleStore } from "@/store/articleStore";
 import { useDateNotesStore } from "@/store/dateNotes";
 import { useThemeStore } from "@/store/theme";
 import { buildSeedWords } from "@/store/seedData";
+import { todayKey } from "@/lib/review";
 import { isAuthenticated, logout, getCurrentUser } from "@/lib/auth";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import {
@@ -71,6 +73,8 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
   const [searchWord, setSearchWord] = useState<Word | null>(null);
   // 主题选择面板
   const [themePanelOpen, setThemePanelOpen] = useState(false);
+  // 随笔页面外部添加触发器 —— 在 Essays 页面点击全局 Add 按钮时自增
+  const [essayAddTrigger, setEssayAddTrigger] = useState(0);
 
   const words = useWordStore((s) => s.words);
   const hydrated = useWordStore((s) => s.hydrated);
@@ -213,6 +217,15 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
     setDrawerOpen(true);
   }, []);
 
+  // 全局 Add 按钮分发：在 Essays 页面触发随笔添加抽屉，其他页面打开单词添加抽屉
+  const handleQuickAdd = useCallback(() => {
+    if (location.pathname === "/essays") {
+      setEssayAddTrigger((n) => n + 1);
+    } else {
+      openDrawer();
+    }
+  }, [location.pathname, openDrawer]);
+
   const openEditDrawer = useCallback((word: Word) => {
     setEditWord(word);
     setDrawerOpen(true);
@@ -241,8 +254,21 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
   }, []);
 
   // 打开 Due Today 弹窗时锁定当前待复习词快照 + 明日到期词快照
+  // 同步生词本自我检测的「到期词 ∪ 当日新词」逻辑：
+  // 当天新加的词 nextReview 是明天，isDue 返回 false，但用户当天应该先学习一次
+  // 所以合并：到期词 + 今天添加的未掌握词（去重），合并后为空则回退到全部生词
   const openDueModal = useCallback(() => {
-    setDueModalWords(selectDueWords(words));
+    const dueWords = selectDueWords(words);
+    const today = todayKey();
+    const todayNewWords = words.filter(
+      (w) => w.date === today && !w.isMastered,
+    );
+    const seen = new Set(dueWords.map((w) => w.id));
+    const merged = [
+      ...dueWords,
+      ...todayNewWords.filter((w) => !seen.has(w.id)),
+    ];
+    setDueModalWords(merged.length > 0 ? merged : selectDifficultWords(words));
     setDueModalTomorrowWords(selectTomorrowWords(words));
     setDueModalOpen(true);
   }, [words]);
@@ -252,7 +278,7 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
   return (
     <>
       <AppShell
-        onQuickAdd={() => openDrawer()}
+        onQuickAdd={handleQuickAdd}
         onLogout={onLogout}
         onPickWord={openSearchModal}
         onOpenTheme={() => setThemePanelOpen(true)}
@@ -272,6 +298,10 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
           <Route path="/wordbook" element={<Wordbook />} />
           <Route path="/blocks" element={<ArticleBuilder />} />
           <Route path="/stats" element={<Stats />} />
+          <Route
+            path="/essays"
+            element={<Essays addTrigger={essayAddTrigger} />}
+          />
           <Route path="/about" element={<About />} />
         </Routes>
       </AppShell>

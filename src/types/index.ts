@@ -34,6 +34,23 @@ export interface DailyStat {
   reviewed: number;
 }
 
+/**
+ * 随笔 / 句子摘录
+ * 用于记录喜欢的句子和翻译，类似便签贴纸，按日期分组
+ */
+export interface Essay {
+  id: string;
+  /** 正文（通常是英文原句） */
+  content: string;
+  /** 翻译（通常是中文翻译） */
+  translation?: string;
+  /** 添加日期 YYYY-MM-DD */
+  date: string;
+  /** 个人笔记（可选） */
+  note?: string;
+  createdAt: number;
+}
+
 // 艾宾浩斯遗忘曲线复习间隔（天）
 export const EBINGHAUS_INTERVALS = [1, 2, 4, 7, 15, 30, 60];
 

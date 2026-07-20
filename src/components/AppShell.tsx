@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Grid3x3, BookOpen, BarChart3, Blocks, Plus, LogOut, Info, Palette } from "lucide-react";
+import { Grid3x3, BookOpen, BarChart3, Blocks, Plus, LogOut, Info, Palette, Quote } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useWordStore } from "@/store/wordStore";
 import { selectDueWords } from "@/store/wordStore";
@@ -22,6 +22,7 @@ const navItems = [
   { to: "/wordbook", label: "Wordbook", labelCN: "生词本", icon: BookOpen },
   { to: "/blocks", label: "Blocks", labelCN: "积木造文", icon: Blocks },
   { to: "/stats", label: "Stats", labelCN: "统计", icon: BarChart3 },
+  { to: "/essays", label: "Essays", labelCN: "随笔", icon: Quote },
   { to: "/about", label: "About", labelCN: "关于", icon: Info },
 ];
 
