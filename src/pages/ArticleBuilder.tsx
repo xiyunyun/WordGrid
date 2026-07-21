@@ -454,9 +454,18 @@ function SelectPhase({
   // 日期备注数据（用于日历中显示小圆点）
   const dateNotes = useDateNotesStore((s) => s.notes);
 
-  // 词性筛选项使用固定的 15 个标准词性列表，保证向下兼容：
-  // 即使单词的 pos 是 "num. adj. n." 这样的合集，拆分后也能被 num./adj./n. 单独筛出
-  const allPos = COMMON_POS;
+  // 词性筛选项：只显示单词库中实际出现的词性，避免展示空筛选项
+  // 多词性单词（如 "num. adj. n."）拆分后任一命中即保留
+  const allPos = useMemo(() => {
+    const set = new Set<string>();
+    for (const w of words) {
+      if (!w.pos) continue;
+      const parts = w.pos.split(/\s+/).filter(Boolean);
+      parts.forEach((p) => set.add(p));
+    }
+    // 保持 COMMON_POS 的标准顺序，只保留实际出现的
+    return COMMON_POS.filter((p) => set.has(p));
+  }, [words]);
 
   const togglePos = (p: string) => {
     setFilterPos((prev) => {
@@ -510,7 +519,7 @@ function SelectPhase({
   return (
     <div className="space-y-5 animate-fade-in">
       {/* 难度 + 字数设置 */}
-      <section className="rounded-md border border-ink/15 bg-paper-card p-3 shadow-paper md:p-5">
+      <section className="rounded-md border border-ink/15 bg-paper-card p-3 hover:shadow-paper-hover md:p-5">
         {/* 难度选择 */}
         <div className="mb-3 flex items-center gap-2">
           <Blocks className="h-4 w-4 text-accent-gold" strokeWidth={1.5} />
@@ -584,7 +593,7 @@ function SelectPhase({
       </section>
 
       {/* 单词筛选区 - 日期 + 字母数 + 词性 + 错误率 */}
-      <section className="rounded-md border border-ink/15 bg-paper-card p-3 shadow-paper md:p-5">
+      <section className="rounded-md border border-ink/15 bg-paper-card p-3 hover:shadow-paper-hover md:p-5">
         <div className="mb-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <Search className="h-4 w-4 text-accent-gold" strokeWidth={1.5} />
@@ -765,7 +774,7 @@ function SelectPhase({
                   className={cn(
                     "group relative flex flex-col rounded-md border p-3 text-left transition-all",
                     isSelected
-                      ? "border-accent-gold/50 bg-accent-gold/10 shadow-paper"
+                      ? "border-accent-gold/50 bg-accent-gold/10 hover:shadow-paper-hover"
                       : "border-ink/10 bg-paper-card hover:border-accent-gold/30",
                   )}
                 >
@@ -1029,13 +1038,13 @@ function ReadingPhase({
       </div>
 
       {/* 文章阅读区 - 与下方 Word List / Quiz 区块同款背景 */}
-      <article className="rounded-md border border-ink/15 bg-paper-warm/40 p-4 shadow-paper md:p-6 lg:p-8">
+      <article className="rounded-md border border-ink/15 bg-paper-warm/40 p-4 hover:shadow-paper-hover md:p-6 lg:p-8">
         <div className="mx-auto max-w-2xl">{renderArticle()}</div>
       </article>
 
       {/* 翻译区 */}
       {showTranslation && translation && (
-        <article className="rounded-md border border-accent-gold/20 bg-accent-gold/5 p-4 shadow-paper animate-fade-in md:p-8 lg:p-12">
+        <article className="rounded-md border border-accent-gold/20 bg-accent-gold/5 p-4 hover:shadow-paper-hover animate-fade-in md:p-8 lg:p-12">
           <div className="mx-auto max-w-2xl">
             <div className="mb-4 flex items-center gap-2 border-b border-accent-gold/15 pb-2">
               <Languages className="h-4 w-4 text-accent-gold" strokeWidth={1.5} />
@@ -1063,7 +1072,7 @@ function ReadingPhase({
       )}
 
       {/* 高亮单词速查表 - 与文章区/题目区同款背景 */}
-      <section className="rounded-md border border-ink/15 bg-paper-warm/40 p-4 shadow-paper md:p-6">
+      <section className="rounded-md border border-ink/15 bg-paper-warm/40 p-4 hover:shadow-paper-hover md:p-6">
         <div className="mb-3 flex items-center gap-2">
           <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
             Word List · 本文单词
@@ -1086,7 +1095,7 @@ function ReadingPhase({
       </section>
 
       {/* 题目区 - 与文章区/单词区同款背景 */}
-      <section className="rounded-md border border-ink/15 bg-paper-warm/40 p-4 shadow-paper md:p-6">
+      <section className="rounded-md border border-ink/15 bg-paper-warm/40 p-4 hover:shadow-paper-hover md:p-6">
         {/* 题目区头部 */}
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -1184,7 +1193,7 @@ function WordHighlight({
     >
       {token}
       {showTip && (
-        <span className="absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md border border-ink/20 bg-paper px-3 py-1.5 shadow-deep animate-fade-in">
+        <span className="absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md border border-ink/20 bg-paper px-3 py-1.5 hover:shadow-deep-hover animate-fade-in">
           <span className="font-mono text-2xs italic text-accent-gold">{word.pos}</span>
           <span className="ml-1.5 font-body text-xs text-ink">{word.meaning}</span>
         </span>

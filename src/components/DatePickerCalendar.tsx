@@ -240,7 +240,7 @@ export default function DatePickerCalendar({
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 w-80 max-w-[calc(100vw-2rem)] rounded-md border border-ink/15 bg-paper-card p-3 shadow-deep animate-fade-in">
+        <div className="absolute left-0 top-full z-50 mt-1 w-80 max-w-[calc(100vw-2rem)] rounded-md border border-ink/15 bg-paper-card p-3 shadow-deep-always animate-fade-in">
           {/* 月份切换头 */}
           <div className="mb-2 flex items-center justify-between">
             <button
@@ -344,7 +344,7 @@ export default function DatePickerCalendar({
       {tooltip && (
         <div
           className={cn(
-            "pointer-events-none fixed z-[100] max-w-xs -translate-x-1/2 rounded-md border border-accent-gold/40 bg-paper-card px-3 py-2 shadow-deep transition-all duration-200",
+            "pointer-events-none fixed z-[100] max-w-xs -translate-x-1/2 rounded-md border border-accent-gold/40 bg-paper-card px-3 py-2 shadow-deep-always transition-all duration-200",
             tooltipVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1",
           )}
           style={{ left: tooltip.left, top: tooltip.top }}

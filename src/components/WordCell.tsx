@@ -42,7 +42,7 @@ export default function WordCell({
   return (
     <article
       className={cn(
-        "group relative flex min-w-0 flex-col rounded-md border bg-paper-card shadow-paper transition-all hover:shadow-card",
+        "group relative flex min-w-0 flex-col rounded-md border bg-paper-card transition-all hover:shadow-card-hover",
         word.isMastered
           ? "border-accent-green/30 border-l-[3px] border-l-accent-green opacity-75"
           : "border-accent-red/40 border-l-[3px] border-l-accent-red",

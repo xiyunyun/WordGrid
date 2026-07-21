@@ -140,7 +140,7 @@ export default function About() {
       </section>
 
       {/* 软件介绍 */}
-      <section className="rounded-md border border-ink/15 bg-paper-card p-4 md:p-6 shadow-paper">
+      <section className="rounded-md border border-ink/15 bg-paper-card p-4 md:p-6 hover:shadow-paper-hover">
         <div className="mb-3 flex items-center gap-2">
           <BookOpen className="h-4 w-4 text-accent-gold" strokeWidth={1.5} />
           <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
@@ -164,7 +164,7 @@ export default function About() {
       </section>
 
       {/* 作者介绍 */}
-      <section className="rounded-md border border-ink/15 bg-paper-card p-4 md:p-6 shadow-paper">
+      <section className="rounded-md border border-ink/15 bg-paper-card p-4 md:p-6 hover:shadow-paper-hover">
         <div className="mb-3 flex items-center gap-2">
           <Heart className="h-4 w-4 text-accent-gold" strokeWidth={1.5} />
           <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
@@ -188,7 +188,7 @@ export default function About() {
       </section>
 
       {/* 数据统计 */}
-      <section className="rounded-md border border-ink/15 bg-paper-card p-4 md:p-6 shadow-paper">
+      <section className="rounded-md border border-ink/15 bg-paper-card p-4 md:p-6 hover:shadow-paper-hover">
         <div className="mb-4 flex items-center gap-2">
           <Database className="h-4 w-4 text-accent-gold" strokeWidth={1.5} />
           <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
@@ -225,7 +225,7 @@ export default function About() {
       </section>
 
       {/* 数据导入导出 */}
-      <section className="rounded-md border border-ink/15 bg-paper-card p-4 md:p-6 shadow-paper">
+      <section className="rounded-md border border-ink/15 bg-paper-card p-4 md:p-6 hover:shadow-paper-hover">
         <div className="mb-4 flex items-center gap-2">
           <Info className="h-4 w-4 text-accent-gold" strokeWidth={1.5} />
           <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
@@ -484,7 +484,7 @@ export default function About() {
       </section>
 
       {/* 开发日志 */}
-      <section className="rounded-md border border-ink/15 bg-paper-card p-4 md:p-6 shadow-paper">
+      <section className="rounded-md border border-ink/15 bg-paper-card p-4 md:p-6 hover:shadow-paper-hover">
         <div className="mb-4 flex items-center gap-2">
           <ScrollText className="h-4 w-4 text-accent-gold" strokeWidth={1.5} />
           <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">

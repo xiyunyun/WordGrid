@@ -53,7 +53,7 @@ export default function NoteModal({ open, onClose, word }: NoteModalProps) {
 
       {/* 弹窗主体 - 宽高自适应 */}
       <div
-        className="relative z-10 mx-4 animate-slide-up overflow-hidden rounded-md border border-ink/15 bg-paper shadow-deep"
+        className="relative z-10 mx-4 animate-slide-up overflow-hidden rounded-md border border-ink/15 bg-paper shadow-deep-always"
         style={{ width: `${width}rem`, maxWidth: "90vw" }}
       >
         {/* 头部 */}

@@ -96,7 +96,7 @@ export default function SearchBar({ onPickWord }: SearchBarProps) {
         />
       </div>
       {open && suggestions.length > 0 && (
-        <ul className="absolute left-0 right-0 top-full z-50 mt-1 max-h-80 overflow-y-auto rounded-md border border-ink/15 bg-paper-card shadow-card">
+        <ul className="absolute left-0 right-0 top-full z-50 mt-1 max-h-80 overflow-y-auto rounded-md border border-ink/15 bg-paper-card shadow-card-always">
           {suggestions.map((w, idx) => (
             <li key={w.id}>
               <button

@@ -156,7 +156,7 @@ export default function AddWordDrawer({
       />
 
       {/* 抽屉 */}
-      <aside className="relative flex h-full w-full max-w-md animate-slide-in-right flex-col border-l border-ink/15 bg-paper-card shadow-deep">
+      <aside className="relative flex h-full w-full max-w-md animate-slide-in-right flex-col border-l border-ink/15 bg-paper-card shadow-deep-always">
         {/* 抽屉头部 */}
         <div className="flex items-center justify-between border-b border-ink/15 px-4 py-3 md:px-6 md:py-4">
           <div>

@@ -646,7 +646,7 @@ export default function DailyGrid({
               className={cn(
                 "scroll-mt-32 overflow-hidden rounded-md border bg-paper-card/60",
                 isToday
-                  ? "border-ink/25 shadow-paper"
+                  ? "border-ink/25 hover:shadow-paper-hover"
                   : "border-ink/10",
               )}
             >

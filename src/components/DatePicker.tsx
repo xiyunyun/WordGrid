@@ -111,10 +111,10 @@ export default function DatePicker({ onJump }: DatePickerProps) {
         ref={buttonRef}
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "flex h-12 w-12 items-center justify-center rounded-full border shadow-card transition-all",
+          "flex h-12 w-12 items-center justify-center rounded-full border hover:shadow-card-hover transition-all",
           open
             ? "border-ink bg-ink text-paper"
-            : "border-ink/20 bg-paper-card text-ink hover:border-ink hover:shadow-deep",
+            : "border-ink/20 bg-paper-card text-ink hover:border-ink hover:shadow-deep-hover",
         )}
         aria-label="选择日期"
         title="跳转到日期"
@@ -126,7 +126,7 @@ export default function DatePicker({ onJump }: DatePickerProps) {
       {open && (
         <div
           ref={panelRef}
-          className="absolute bottom-full right-0 mb-3 w-80 origin-bottom-right animate-slide-up overflow-hidden rounded-md border border-ink/15 bg-paper-card shadow-deep"
+          className="absolute bottom-full right-0 mb-3 w-80 origin-bottom-right animate-slide-up overflow-hidden rounded-md border border-ink/15 bg-paper-card shadow-deep-always"
         >
           {/* 头部 */}
           <div className="flex items-center justify-between border-b border-ink/10 px-4 py-3">

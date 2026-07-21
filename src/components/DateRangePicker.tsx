@@ -192,7 +192,7 @@ export default function DateRangePicker({
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 w-80 max-w-[calc(100vw-2rem)] rounded-md border border-ink/15 bg-paper-card p-3 shadow-deep animate-fade-in">
+        <div className="absolute left-0 top-full z-50 mt-1 w-80 max-w-[calc(100vw-2rem)] rounded-md border border-ink/15 bg-paper-card p-3 shadow-deep-always animate-fade-in">
           {/* 月份切换头 */}
           <div className="mb-2 flex items-center justify-between">
             <button

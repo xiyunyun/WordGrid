@@ -54,7 +54,7 @@ export default function DueTodayModal({
       />
 
       {/* 中央弹窗 */}
-      <div className="relative z-10 mx-4 w-full max-w-2xl animate-slide-up overflow-hidden rounded-md border border-ink/15 bg-paper shadow-deep">
+      <div className="relative z-10 mx-4 w-full max-w-2xl animate-slide-up overflow-hidden rounded-md border border-ink/15 bg-paper shadow-deep-always">
         {/* 头部 */}
         <header className="flex items-center justify-between border-b border-ink/15 bg-paper-card px-4 py-3 md:px-6 md:py-4">
           <div className="flex items-center gap-3">

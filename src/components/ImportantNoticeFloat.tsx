@@ -52,7 +52,7 @@ export default function ImportantNoticeFloat() {
     <>
       {/* 手机端：底部条幅 - 避开底部导航栏（z-40），用 z-50 显示在导航栏上方 */}
       <div className="md:hidden fixed inset-x-0 bottom-16 z-50 animate-slide-up px-3">
-        <div className="m-3 rounded-lg border border-accent-red/40 bg-paper-card shadow-deep">
+        <div className="m-3 rounded-lg border border-accent-red/40 bg-paper-card shadow-deep-always">
           {/* 头部 */}
           <div className="flex items-center justify-between border-b border-accent-red/20 bg-accent-red/5 px-4 py-2.5">
             <div className="flex items-center gap-2">
@@ -97,7 +97,7 @@ export default function ImportantNoticeFloat() {
 
       {/* 桌面端：右侧浮窗 */}
       <div className="hidden md:flex fixed right-6 bottom-24 z-50 animate-slide-in-right">
-        <div className="w-80 rounded-lg border border-accent-red/40 bg-paper-card shadow-deep">
+        <div className="w-80 rounded-lg border border-accent-red/40 bg-paper-card shadow-deep-always">
           {/* 头部 */}
           <div className="flex items-center justify-between border-b border-accent-red/20 bg-accent-red/5 px-4 py-3">
             <div className="flex items-center gap-2">

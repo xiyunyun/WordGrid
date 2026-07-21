@@ -40,10 +40,16 @@ export function advanceReview(stage: number): {
   };
 }
 
-/** 答错时重置复习节点 */
+/**
+ * 答错时重置复习节点
+ *
+ * 关键设计：nextReview 设为今天，保持"到期"状态。
+ * 原因：答错的词需要被重问，不应该从"待复习"红点中移除。
+ * 只有答对时才推进 nextReview 到下一个复习间隔，从红点中移除。
+ */
 export function resetReview(): { nextReview: string; reviewStage: number } {
   return {
-    nextReview: addDays(todayKey(), EBINGHAUS_INTERVALS[0]),
+    nextReview: todayKey(),
     reviewStage: 0,
   };
 }

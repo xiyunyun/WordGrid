@@ -17,7 +17,7 @@ import Stats from "@/pages/Stats";
 import About from "@/pages/About";
 import Essays from "@/pages/Essays";
 import LoginPage from "@/pages/Login";
-import { useWordStore, selectDueWords, selectTomorrowWords, selectDifficultWords } from "@/store/wordStore";
+import { useWordStore, selectDueWords, selectTomorrowWords } from "@/store/wordStore";
 import { useArticleStore } from "@/store/articleStore";
 import { useDateNotesStore } from "@/store/dateNotes";
 import { useEssayStore } from "@/store/essayStore";
@@ -264,7 +264,8 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
   // 打开 Due Today 弹窗时锁定当前待复习词快照 + 明日到期词快照
   // 同步生词本自我检测的「到期词 ∪ 当日新词」逻辑：
   // 当天新加的词 nextReview 是明天，isDue 返回 false，但用户当天应该先学习一次
-  // 所以合并：到期词 + 今天添加的未掌握词（去重），合并后为空则回退到全部生词
+  // 所以合并：到期词 + 今天添加的未掌握词（去重）
+  // 修复：移除 fallback 到全部生词，无待复习词时显示空状态（让 SelfCheckFlow 显示完成页）
   const openDueModal = useCallback(() => {
     const dueWords = selectDueWords(words);
     const today = todayKey();
@@ -281,7 +282,7 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
       ...dueWords,
       ...todayNewWords.filter((w) => !seen.has(w.id)),
     ];
-    setDueModalWords(merged.length > 0 ? merged : selectDifficultWords(words));
+    setDueModalWords(merged);
     setDueModalTomorrowWords(selectTomorrowWords(words));
     setDueModalOpen(true);
   }, [words]);

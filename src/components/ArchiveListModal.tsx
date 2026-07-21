@@ -39,7 +39,7 @@ export default function ArchiveListModal({
         className="absolute inset-0 bg-ink/30 backdrop-blur-[2px]"
         onClick={onClose}
       />
-      <div className="relative flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg border border-ink/15 bg-paper-card shadow-deep">
+      <div className="relative flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg border border-ink/15 bg-paper-card shadow-deep-always">
         {/* 头部 */}
         <div className="flex items-center justify-between border-b border-ink/15 px-4 py-3 md:px-6 md:py-4">
           <div>

@@ -188,7 +188,7 @@ export default function Stats() {
             <div
               key={s.label}
               className={cn(
-                "rounded-md border p-5 transition-all hover:shadow-paper",
+                "rounded-md border p-5 transition-all hover:shadow-paper-hover",
                 s.bg,
               )}
             >
@@ -218,7 +218,7 @@ export default function Stats() {
       </section>
 
       {/* 图表日期范围筛选 - 同时控制下方两个图表 */}
-      <section className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-ink/15 bg-paper-card p-3 md:p-4 shadow-paper">
+      <section className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-ink/15 bg-paper-card p-3 md:p-4 hover:shadow-paper-hover">
         <div className="flex items-center gap-2">
           <TrendingUp className="h-4 w-4 text-ink-light" strokeWidth={1.5} />
           <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
@@ -254,7 +254,7 @@ export default function Stats() {
       </section>
 
       {/* 每日新增柱状图 */}
-      <section className="rounded-md border border-ink/15 bg-paper-card p-4 md:p-6 shadow-paper">
+      <section className="rounded-md border border-ink/15 bg-paper-card p-4 md:p-6 hover:shadow-paper-hover">
         <div className="mb-5 flex items-center justify-between">
           <div>
             <div className="eyebrow mb-1">Daily New Words</div>
@@ -320,7 +320,7 @@ export default function Stats() {
       </section>
 
       {/* 累计折线图 */}
-      <section className="rounded-md border border-ink/15 bg-paper-card p-4 md:p-6 shadow-paper">
+      <section className="rounded-md border border-ink/15 bg-paper-card p-4 md:p-6 hover:shadow-paper-hover">
         <div className="mb-5 flex items-center justify-between">
           <div>
             <div className="eyebrow mb-1">Cumulative Growth</div>
@@ -404,7 +404,7 @@ export default function Stats() {
 
       {/* 今日复习汇总 */}
       <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <div className="rounded-md border border-ink/15 bg-paper-card p-5 shadow-paper">
+        <div className="rounded-md border border-ink/15 bg-paper-card p-5 hover:shadow-paper-hover">
           <div className="eyebrow mb-2">Today's Reviews</div>
           <div className="font-display text-2xl md:text-4xl font-medium text-ink">
             {todayReviews.length}
@@ -413,7 +413,7 @@ export default function Stats() {
             今日总复习次数
           </div>
         </div>
-        <div className="rounded-md border border-ink/15 bg-paper-card p-5 shadow-paper">
+        <div className="rounded-md border border-ink/15 bg-paper-card p-5 hover:shadow-paper-hover">
           <div className="eyebrow mb-2 text-accent-green">Correct</div>
           <div className="font-display text-2xl md:text-4xl font-medium text-accent-green">
             {todayCorrect}
@@ -422,7 +422,7 @@ export default function Stats() {
             答对次数
           </div>
         </div>
-        <div className="rounded-md border border-ink/15 bg-paper-card p-5 shadow-paper">
+        <div className="rounded-md border border-ink/15 bg-paper-card p-5 hover:shadow-paper-hover">
           <div className="eyebrow mb-2 text-accent-red">Wrong</div>
           <div className="font-display text-2xl md:text-4xl font-medium text-accent-red">
             {todayWrong}
@@ -434,7 +434,7 @@ export default function Stats() {
       </section>
 
       {/* 熟练度排行 - 错误最多 / 正确最多 */}
-      <section className="rounded-md border border-ink/15 bg-paper-card p-4 md:p-6 shadow-paper">
+      <section className="rounded-md border border-ink/15 bg-paper-card p-4 md:p-6 hover:shadow-paper-hover">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <div>
             <div className="eyebrow mb-1">Mastery Ranking</div>

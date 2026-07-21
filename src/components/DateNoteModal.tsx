@@ -47,7 +47,7 @@ export default function DateNoteModal({ open, onClose, date }: DateNoteModalProp
         className="absolute inset-0 bg-ink/30 backdrop-blur-[2px]"
         onClick={onClose}
       />
-      <div className="relative w-full max-w-lg rounded-md border border-ink/15 bg-paper-card shadow-deep animate-slide-up">
+      <div className="relative w-full max-w-lg rounded-md border border-ink/15 bg-paper-card shadow-deep-always animate-slide-up">
         {/* 头部 */}
         <div className="flex items-center justify-between border-b border-ink/15 px-5 py-3">
           <div>

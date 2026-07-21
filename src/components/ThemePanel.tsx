@@ -50,7 +50,7 @@ export default function ThemePanel({ open, onClose }: ThemePanelProps) {
 
       {/* 面板 */}
       <div
-        className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-lg border border-ink/15 bg-paper-card p-6 shadow-deep"
+        className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-lg border border-ink/15 bg-paper-card p-6 shadow-deep-always"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 头部 */}
@@ -167,8 +167,8 @@ function ThemeCard({
       className={cn(
         "group relative flex flex-col gap-2 rounded-md border p-3 text-left transition-all",
         active
-          ? "border-ink bg-ink/5 shadow-paper"
-          : "border-ink/15 hover:border-ink/40 hover:shadow-paper",
+          ? "border-ink bg-ink/5 hover:shadow-paper-hover"
+          : "border-ink/15 hover:border-ink/40 hover:shadow-paper-hover",
       )}
     >
       {/* 纹理预览 - 显示主题色 + 纹理质感（径向光晕 + 图案 + 噪点） */}

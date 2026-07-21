@@ -103,7 +103,7 @@ export default function ExportModal({ open, onClose, words }: ExportModalProps) 
       />
 
       {/* 弹窗 */}
-      <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-ink/15 bg-paper-card shadow-deep animate-fade-in">
+      <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-ink/15 bg-paper-card shadow-deep-always animate-fade-in">
         {/* 头部 */}
         <div className="flex items-center justify-between border-b border-ink/15 px-4 py-3 md:px-6 md:py-4">
           <div>

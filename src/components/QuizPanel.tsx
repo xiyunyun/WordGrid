@@ -124,7 +124,7 @@ export default function QuizPanel({
 
       {/* 批改结果汇总 */}
       {status === "graded" && (
-        <div className="rounded-md border border-ink/15 bg-paper-card p-4 shadow-paper animate-fade-in md:p-6">
+        <div className="rounded-md border border-ink/15 bg-paper-card p-4 hover:shadow-paper-hover animate-fade-in md:p-6">
           <div className="flex items-center justify-center gap-4 md:gap-6">
             <div className="text-center">
               <Award

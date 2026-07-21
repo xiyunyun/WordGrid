@@ -5,6 +5,44 @@ import { useWordStore } from "@/store/wordStore";
 import { formatMD, todayKey } from "@/lib/review";
 import SpeakButton from "@/components/SpeakButton";
 
+/**
+ * 模块级缓存：路由切换时保留「再来一轮」状态
+ *
+ * 设计原理：
+ * - SelfCheckFlow 的进度（已消费的词）从今日 review_logs 派生，天然跨设备同步
+ * - 但「再来一轮」是本地行为，不入 logs（避免污染统计），所以需要手动缓存
+ * - 缓存 key = persistKey + 当日日期，确保每天重置
+ * - 刷新页面/关闭标签页后缓存丢失（重新从 logs 派生，合理）
+ */
+interface RestartCache {
+  restarted: boolean;
+  restartedStats: { correct: number; wrong: number };
+  restartedConsumed: number;
+  /** 重问队列只存 id，重新挂载时从 initialWords 恢复 Word 对象 */
+  reaskIds: string[];
+}
+
+const restartCacheMap = new Map<string, RestartCache>();
+
+function getRestartCacheKey(persistKey: string | undefined): string {
+  return `${persistKey ?? "default"}-${todayKey()}`;
+}
+
+function loadRestartCache(persistKey: string | undefined): RestartCache | null {
+  const key = getRestartCacheKey(persistKey);
+  return restartCacheMap.get(key) ?? null;
+}
+
+function saveRestartCache(persistKey: string | undefined, cache: RestartCache): void {
+  const key = getRestartCacheKey(persistKey);
+  restartCacheMap.set(key, cache);
+}
+
+function clearRestartCache(persistKey: string | undefined): void {
+  const key = getRestartCacheKey(persistKey);
+  restartCacheMap.delete(key);
+}
+
 interface SelfCheckFlowProps {
   words: Word[];
   mode?: ReviewMode;
@@ -68,6 +106,7 @@ export default function SelfCheckFlow({
   onComplete,
   showRestart = true,
   dryRun = false,
+  persistKey,
 }: SelfCheckFlowProps) {
   const reviewWord = useWordStore((s) => s.reviewWord);
   const logs = useWordStore((s) => s.logs);
@@ -91,14 +130,41 @@ export default function SelfCheckFlow({
     });
   }, [wordsIdSignature]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // 从模块级缓存恢复「再来一轮」状态（路由切换后保留进度）
+  const cachedRestart = useMemo(() => loadRestartCache(persistKey), [persistKey]);
+
   // 本地状态：只记录"本轮重问"的临时队列（不持久化，因为进度从 logs 派生）
   // 当用户点"不认识"时，词会被追加到 reaskQueue 末尾再次提问
-  const [reaskQueue, setReaskQueue] = useState<Word[]>([]);
+  const [reaskQueue, setReaskQueue] = useState<Word[]>(() => {
+    // 从缓存恢复时，需要从 initialWords 中按 id 还原 Word 对象
+    if (cachedRestart && cachedRestart.reaskIds.length > 0) {
+      const idSet = new Set(cachedRestart.reaskIds);
+      return words.filter((w) => idSet.has(w.id));
+    }
+    return [];
+  });
   const [revealed, setRevealed] = useState(false);
   // 是否点击了"再来一轮"：重启后不再从 logs 派生 done，而是用本轮临时计数
-  const [restarted, setRestarted] = useState(false);
-  const [restartedStats, setRestartedStats] = useState({ correct: 0, wrong: 0 });
-  const [restartedConsumed, setRestartedConsumed] = useState(0);
+  const [restarted, setRestarted] = useState(() => cachedRestart?.restarted ?? false);
+  const [restartedStats, setRestartedStats] = useState(
+    () => cachedRestart?.restartedStats ?? { correct: 0, wrong: 0 },
+  );
+  const [restartedConsumed, setRestartedConsumed] = useState(
+    () => cachedRestart?.restartedConsumed ?? 0,
+  );
+
+  // 当 restarted/restartedStats/restartedConsumed/reaskQueue 变化时，同步到模块级缓存
+  // 这样路由切换后重新挂载能恢复「再来一轮」进度
+  useEffect(() => {
+    if (restarted) {
+      saveRestartCache(persistKey, {
+        restarted,
+        restartedStats,
+        restartedConsumed,
+        reaskIds: reaskQueue.map((w) => w.id),
+      });
+    }
+  }, [restarted, restartedStats, restartedConsumed, reaskQueue, persistKey]);
 
   // 从今日 logs 派生已消费集合与统计（跨设备同步的进度来源）
   const { consumedIds, correct: logCorrect, wrong: logWrong } = useMemo(
@@ -119,14 +185,18 @@ export default function SelfCheckFlow({
     return [...remaining, ...reaskQueue];
   }, [initialWords, consumedIds, reaskQueue, dryRun, restarted, restartedConsumed]);
 
-  const total = initialWords.length;
+  // total 包含重问的词：答错后词会被追加到 reaskQueue，总数应相应增加
+  // 这样进度显示为 "1 / 41 (含重问 1)" 而不是 "1 / 40 (含重问 1)"
+  const initialTotal = initialWords.length;
+  const total = initialTotal + reaskQueue.length;
   const current = queue[0];
 
-  // done 判断：所有词都已消费 且 重问队列清空
-  // 修复：之前只判断 consumedIds.size >= total，但答错的词在 reaskQueue 中还没重问就判定完成
+  // done 判断：所有原始词都已消费 且 重问队列清空
+  // 用 initialTotal（不含重问）判断，因为 consumedIds 只统计唯一 wordId
+  // 重问的词不会增加 consumedIds.size，所以用 initialTotal 才能正确判断完成
   const done = restarted
-    ? restartedConsumed >= total && reaskQueue.length === 0
-    : !dryRun && consumedIds.size >= total && reaskQueue.length === 0;
+    ? restartedConsumed >= initialTotal && reaskQueue.length === 0
+    : !dryRun && consumedIds.size >= initialTotal && reaskQueue.length === 0;
 
   // 统计展示
   const stats = restarted
@@ -135,12 +205,21 @@ export default function SelfCheckFlow({
       ? { correct: 0, wrong: 0 }
       : { correct: logCorrect, wrong: logWrong };
 
+  // 空列表判断：
+  // - initialTotal===0 且 今日没有 self_check 日志 → 真正无待复习，显示空状态
+  // - initialTotal===0 但 今日有 self_check 日志 → 已复习完毕，进入 done 分支显示完成页 + 再来一轮
+  //   （避免用户刚复习完进 SelfCheck 看到空状态而非完成页）
+  const hasTodayLogs = !dryRun && consumedIds.size > 0;
+
+  // 当 initialTotal===0 但今日已有 logs 时，强制 done=true，显示完成页
+  const effectiveDone = done || (total === 0 && hasTodayLogs);
+
   // 完成回调
   useEffect(() => {
-    if (done) {
+    if (effectiveDone) {
       onComplete?.({ ...stats, total });
     }
-  }, [done, stats, total, onComplete]);
+  }, [effectiveDone, stats, total, onComplete]);
 
   const handle = (correct: boolean) => {
     if (!current) return;
@@ -196,8 +275,7 @@ export default function SelfCheckFlow({
     setRevealed(false);
   };
 
-  // 空列表
-  if (total === 0) {
+  if (total === 0 && !hasTodayLogs) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <Check className="mb-4 h-10 w-10 text-accent-green" strokeWidth={1.5} />
@@ -213,7 +291,7 @@ export default function SelfCheckFlow({
   }
 
   // 完成或越界保护
-  if (done || !current) {
+  if (effectiveDone || !current) {
     const attempts = stats.correct + stats.wrong;
     const accuracy =
       attempts > 0 ? Math.round((stats.correct / attempts) * 100) : 100;
@@ -225,7 +303,7 @@ export default function SelfCheckFlow({
           复习完成
         </h3>
 
-        <div className="grid grid-cols-3 gap-3 rounded-md border border-ink/15 bg-paper-card p-4 shadow-paper md:gap-6 md:p-6">
+        <div className="grid grid-cols-3 gap-3 rounded-md border border-ink/15 bg-paper-card p-4 hover:shadow-paper-hover md:gap-6 md:p-6">
           <div>
             <div className="font-display text-2xl font-medium text-ink md:text-4xl">
               {total}
@@ -309,7 +387,7 @@ export default function SelfCheckFlow({
 
       {/* 单词卡片 */}
       <div>
-        <div className="rounded-md border border-ink/15 bg-paper-card p-5 text-center shadow-paper md:p-10">
+        <div className="rounded-md border border-ink/15 bg-paper-card p-5 text-center hover:shadow-paper-hover md:p-10">
           <div className="eyebrow mb-4">Self-Check</div>
           <h3 className="font-serif text-3xl font-medium tracking-word text-ink md:text-5xl">
             {current.word}

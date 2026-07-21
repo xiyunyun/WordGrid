@@ -9,12 +9,13 @@
  *
  * 自我检测页面由 selfCheckPlaceholder 提供占位内容，日期筛选仍可使用。
  */
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Filter, Check, X } from "lucide-react";
 import { COMMON_POS } from "@/lib/pos";
 import { STAGE_LABELS } from "@/types";
 import { cn } from "@/lib/utils";
 import { useDateNotesStore } from "@/store/dateNotes";
+import { useWordStore } from "@/store/wordStore";
 import DatePickerCalendar from "@/components/DatePickerCalendar";
 
 export interface FilterState {
@@ -79,6 +80,17 @@ export default function WordbookFilterBar({
 }: WordbookFilterBarProps) {
   // 日期备注数据（用于日历中显示小圆点）
   const dateNotes = useDateNotesStore((s) => s.notes);
+  // 词性筛选项：只显示单词库中实际出现的词性，避免展示空筛选项
+  const words = useWordStore((s) => s.words);
+  const availablePos = useMemo(() => {
+    const set = new Set<string>();
+    for (const w of words) {
+      if (!w.pos) continue;
+      const parts = w.pos.split(/\s+/).filter(Boolean);
+      parts.forEach((p) => set.add(p));
+    }
+    return COMMON_POS.filter((p) => set.has(p));
+  }, [words]);
 
   // 如果没有任何筛选项且没有占位内容，则不渲染工具栏
   if (!hasFilter && !selfCheckPlaceholder) return null;
@@ -117,7 +129,7 @@ export default function WordbookFilterBar({
       {showPos && (
         <MultiSelectDropdown
           label="词性"
-          options={COMMON_POS.map((p) => ({ value: p, label: p }))}
+          options={availablePos.map((p) => ({ value: p, label: p }))}
           selected={filter.pos ?? []}
           onChange={(next) => {
             onChange({ ...filter, pos: next.length > 0 ? next : null });
@@ -212,7 +224,7 @@ function MultiSelectDropdown({
         )}
       </button>
       {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 max-h-72 min-w-[10rem] overflow-y-auto rounded-md border border-ink/15 bg-paper-card p-1.5 shadow-deep animate-fade-in">
+        <div className="absolute left-0 top-full z-50 mt-1 max-h-72 min-w-[10rem] overflow-y-auto rounded-md border border-ink/15 bg-paper-card p-1.5 shadow-deep-always animate-fade-in">
           {options.map((opt) => {
             const isSelected = selected.includes(opt.value);
             return (

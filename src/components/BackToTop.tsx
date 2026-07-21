@@ -25,7 +25,7 @@ export default function BackToTop({ threshold = 400 }: BackToTopProps) {
     <button
       onClick={scrollToTop}
       className={cn(
-        "flex h-12 w-12 items-center justify-center rounded-full border border-ink/20 bg-paper-card text-ink shadow-card transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:border-ink hover:bg-ink hover:text-paper hover:shadow-deep",
+        "flex h-12 w-12 items-center justify-center rounded-full border border-ink/20 bg-paper-card text-ink hover:shadow-card-hover transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:border-ink hover:bg-ink hover:text-paper hover:shadow-deep-hover",
         visible
           ? "translate-y-0 opacity-100"
           : "pointer-events-none translate-y-4 opacity-0",

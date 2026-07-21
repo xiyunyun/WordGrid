@@ -302,11 +302,13 @@ export const useWordStore = create<WordStore>()(
             });
           }
         } else {
+          // 答错：重置复习阶段到 stage=0，nextReview 保持今天（仍然到期）
+          // 不设置 lastReviewDate，允许今日重问时再次推进阶段
+          // 这样答错的词仍然计入"待复习"红点数字，只有答对时才从红点中移除
           const next = resetReview();
           get().updateWord(id, {
             ...next,
             isMastered: false,
-            lastReviewDate: today,
           });
         }
       },

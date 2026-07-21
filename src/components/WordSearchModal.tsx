@@ -34,7 +34,7 @@ export default function WordSearchModal({
       />
       <article
         className={cn(
-          "relative w-full max-w-xl overflow-hidden rounded-lg border bg-paper-card shadow-deep",
+          "relative w-full max-w-xl overflow-hidden rounded-lg border bg-paper-card shadow-deep-always",
           word.isMastered
             ? "border-accent-green/30 border-l-[4px] border-l-accent-green"
             : "border-accent-red/40 border-l-[4px] border-l-accent-red",

@@ -136,7 +136,7 @@ body {
 
   /* 主按钮 */
   .btn-primary {
-    @apply inline-flex items-center gap-2 rounded-md border border-ink bg-ink px-4 py-2 font-mono text-2xs uppercase tracking-editorial text-paper transition-all hover:bg-ink-soft hover:shadow-paper active:translate-y-px;
+    @apply inline-flex items-center gap-2 rounded-md border border-ink bg-ink px-4 py-2 font-mono text-2xs uppercase tracking-editorial text-paper transition-all hover:bg-ink-soft hover:shadow-paper-hover active:translate-y-px;
   }
 
   .btn-ghost {
@@ -158,7 +158,7 @@ body {
 
   /* 卡片 */
   .paper-card {
-    @apply bg-paper-card border border-ink/10 shadow-paper;
+    @apply bg-paper-card border border-ink/10 hover:shadow-paper-hover;
   }
 
   /* 单词列表网格 - 所有行共享同一组列宽

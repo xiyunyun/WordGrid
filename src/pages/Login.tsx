@@ -52,7 +52,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
         {/* 登录卡片 */}
         <form
           onSubmit={handleSubmit}
-          className="space-y-5 rounded-lg border border-ink/15 bg-paper-card p-6 md:p-8 shadow-paper"
+          className="space-y-5 rounded-lg border border-ink/15 bg-paper-card p-6 md:p-8 shadow-paper-always"
         >
           {/* 用户名 */}
           <div>

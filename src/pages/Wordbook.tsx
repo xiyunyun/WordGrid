@@ -19,6 +19,7 @@ import { useWordStore } from "@/store/wordStore";
 import {
   selectDifficultWords,
   selectDueWords,
+  selectDueAndTodayNewCount,
   selectMasteredWords,
   selectRecentWords,
 } from "@/store/wordStore";
@@ -79,6 +80,9 @@ export default function Wordbook() {
 
   const difficultWords = selectDifficultWords(words);
   const dueWords = selectDueWords(words);
+  // Due Today 数量：与导航红点、Stats、DailyGrid 一致
+  // （到期词 ∪ 当日新加未复习词，避免今日已复习的新词被重复计入）
+  const dueTodayCount = selectDueAndTodayNewCount(words);
   const masteredWords = selectMasteredWords(words);
   const recentWords = selectRecentWords(words, 7);
 
@@ -251,6 +255,7 @@ export default function Wordbook() {
           {mode === "list" && (
             <ListView
               dueWords={dueWords}
+              dueTodayCount={dueTodayCount}
               difficultWords={difficultWords}
               masteredWords={masteredWords}
               recentWords={recentWords}
@@ -273,19 +278,27 @@ export default function Wordbook() {
                 if (selfCheckScope === "all_difficult") {
                   baseWords = difficultWords;
                 } else {
-                  // 默认：到期词 ∪ 当天新词
+                  // 默认：到期词 ∪ 当天新词（未复习）
                   // 当天新加的词 nextReview 是明天，isDue 返回 false，但用户当天应该先学习一次
-                  // 注意：difficultWords 包含所有 isDifficult && !isMastered 的词，
-                  // 当天新加的词默认 isDifficult=true，所以会被包含在 todayNewWords 中
+                  // 注意：今日已复习过的词（lastReviewDate === today）不再计入，
+                  // 与导航红点（App.tsx）和 Due Today 数量逻辑保持一致，
+                  // 避免用户在 DailyGrid 复习完后进 SelfCheck 仍看到这些词
                   const today = todayKey();
-                  // 当日新词：所有今天添加的未掌握词（不限于 difficultWords，确保新词一定被纳入）
                   const todayNewWords = words.filter(
-                    (w) => w.date === today && !w.isMastered,
+                    (w) =>
+                      w.date === today &&
+                      !w.isMastered &&
+                      w.lastReviewDate !== today,
                   );
                   // 合并去重（按 id）
                   const seen = new Set(dueWords.map((w) => w.id));
-                  const merged = [...dueWords, ...todayNewWords.filter((w) => !seen.has(w.id))];
-                  baseWords = merged.length > 0 ? merged : difficultWords;
+                  const merged = [
+                    ...dueWords,
+                    ...todayNewWords.filter((w) => !seen.has(w.id)),
+                  ];
+                  // 无待复习词时传入空数组，让 SelfCheckFlow 显示「今日无待复习词」空状态
+                  // 不再 fallback 到全部生词，避免用户误以为还要复习全部
+                  baseWords = merged;
                 }
                 // 应用日期筛选（如果工具栏启用了日期筛选）
                 if (filter.dates && filter.dates.length > 0) {
@@ -330,6 +343,7 @@ export default function Wordbook() {
 /* ============ 极简列表 ============ */
 function ListView({
   dueWords,
+  dueTodayCount,
   difficultWords,
   masteredWords,
   recentWords,
@@ -340,6 +354,8 @@ function ListView({
   onRequestNote,
 }: {
   dueWords: Word[];
+  /** Due Today 标签显示的数量（到期词 ∪ 当日新加未复习词，与导航红点一致） */
+  dueTodayCount: number;
   difficultWords: Word[];
   masteredWords: Word[];
   recentWords: Word[];
@@ -430,7 +446,7 @@ function ListView({
       key: "due",
       label: "Due Today",
       labelCN: "待复习",
-      count: dueWords.length,
+      count: dueTodayCount,
       accent: "accent-red",
     },
     {
@@ -847,7 +863,7 @@ function RandomView({ words, filter }: { words: Word[]; filter: FilterState }) {
       </div>
 
       <div className="mx-auto max-w-2xl">
-        <div className="rounded-md border border-accent-gold/30 bg-paper-card p-6 md:p-12 text-center shadow-paper">
+        <div className="rounded-md border border-accent-gold/30 bg-paper-card p-6 md:p-12 text-center hover:shadow-paper-hover">
           <div className="eyebrow mb-4 text-accent-gold">Random Quiz</div>
           <h3 className="font-serif text-3xl md:text-5xl font-medium tracking-word text-ink">
             {current.word}
@@ -1084,7 +1100,7 @@ function DictationView({ words, filter }: { words: Word[]; filter: FilterState }
       <div className="mx-auto max-w-2xl">
         <div
           className={cn(
-            "rounded-md border bg-paper-card p-6 md:p-12 text-center shadow-paper transition-colors",
+            "rounded-md border bg-paper-card p-6 md:p-12 text-center hover:shadow-paper-hover transition-colors",
             result === "correct"
               ? "border-accent-green/50"
               : result === "wrong"

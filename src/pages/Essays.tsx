@@ -10,7 +10,6 @@ import {
   Quote,
 } from "lucide-react";
 import { useEssayStore } from "@/store/essayStore";
-import { useDateNotesStore, truncateNote } from "@/store/dateNotes";
 import {
   todayKey,
   formatMD,
@@ -39,7 +38,6 @@ let cachedSortAsc = false;
 export default function Essays({ addTrigger }: EssaysProps) {
   const essays = useEssayStore((s) => s.essays);
   const removeEssay = useEssayStore((s) => s.removeEssay);
-  const dateNotes = useDateNotesStore((s) => s.notes);
 
   // 折叠状态
   const [collapsed, setCollapsed] = useState<Set<string>>(
@@ -245,8 +243,6 @@ export default function Essays({ addTrigger }: EssaysProps) {
         {groups.map((group) => {
           const isToday = group.date === today;
           const isCollapsed = collapsed.has(group.date);
-          const note = dateNotes[group.date] || "";
-          const notePreview = truncateNote(note, 24);
 
           return (
             <section
@@ -254,7 +250,7 @@ export default function Essays({ addTrigger }: EssaysProps) {
               id={`essay-date-${group.date}`}
               className={cn(
                 "scroll-mt-32 overflow-hidden rounded-md border bg-paper-card/60",
-                isToday ? "border-ink/25 shadow-paper" : "border-ink/10",
+                isToday ? "border-ink/25 hover:shadow-paper-hover" : "border-ink/10",
               )}
             >
               {/* 日期头部 */}
@@ -294,7 +290,7 @@ export default function Essays({ addTrigger }: EssaysProps) {
                   </div>
                 </div>
 
-                {/* 统计 + 备注 */}
+                {/* 统计 */}
                 <div className="flex flex-1 flex-wrap items-baseline gap-3 border-l border-ink/10 pl-3 md:gap-6 md:pl-8">
                   <div className="flex items-baseline gap-1 md:gap-2">
                     <span className="font-serif text-base font-medium text-ink md:text-xl">
@@ -304,15 +300,6 @@ export default function Essays({ addTrigger }: EssaysProps) {
                       essays
                     </span>
                   </div>
-                  {notePreview && (
-                    <span className="hidden items-center gap-1 font-body text-xs text-ink-muted sm:flex">
-                      <StickyNote
-                        className="h-3 w-3 text-accent-gold"
-                        strokeWidth={1.5}
-                      />
-                      <span className="italic">{notePreview}</span>
-                    </span>
-                  )}
                 </div>
 
                 {/* 右侧操作 */}
@@ -342,19 +329,6 @@ export default function Essays({ addTrigger }: EssaysProps) {
                   </button>
                 </div>
               </header>
-
-              {/* 移动端备注 */}
-              {!isCollapsed && notePreview && (
-                <div className="flex items-center gap-1 border-t border-ink/8 bg-accent-gold/3 px-3 py-1.5 md:px-6 sm:hidden">
-                  <StickyNote
-                    className="h-3 w-3 flex-shrink-0 text-accent-gold"
-                    strokeWidth={1.5}
-                  />
-                  <span className="font-body text-xs italic text-ink-muted">
-                    {notePreview}
-                  </span>
-                </div>
-              )}
 
               {/* 瀑布流卡片容器
                   使用 CSS columns 实现瀑布流，每个卡片用 break-inside-avoid 避免被切割
@@ -415,7 +389,7 @@ function EssayCard({
     <article
       className={cn(
         // v2.3.7：背景从 bg-paper（最亮，接近纯白）改为 bg-paper-card/60，与每日网格日期卡片一致
-        "group flex w-full break-inside-avoid flex-col overflow-hidden rounded-md border bg-paper-card/60 p-4 shadow-paper transition-all hover:shadow-deep",
+        "group flex w-full break-inside-avoid flex-col overflow-hidden rounded-md border bg-paper-card/60 p-4 transition-all hover:shadow-paper-hover hover:shadow-deep-hover",
         "border-ink/15",
       )}
     >
