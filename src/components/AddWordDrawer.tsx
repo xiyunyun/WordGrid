@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Plus, FileText, Save } from "lucide-react";
+import { X, Plus, FileText, Save, AlertTriangle } from "lucide-react";
 import { useWordStore } from "@/store/wordStore";
 import { parseBulkText, todayKey } from "@/lib/review";
 import type { Word } from "@/types";
@@ -25,6 +25,7 @@ export default function AddWordDrawer({
   const addWord = useWordStore((s) => s.addWord);
   const addWordsBulk = useWordStore((s) => s.addWordsBulk);
   const updateWord = useWordStore((s) => s.updateWord);
+  const existingWords = useWordStore((s) => s.words);
 
   const isEditing = !!editWord;
 
@@ -42,6 +43,14 @@ export default function AddWordDrawer({
   const [dupWarning, setDupWarning] = useState(false);
   /** 批量导入：被跳过的重复单词列表 */
   const [bulkDuplicates, setBulkDuplicates] = useState<string[]>([]);
+  /** 批量导入：被替换的重复单词列表 */
+  const [bulkReplaced, setBulkReplaced] = useState<string[]>([]);
+  /** 批量导入冲突对话框：待确认的重复单词列表（解析后未导入前） */
+  const [pendingConflict, setPendingConflict] = useState<string[] | null>(null);
+  /** 缓存最近一次解析结果，供冲突对话框确认后使用 */
+  const [pendingItems, setPendingItems] = useState<
+    Array<{ word: string; phonetic?: string; pos: string; meaning: string; note?: string }>
+  >([]);
 
   /** 将存储中的 pos 字符串拆分为词性数组 */
   const splitPos = (raw: string): string[] => {
@@ -79,6 +88,9 @@ export default function AddWordDrawer({
       setJustSaved(false);
       setDupWarning(false);
       setBulkDuplicates([]);
+      setBulkReplaced([]);
+      setPendingConflict(null);
+      setPendingItems([]);
     } else {
       // 新增模式：清空表单
       setTab("single");
@@ -92,6 +104,9 @@ export default function AddWordDrawer({
       setJustAdded(0);
       setDupWarning(false);
       setBulkDuplicates([]);
+      setBulkReplaced([]);
+      setPendingConflict(null);
+      setPendingItems([]);
     }
   }, [open, defaultDate, editWord]);
 
@@ -138,13 +153,71 @@ export default function AddWordDrawer({
     );
   };
 
+  /** 解析批量文本并执行导入。
+   *  若存在重复单词：先弹出冲突对话框让用户选择「跳过」或「替换」，再据此执行。
+   *  若无重复：直接导入。
+   */
   const handleAddBulk = () => {
     const items = parseBulkText(bulkText, date);
     if (items.length === 0) return;
-    const { added, duplicates } = addWordsBulk(items, date);
+
+    // 与现有单词比对（大小写不敏感）
+    const existingLower = new Set(
+      existingWords.map((w) => w.word.toLowerCase()),
+    );
+    const dupWords: string[] = [];
+    const seenInBatch = new Set<string>();
+    for (const item of items) {
+      const lower = item.word.trim().toLowerCase();
+      if (existingLower.has(lower) || seenInBatch.has(lower)) {
+        dupWords.push(item.word.trim());
+      }
+      seenInBatch.add(lower);
+    }
+
+    if (dupWords.length > 0) {
+      // 有重复：缓存解析结果，弹出冲突对话框
+      setPendingItems(items);
+      setPendingConflict(dupWords);
+      return;
+    }
+
+    // 无重复：直接导入
+    const { added } = addWordsBulk(items, date, "skip");
+    setJustAdded((n) => n + added);
+    setBulkDuplicates([]);
+    setBulkReplaced([]);
+    setBulkText("");
+  };
+
+  /** 冲突对话框：用户选择跳过 */
+  const handleConflictSkip = () => {
+    if (pendingItems.length === 0) return;
+    const { added, duplicates } = addWordsBulk(pendingItems, date, "skip");
     setJustAdded((n) => n + added);
     setBulkDuplicates(duplicates);
+    setBulkReplaced([]);
+    setPendingConflict(null);
+    setPendingItems([]);
     setBulkText("");
+  };
+
+  /** 冲突对话框：用户选择替换 */
+  const handleConflictReplace = () => {
+    if (pendingItems.length === 0) return;
+    const { added, duplicates, replaced } = addWordsBulk(pendingItems, date, "replace");
+    setJustAdded((n) => n + added);
+    setBulkDuplicates(duplicates.filter((w) => !replaced.includes(w)));
+    setBulkReplaced(replaced);
+    setPendingConflict(null);
+    setPendingItems([]);
+    setBulkText("");
+  };
+
+  /** 冲突对话框：取消 */
+  const handleConflictCancel = () => {
+    setPendingConflict(null);
+    setPendingItems([]);
   };
 
   return (
@@ -388,7 +461,26 @@ export default function AddWordDrawer({
 
               {justAdded > 0 && (
                 <div className="rounded-md border border-accent-green/40 bg-accent-green/10 p-3 font-mono text-2xs text-accent-green">
-                  ✓ 已批量添加 {justAdded} 个单词
+                  ✓ 已批量添加 {justAdded} 个新单词
+                </div>
+              )}
+
+              {/* 批量导入：替换提示 */}
+              {bulkReplaced.length > 0 && (
+                <div className="rounded-md border border-ink/25 bg-ink/5 p-3">
+                  <div className="font-mono text-2xs text-ink">
+                    ↻ 以下 {bulkReplaced.length} 个单词已替换为新内容（复习进度已保留）：
+                  </div>
+                  <div className="mt-1.5 flex flex-wrap gap-1">
+                    {bulkReplaced.map((w) => (
+                      <span
+                        key={w}
+                        className="rounded-sm border border-ink/20 bg-paper-card px-1.5 py-0.5 font-serif text-xs text-ink-muted"
+                      >
+                        {w}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -423,6 +515,80 @@ export default function AddWordDrawer({
           )}
         </div>
       </aside>
+
+      {/* 批量导入冲突对话框（Windows 风格：跳过 / 替换 / 取消） */}
+      {pendingConflict && pendingConflict.length > 0 && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 animate-fade-in">
+          <div
+            className="absolute inset-0 bg-ink/40 backdrop-blur-[2px]"
+            onClick={handleConflictCancel}
+          />
+          <div className="relative w-full max-w-md rounded-lg border border-ink/20 bg-paper-card p-5 shadow-deep-always">
+            <div className="flex items-start gap-3">
+              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-accent-gold/10 text-accent-gold">
+                <AlertTriangle className="h-5 w-5" strokeWidth={1.5} />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-display text-lg font-semibold text-ink">
+                  检测到 {pendingConflict.length} 个单词已存在
+                </h3>
+                <p className="mt-1 font-body text-sm text-ink-muted">
+                  请选择如何处理这些重复单词：
+                </p>
+                <ul className="mt-1 font-mono text-2xs text-ink-light">
+                  <li>
+                    <span className="text-ink">跳过</span> · 保留现有单词不变，仅导入新单词
+                  </li>
+                  <li>
+                    <span className="text-ink">替换</span> · 用新内容覆盖音标/词性/词意/笔记（保留复习进度）
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            {/* 重复单词预览（最多显示 8 个，超出折叠） */}
+            <div className="mt-3 max-h-24 overflow-y-auto rounded-md border border-ink/10 bg-paper p-2">
+              <div className="flex flex-wrap gap-1">
+                {pendingConflict.slice(0, 12).map((w) => (
+                  <span
+                    key={w}
+                    className="rounded-sm border border-accent-gold/30 bg-paper-card px-1.5 py-0.5 font-serif text-xs text-ink-muted"
+                  >
+                    {w}
+                  </span>
+                ))}
+                {pendingConflict.length > 12 && (
+                  <span className="font-mono text-2xs text-ink-light">
+                    …等共 {pendingConflict.length} 个
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* 按钮组 */}
+            <div className="mt-4 flex flex-wrap justify-end gap-2">
+              <button
+                onClick={handleConflictCancel}
+                className="rounded-md border border-ink/20 px-4 py-2 font-mono text-2xs uppercase tracking-editorial text-ink-light transition-colors hover:border-ink/40 hover:text-ink"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleConflictSkip}
+                className="rounded-md border border-accent-gold/40 bg-accent-gold/10 px-4 py-2 font-mono text-2xs uppercase tracking-editorial text-accent-gold transition-colors hover:bg-accent-gold/20"
+              >
+                跳过重复
+              </button>
+              <button
+                onClick={handleConflictReplace}
+                className="rounded-md border border-ink bg-ink px-4 py-2 font-mono text-2xs uppercase tracking-editorial text-paper transition-colors hover:bg-ink/90"
+              >
+                替换已有
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

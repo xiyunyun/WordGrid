@@ -13,6 +13,9 @@ import {
   ArrowUpNarrowWide,
   Eye,
   EyeOff,
+  Trash2,
+  CheckCircle2,
+  AlertTriangle,
 } from "lucide-react";
 import { useWordStore } from "@/store/wordStore";
 import { selectDueAndTodayNewCount } from "@/store/wordStore";
@@ -29,6 +32,7 @@ import {
 } from "@/lib/review";
 import WordCell from "@/components/WordCell";
 import DateNoteModal from "@/components/DateNoteModal";
+import DatePickerCalendar from "@/components/DatePickerCalendar";
 import type { Word } from "@/types";
 import { cn } from "@/lib/utils";
 import { useMidnightCountdown } from "@/hooks/useMidnightCountdown";
@@ -76,6 +80,7 @@ export default function DailyGrid({
   onRequestNote,
 }: DailyGridProps) {
   const words = useWordStore((s) => s.words);
+  const removeWordsBulk = useWordStore((s) => s.removeWordsBulk);
   const dateNotes = useDateNotesStore((s) => s.notes);
   // 从模块级缓存恢复折叠状态，无缓存则默认空集（全部展开）
   const [collapsed, setCollapsed] = useState<Set<string>>(
@@ -134,6 +139,57 @@ export default function DailyGrid({
 
   // 词性筛选面板展开/收起
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
+
+  // ============ 批量删除多选模式 ============
+  // 进入后单击单词卡切换选中状态，再单击取消；右上角操作栏执行删除
+  const [bulkDeleteMode, setBulkDeleteMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  // 删除确认对话框
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  // 批量删除模式下的日期筛选（仅在该模式下显示，多选日历）
+  // 选中日期后，只显示对应日期板块的单词供选择删除
+  const [bulkDeleteDates, setBulkDeleteDates] = useState<string[]>([]);
+
+  // 进入批量删除模式时清空选中状态，退出时也清空（避免残留）
+  const enterBulkDeleteMode = () => {
+    setSelectedIds(new Set());
+    setBulkDeleteDates([]);
+    setBulkDeleteMode(true);
+  };
+  const exitBulkDeleteMode = () => {
+    setSelectedIds(new Set());
+    setBulkDeleteDates([]);
+    setBulkDeleteMode(false);
+  };
+
+  // 单击单词卡：切换选中状态
+  const toggleSelectWord = (word: Word) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(word.id)) next.delete(word.id);
+      else next.add(word.id);
+      return next;
+    });
+  };
+
+  // 全选当前筛选结果（与 visibleGroups 中实际显示的单词一致）
+  const selectAllVisible = () => {
+    const all = new Set<string>();
+    for (const g of visibleGroups) for (const w of g.words) all.add(w.id);
+    setSelectedIds(all);
+  };
+
+  // 执行删除：调用 store 批量删除方法，然后退出模式
+  const confirmDelete = () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) {
+      setDeleteConfirmOpen(false);
+      return;
+    }
+    removeWordsBulk(ids);
+    setDeleteConfirmOpen(false);
+    exitBulkDeleteMode();
+  };
 
   // 显示设置面板展开/收起（控制单词块各信息行的显隐）
   const [displayPanelOpen, setDisplayPanelOpen] = useState(false);
@@ -243,9 +299,19 @@ export default function DailyGrid({
     );
   }, [words, filterPos, filterStages, filterDueOnly, filterNoteKeyword, dateNotes, sortAsc]);
 
-  // 词性/记忆阶段筛选激活时，自动展开所有（筛选后的）日期板块，让筛选结果立即可见
+  // 批量删除模式：按日历选中的日期二次筛选（只显示选中日期的板块）
+  const visibleGroups = useMemo(() => {
+    if (!bulkDeleteMode || bulkDeleteDates.length === 0) return groups;
+    const dateSet = new Set(bulkDeleteDates);
+    return groups.filter((g) => dateSet.has(g.date));
+  }, [groups, bulkDeleteMode, bulkDeleteDates]);
+
+  // 词性/记忆阶段筛选激活时，或进入批量删除模式时，自动展开所有（筛选后的）日期板块
   // 使用派生值而非副作用修改 collapsed，避免与用户手动折叠冲突
-  const effectiveCollapsed = (filterPos.size > 0 || filterStages.size > 0) ? new Set<string>() : collapsed;
+  const effectiveCollapsed =
+    filterPos.size > 0 || filterStages.size > 0 || bulkDeleteMode
+      ? new Set<string>()
+      : collapsed;
 
   const toggleCollapse = (date: string) => {
     setCollapsed((prev) => {
@@ -278,7 +344,7 @@ export default function DailyGrid({
   // 词性筛选激活时使用 effectiveCollapsed（强制展开），此时按钮状态基于它判定
   const allExpanded = effectiveCollapsed.size === 0;
   const allCollapsed =
-    groups.length > 0 && effectiveCollapsed.size === groups.length;
+    visibleGroups.length > 0 && effectiveCollapsed.size === visibleGroups.length;
 
   return (
     <div className="space-y-6">
@@ -423,6 +489,21 @@ export default function DailyGrid({
                     (filterStages.size > 0 ? 1 : 0)}
                 </span>
               )}
+            </button>
+
+            {/* 批量删除按钮：进入多选模式 */}
+            <button
+              onClick={bulkDeleteMode ? exitBulkDeleteMode : enterBulkDeleteMode}
+              className={cn(
+                "flex items-center gap-1.5 rounded-md border px-3 py-1.5 font-mono text-2xs uppercase tracking-editorial transition-colors",
+                bulkDeleteMode
+                  ? "border-accent-red bg-accent-red/10 text-accent-red"
+                  : "border-ink/15 bg-paper-card text-ink-light hover:border-accent-red/30 hover:text-accent-red",
+              )}
+              title={bulkDeleteMode ? "退出批量删除" : "进入批量删除模式"}
+            >
+              <Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} />
+              {bulkDeleteMode ? "退出删除" : "批量删除"}
             </button>
 
             {/* 清空筛选（仅有筛选时显示） */}
@@ -626,9 +707,71 @@ export default function DailyGrid({
         )}
       </section>
 
+      {/* 批量删除操作栏：进入模式后置顶固定显示 */}
+      {bulkDeleteMode && (
+        <section className="sticky top-2 z-30 space-y-2 rounded-md border border-accent-red/30 bg-paper-card/95 p-3 shadow-deep-always backdrop-blur-sm">
+          {/* 第一行：选择统计 + 操作按钮 */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <CheckCircle2
+                className="h-4 w-4 text-accent-red"
+                strokeWidth={2}
+              />
+              <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
+                已选
+              </span>
+              <span className="font-serif text-lg font-medium text-accent-red tabular-nums">
+                {selectedIds.size}
+              </span>
+              <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
+                个单词
+              </span>
+              <span className="ml-2 hidden font-mono text-2xs uppercase tracking-editorial text-ink-light/60 sm:inline">
+                · 单击单词卡片选择 / 取消
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              {/* 日历筛选：选中日期后只显示对应日期板块 */}
+              <DatePickerCalendar
+                selected={bulkDeleteDates}
+                onChange={setBulkDeleteDates}
+                notes={dateNotes}
+                label="日期筛选"
+              />
+              <button
+                onClick={selectAllVisible}
+                className="rounded-md border border-ink/20 px-3 py-1.5 font-mono text-2xs uppercase tracking-editorial text-ink-light transition-colors hover:border-ink/40 hover:text-ink"
+              >
+                全选可见
+              </button>
+              <button
+                onClick={exitBulkDeleteMode}
+                className="rounded-md border border-ink/20 px-3 py-1.5 font-mono text-2xs uppercase tracking-editorial text-ink-light transition-colors hover:border-ink/40 hover:text-ink"
+              >
+                取消
+              </button>
+              <button
+                onClick={() => setDeleteConfirmOpen(true)}
+                disabled={selectedIds.size === 0}
+                className="flex items-center gap-1.5 rounded-md border border-accent-red bg-accent-red px-3 py-1.5 font-mono text-2xs uppercase tracking-editorial text-paper transition-colors hover:bg-accent-red/90 disabled:cursor-not-allowed disabled:border-ink/15 disabled:bg-ink/10 disabled:text-ink-light/50"
+              >
+                <Trash2 className="h-3 w-3" strokeWidth={2} />
+                删除所选
+              </button>
+            </div>
+          </div>
+          {/* 日期筛选提示：选中日期时显示当前筛选范围 */}
+          {bulkDeleteDates.length > 0 && (
+            <div className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
+              日期筛选：仅显示 {bulkDeleteDates.length} 个选中日期的板块
+            </div>
+          )}
+        </section>
+      )}
+
       {/* 日期行列表 */}
       <div className="space-y-3">
-        {groups.map((group) => {
+        {visibleGroups.map((group) => {
           const isToday = group.date === today;
           // 词性筛选激活时强制展开，否则使用用户折叠状态
           const isCollapsed = effectiveCollapsed.has(group.date);
@@ -799,18 +942,23 @@ export default function DailyGrid({
                         word={w}
                         onRequestEdit={onRequestEdit}
                         onRequestNote={onRequestNote}
+                        selectionMode={bulkDeleteMode}
+                        selected={selectedIds.has(w.id)}
+                        onToggleSelect={toggleSelectWord}
                       />
                     ))}
-                    {/* 添加占位卡 */}
-                    <button
-                      onClick={() => onRequestAdd(group.date)}
-                      className="flex min-h-[110px] flex-col items-center justify-center gap-2 rounded-md border border-dashed border-ink/20 py-6 text-ink-light transition-colors hover:border-ink/40 hover:text-ink"
-                    >
-                      <Plus className="h-5 w-5" strokeWidth={1.5} />
-                      <span className="font-mono text-2xs uppercase tracking-editorial">
-                        Add Word
-                      </span>
-                    </button>
+                    {/* 添加占位卡（批量删除模式下隐藏） */}
+                    {!bulkDeleteMode && (
+                      <button
+                        onClick={() => onRequestAdd(group.date)}
+                        className="flex min-h-[110px] flex-col items-center justify-center gap-2 rounded-md border border-dashed border-ink/20 py-6 text-ink-light transition-colors hover:border-ink/40 hover:text-ink"
+                      >
+                        <Plus className="h-5 w-5" strokeWidth={1.5} />
+                        <span className="font-mono text-2xs uppercase tracking-editorial">
+                          Add Word
+                        </span>
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
@@ -818,22 +966,32 @@ export default function DailyGrid({
           );
         })}
         {/* 筛选后无结果提示 */}
-        {groups.length === 0 && hasActiveFilter && (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <Filter className="mb-3 h-8 w-8 text-ink-light" strokeWidth={1} />
-            <div className="eyebrow mb-1">No Matches</div>
-            <p className="mb-4 font-body text-sm text-ink-muted">
-              没有符合当前筛选条件的日期
-            </p>
-            <button
-              onClick={clearAllFilters}
-              className="btn-ghost"
-            >
-              <X className="h-3.5 w-3.5" strokeWidth={1.5} />
-              清空筛选
-            </button>
-          </div>
-        )}
+        {visibleGroups.length === 0 &&
+          (hasActiveFilter || (bulkDeleteMode && bulkDeleteDates.length > 0)) && (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <Filter className="mb-3 h-8 w-8 text-ink-light" strokeWidth={1} />
+              <div className="eyebrow mb-1">No Matches</div>
+              <p className="mb-4 font-body text-sm text-ink-muted">
+                {bulkDeleteMode && bulkDeleteDates.length > 0
+                  ? "所选日期下没有可删除的单词"
+                  : "没有符合当前筛选条件的日期"}
+              </p>
+              {bulkDeleteMode && bulkDeleteDates.length > 0 ? (
+                <button
+                  onClick={() => setBulkDeleteDates([])}
+                  className="btn-ghost"
+                >
+                  <X className="h-3.5 w-3.5" strokeWidth={1.5} />
+                  清除日期筛选
+                </button>
+              ) : (
+                <button onClick={clearAllFilters} className="btn-ghost">
+                  <X className="h-3.5 w-3.5" strokeWidth={1.5} />
+                  清空筛选
+                </button>
+              )}
+            </div>
+          )}
       </div>
 
       {/* 日期备注编辑弹窗 */}
@@ -842,6 +1000,45 @@ export default function DailyGrid({
         onClose={() => setNoteModalOpen(false)}
         date={noteModalDate}
       />
+
+      {/* 批量删除确认对话框 */}
+      {deleteConfirmOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 animate-fade-in">
+          <div
+            className="absolute inset-0 bg-ink/40 backdrop-blur-[2px]"
+            onClick={() => setDeleteConfirmOpen(false)}
+          />
+          <div className="relative w-full max-w-md rounded-lg border border-ink/20 bg-paper-card p-5 shadow-deep-always">
+            <div className="flex items-start gap-3">
+              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-accent-red/10 text-accent-red">
+                <AlertTriangle className="h-5 w-5" strokeWidth={1.5} />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-display text-lg font-semibold text-ink">
+                  确认删除 {selectedIds.size} 个单词？
+                </h3>
+                <p className="mt-1 font-body text-sm text-ink-muted">
+                  删除后单词及其所有复习记录将一并移除，且无法撤销。请确认操作。
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 flex flex-wrap justify-end gap-2">
+              <button
+                onClick={() => setDeleteConfirmOpen(false)}
+                className="rounded-md border border-ink/20 px-4 py-2 font-mono text-2xs uppercase tracking-editorial text-ink-light transition-colors hover:border-ink/40 hover:text-ink"
+              >
+                取消
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="rounded-md border border-accent-red bg-accent-red px-4 py-2 font-mono text-2xs uppercase tracking-editorial text-paper transition-colors hover:bg-accent-red/90"
+              >
+                确认删除
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

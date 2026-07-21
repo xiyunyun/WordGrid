@@ -38,7 +38,9 @@ interface WordStore {
     note?: string;
     date?: string;
   }) => Word | null;
-  /** 批量添加单词，自动跳过重复项（大小写不敏感），返回新增数与重复单词列表 */
+  /** 批量添加单词，自动跳过重复项（大小写不敏感），返回新增数与重复单词列表
+   *  mode: "skip"=跳过重复（默认）, "replace"=覆盖重复单词的音标/词性/词意/笔记（保留复习进度）
+   */
   addWordsBulk: (
     items: Array<{
       word: string;
@@ -48,9 +50,12 @@ interface WordStore {
       note?: string;
     }>,
     date?: string,
-  ) => { added: number; duplicates: string[] };
+    mode?: "skip" | "replace",
+  ) => { added: number; duplicates: string[]; replaced: string[] };
   updateWord: (id: string, patch: Partial<Word>) => void;
   removeWord: (id: string) => void;
+  /** 批量删除单词（同时清理关联复习日志与云端记录） */
+  removeWordsBulk: (ids: string[]) => void;
 
   // 生词标记
   toggleDifficult: (id: string) => void;
@@ -126,23 +131,42 @@ export const useWordStore = create<WordStore>()(
         return word;
       },
 
-      addWordsBulk: (items, date) => {
+      addWordsBulk: (items, date, mode = "skip") => {
         const targetDate = date || todayKey();
         const { nextReview, reviewStage } = initReview();
 
-        // 重复检查（大小写不敏感）：既比对已有单词，也比对当前批次内已通过的
-        const existingLower = new Set(
-          get().words.map((w) => w.word.toLowerCase()),
-        );
+        // 构建「小写单词 -> 现存 Word」索引（用于替换模式查找）
+        const existingMap = new Map<string, Word>();
+        for (const w of get().words) {
+          existingMap.set(w.word.toLowerCase(), w);
+        }
         const seenInBatch = new Set<string>();
         const duplicates: string[] = [];
+        const replaced: string[] = [];
         const newWords: Word[] = [];
+        const replacedWords: Word[] = [];
 
         for (const item of items) {
           const trimmed = item.word.trim();
           const lower = trimmed.toLowerCase();
-          if (existingLower.has(lower) || seenInBatch.has(lower)) {
+          const existing = existingMap.get(lower);
+          if (existing || seenInBatch.has(lower)) {
             duplicates.push(trimmed);
+            if (mode === "replace" && existing) {
+              // 覆盖现有单词的音标/词性/词意/笔记，保留复习进度与状态
+              const updated: Word = {
+                ...existing,
+                word: trimmed,
+                phonetic: item.phonetic?.trim() || existing.phonetic,
+                pos: item.pos.trim() || existing.pos,
+                meaning: item.meaning.trim() || existing.meaning,
+                note: item.note?.trim() || existing.note,
+              };
+              replacedWords.push(updated);
+              replaced.push(trimmed);
+              // 替换索引中的引用，便于后续同批次重复时识别
+              existingMap.set(lower, updated);
+            }
             continue;
           }
           seenInBatch.add(lower);
@@ -163,14 +187,31 @@ export const useWordStore = create<WordStore>()(
           });
         }
 
-        if (newWords.length > 0) {
-          set((s) => ({ words: [...newWords, ...s.words] }));
-          // 云同步：批量推送（一次请求）
-          if (get().syncEnabled) {
+        // 应用变更：新词前置插入 + 替换词就地更新
+        if (newWords.length > 0 || replacedWords.length > 0) {
+          const replacedIds = new Set(replacedWords.map((w) => w.id));
+          set((s) => ({
+            words: [
+              ...newWords,
+              ...s.words.map((w) =>
+                replacedIds.has(w.id)
+                  ? replacedWords.find((rw) => rw.id === w.id)!
+                  : w,
+              ),
+            ],
+          }));
+          // 云同步：新词批量推送
+          if (newWords.length > 0 && get().syncEnabled) {
             pushWordsBulk(newWords).catch((e) => console.error("[云同步] 推送异常:", e));
           }
+          // 云同步：替换的单词逐条 upsert
+          if (replacedWords.length > 0 && get().syncEnabled) {
+            for (const rw of replacedWords) {
+              pushWord(rw).catch((e) => console.error("[云同步] 推送异常:", e));
+            }
+          }
         }
-        return { added: newWords.length, duplicates };
+        return { added: newWords.length, duplicates, replaced };
       },
 
       updateWord: (id, patch) => {
@@ -193,6 +234,22 @@ export const useWordStore = create<WordStore>()(
         if (get().syncEnabled) {
           cloudDeleteWord(id).catch((e) => console.error("[云同步] 推送异常:", e));
           deleteReviewLogsByWordId(id).catch((e) => console.error("[云同步] 推送异常:", e));
+        }
+      },
+
+      removeWordsBulk: (ids) => {
+        if (ids.length === 0) return;
+        const idSet = new Set(ids);
+        set((s) => ({
+          words: s.words.filter((w) => !idSet.has(w.id)),
+          logs: s.logs.filter((l) => !idSet.has(l.wordId)),
+        }));
+        // 云同步：逐条删除云端记录（保持与 removeWord 一致的语义）
+        if (get().syncEnabled) {
+          for (const id of ids) {
+            cloudDeleteWord(id).catch((e) => console.error("[云同步] 推送异常:", e));
+            deleteReviewLogsByWordId(id).catch((e) => console.error("[云同步] 推送异常:", e));
+          }
         }
       },
 

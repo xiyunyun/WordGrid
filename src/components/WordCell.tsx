@@ -1,4 +1,4 @@
-import { Check, Trash2, NotebookPen, Pencil, Eye, Brain } from "lucide-react";
+import { Check, Trash2, NotebookPen, Pencil, Eye, Brain, CheckCircle2 } from "lucide-react";
 import type { Word } from "@/types";
 import { useWordStore } from "@/store/wordStore";
 import { STAGE_LABELS } from "@/types";
@@ -11,6 +11,12 @@ interface WordCellProps {
   compact?: boolean;
   onRequestEdit?: (word: Word) => void;
   onRequestNote?: (word: Word) => void;
+  /** 批量选择模式：开启后单击卡片切换选中状态，隐藏内部操作按钮 */
+  selectionMode?: boolean;
+  /** 当前是否被选中（仅在 selectionMode 时生效） */
+  selected?: boolean;
+  /** 单击卡片时的回调（仅在 selectionMode 时生效） */
+  onToggleSelect?: (word: Word) => void;
 }
 
 /**
@@ -32,6 +38,9 @@ export default function WordCell({
   compact = false,
   onRequestEdit,
   onRequestNote,
+  selectionMode = false,
+  selected = false,
+  onToggleSelect,
 }: WordCellProps) {
   const markMastered = useWordStore((s) => s.markMastered);
   const unmarkMastered = useWordStore((s) => s.unmarkMastered);
@@ -39,15 +48,52 @@ export default function WordCell({
   const { showPos, showPhonetic, showMeaning, showStage, showNote } =
     useDisplaySettingsStore();
 
+  // 选择模式下整张卡片可点击
+  const handleCardClick = () => {
+    if (selectionMode) onToggleSelect?.(word);
+  };
+
   return (
     <article
+      onClick={handleCardClick}
+      role={selectionMode ? "button" : undefined}
+      aria-pressed={selectionMode ? selected : undefined}
+      tabIndex={selectionMode ? 0 : undefined}
+      onKeyDown={(e) => {
+        if (selectionMode && (e.key === "Enter" || e.key === " ")) {
+          e.preventDefault();
+          onToggleSelect?.(word);
+        }
+      }}
       className={cn(
-        "group relative flex min-w-0 flex-col rounded-md border bg-paper-card transition-all hover:shadow-card-hover",
-        word.isMastered
-          ? "border-accent-green/30 border-l-[3px] border-l-accent-green opacity-75"
-          : "border-accent-red/40 border-l-[3px] border-l-accent-red",
+        "group relative flex min-w-0 flex-col rounded-md border bg-paper-card transition-all",
+        selectionMode
+          ? cn(
+              "cursor-pointer hover:shadow-card-hover",
+              selected
+                ? "border-accent-red border-[2px] ring-2 ring-accent-red/30"
+                : "border-ink/20 hover:border-ink/40",
+            )
+          : cn(
+              "hover:shadow-card-hover",
+              word.isMastered
+                ? "border-accent-green/30 border-l-[3px] border-l-accent-green opacity-75"
+                : "border-accent-red/40 border-l-[3px] border-l-accent-red",
+            ),
       )}
     >
+      {/* 选择模式：右下角选中指示器（避开右上角的记忆阶段标签） */}
+      {selectionMode && (
+        <div className="absolute bottom-2 right-2 z-10">
+          <CheckCircle2
+            className={cn(
+              "h-5 w-5 transition-colors",
+              selected ? "text-accent-red" : "text-ink/25",
+            )}
+            strokeWidth={selected ? 2.2 : 1.5}
+          />
+        </div>
+      )}
       {/* 单词主体：单词行（右侧固定状态标签）+ 词性/音标/词意竖向排列 */}
       <div className="flex flex-col items-start gap-1 px-3 py-2.5 md:px-4 md:py-3">
         {/* 单词行：单词 + 右侧固定宽度的记忆状态标签 */}
@@ -108,60 +154,62 @@ export default function WordCell({
       </div>
 
       {/* 功能按钮栏 - 独占一行，居中平均放置；mt-auto 确保卡片被拉高时贴底对齐 */}
-      <div className="mt-auto flex items-center justify-center gap-4 border-t border-ink/8 px-3 py-1.5">
-        {/* 悬浮操作 - 手机端始终显示，桌面端 hover 显示 */}
-        <div className="flex items-center gap-4 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
-          <SpeakButton text={word.word} />
-          {onRequestEdit && (
+      {!selectionMode && (
+        <div className="mt-auto flex items-center justify-center gap-4 border-t border-ink/8 px-3 py-1.5">
+          {/* 悬浮操作 - 手机端始终显示，桌面端 hover 显示 */}
+          <div className="flex items-center gap-4 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
+            <SpeakButton text={word.word} />
+            {onRequestEdit && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRequestEdit(word);
+                }}
+                className="rounded p-1 text-ink-light hover:bg-accent-gold/10 hover:text-accent-gold"
+                title="编辑"
+              >
+                <Pencil className="h-3 w-3" strokeWidth={1.5} />
+              </button>
+            )}
+            {word.isMastered ? (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  unmarkMastered(word.id);
+                }}
+                className="rounded p-1 text-accent-red/70 hover:bg-accent-red/10 hover:text-accent-red"
+                title="标记为已遗忘（恢复为生词）"
+              >
+                <Brain className="h-3 w-3" strokeWidth={2} />
+              </button>
+            ) : (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  markMastered(word.id);
+                }}
+                className="rounded p-1 text-accent-green/70 hover:bg-accent-green/10 hover:text-accent-green"
+                title="标记为已掌握"
+              >
+                <Check className="h-3 w-3" strokeWidth={2} />
+              </button>
+            )}
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                onRequestEdit(word);
+                removeWord(word.id);
               }}
-              className="rounded p-1 text-ink-light hover:bg-accent-gold/10 hover:text-accent-gold"
-              title="编辑"
+              className="rounded p-1 text-ink-light hover:bg-accent-red/10 hover:text-accent-red"
+              title="删除"
             >
-              <Pencil className="h-3 w-3" strokeWidth={1.5} />
+              <Trash2 className="h-3 w-3" strokeWidth={1.5} />
             </button>
-          )}
-          {word.isMastered ? (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                unmarkMastered(word.id);
-              }}
-              className="rounded p-1 text-accent-red/70 hover:bg-accent-red/10 hover:text-accent-red"
-              title="标记为已遗忘（恢复为生词）"
-            >
-              <Brain className="h-3 w-3" strokeWidth={2} />
-            </button>
-          ) : (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                markMastered(word.id);
-              }}
-              className="rounded p-1 text-accent-green/70 hover:bg-accent-green/10 hover:text-accent-green"
-              title="标记为已掌握"
-            >
-              <Check className="h-3 w-3" strokeWidth={2} />
-            </button>
-          )}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              removeWord(word.id);
-            }}
-            className="rounded p-1 text-ink-light hover:bg-accent-red/10 hover:text-accent-red"
-            title="删除"
-          >
-            <Trash2 className="h-3 w-3" strokeWidth={1.5} />
-          </button>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* 笔记预览 - 点击打开完整笔记弹窗 */}
-      {showNote && word.note && !compact && (
+      {/* 笔记预览 - 点击打开完整笔记弹窗（选择模式下隐藏） */}
+      {!selectionMode && showNote && word.note && !compact && (
         <button
           onClick={(e) => {
             e.stopPropagation();
