@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { Difficulty, QuizQuestion } from "@/lib/deepseek";
+import type { Difficulty, QuizQuestion, Tense, ArticleStyle } from "@/lib/deepseek";
 import type { Word } from "@/types";
 import {
   pushArticle,
@@ -26,6 +26,10 @@ export interface ArticleArchive {
   }>;
   /** 难度 */
   difficulty: Difficulty;
+  /** 时态倾向（v2.4.1+，旧归档可能无此字段） */
+  tenses?: Tense[];
+  /** 文章风格倾向（v2.4.1+，旧归档可能无此字段） */
+  styles?: ArticleStyle[];
   /** 题目（生成后填充，未生成时为空数组） */
   questions: QuizQuestion[];
   /** 最近一次作答记录 */
@@ -60,6 +64,8 @@ interface ArticleStore {
     article: string;
     words: Word[];
     difficulty: Difficulty;
+    tenses?: Tense[];
+    styles?: ArticleStyle[];
   }) => string;
 
   /** 为指定归档追加题目 */
@@ -124,6 +130,8 @@ export const useArticleStore = create<ArticleStore>()(
             phonetic: w.phonetic,
           })),
           difficulty: input.difficulty,
+          tenses: input.tenses,
+          styles: input.styles,
           questions: [],
         };
         set((s) => ({ archives: [archive, ...s.archives] }));

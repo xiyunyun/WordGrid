@@ -2,7 +2,6 @@ import { useMemo, useState, useEffect, useRef } from "react";
 import {
   ChevronDown,
   Plus,
-  StickyNote,
   ChevronsDownUp,
   ChevronsUpDown,
   Pencil,
@@ -413,13 +412,9 @@ function EssayCard({
         </div>
       )}
 
-      {/* 笔记 */}
+      {/* 笔记：只显示内容，不显示 Note 标签和图标 */}
       {essay.note && (
         <div className="mt-2 mb-2 rounded-sm border border-accent-gold/30 bg-accent-gold/5 px-3 py-2">
-          <div className="mb-1 flex items-center gap-1 font-mono text-2xs uppercase tracking-editorial text-accent-gold">
-            <StickyNote className="h-3 w-3" strokeWidth={1.5} />
-            Note
-          </div>
           <p className="break-words whitespace-pre-wrap font-body text-xs leading-relaxed text-ink-muted">
             {essay.note}
           </p>

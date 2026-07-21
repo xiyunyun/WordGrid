@@ -310,7 +310,7 @@ export default function Stats() {
               <Bar
                 dataKey="added"
                 name="新增"
-                fill="hsl(var(--c-ink))"
+                fill="hsl(var(--c-ink-muted))"
                 radius={[2, 2, 0, 0]}
                 maxBarSize={28}
               />

@@ -62,14 +62,25 @@ export default function NoteModal({ open, onClose, word }: NoteModalProps) {
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-gold/10 text-accent-gold">
               <NotebookPen className="h-4 w-4" strokeWidth={1.5} />
             </div>
-            <div>
+            <div className="flex flex-col gap-0.5">
               <div className="eyebrow text-accent-gold">Note</div>
-              <h3 className="font-display text-xl font-medium text-ink">
-                {word.word}
-                <span className="ml-2 font-mono text-sm italic text-ink-light">
-                  {word.pos}
-                </span>
-              </h3>
+              {/* 单词：与 WordCell 同款 font-serif，避免使用艺术体 font-display */}
+              <div className="flex items-baseline gap-2">
+                <h3 className="font-serif text-xl font-medium leading-tight tracking-word text-ink">
+                  {word.word}
+                </h3>
+                {word.pos && (
+                  <span className="font-mono text-2xs italic text-accent-gold">
+                    {word.pos}
+                  </span>
+                )}
+              </div>
+              {/* 词意：与 WordCell 同款 font-body，紧贴单词下方 */}
+              {word.meaning && (
+                <p className="font-body text-sm leading-snug text-ink-soft">
+                  {word.meaning}
+                </p>
+              )}
             </div>
           </div>
           <button

@@ -8,7 +8,11 @@ import {
   generateQuiz,
   translateArticle,
   type Difficulty,
+  type Tense,
+  type ArticleStyle,
   type QuizQuestion,
+  TENSE_LABELS,
+  STYLE_LABELS,
 } from "@/lib/deepseek";
 import type { Word } from "@/types";
 import { cn } from "@/lib/utils";
@@ -33,6 +37,27 @@ const DIFFICULTIES: Array<{
   { key: "advanced", label: "Advanced", labelCN: "高级", desc: "复杂修辞，接近母语" },
 ];
 
+/** 时态倾向选项（8 种，与 deepseek.ts Tense 一一对应） */
+const TENSE_OPTIONS: Array<{ key: Tense; label: string }> = [
+  { key: "simple_present", label: TENSE_LABELS.simple_present },
+  { key: "simple_past", label: TENSE_LABELS.simple_past },
+  { key: "simple_future", label: TENSE_LABELS.simple_future },
+  { key: "past_future", label: TENSE_LABELS.past_future },
+  { key: "present_continuous", label: TENSE_LABELS.present_continuous },
+  { key: "past_continuous", label: TENSE_LABELS.past_continuous },
+  { key: "present_perfect", label: TENSE_LABELS.present_perfect },
+  { key: "past_perfect", label: TENSE_LABELS.past_perfect },
+];
+
+/** 文章风格倾向选项（5 种，与 deepseek.ts ArticleStyle 一一对应） */
+const STYLE_OPTIONS: Array<{ key: ArticleStyle; label: string }> = [
+  { key: "narrative", label: STYLE_LABELS.narrative },
+  { key: "expository", label: STYLE_LABELS.expository },
+  { key: "argumentative", label: STYLE_LABELS.argumentative },
+  { key: "practical", label: STYLE_LABELS.practical },
+  { key: "dialogue", label: STYLE_LABELS.dialogue },
+];
+
 export default function ArticleBuilder() {
   const words = useWordStore((s) => s.words);
   const archives = useArticleStore((s) => s.archives);
@@ -48,6 +73,10 @@ export default function ArticleBuilder() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [difficulty, setDifficulty] = useState<Difficulty>("elementary");
   const [wordCount, setWordCount] = useState(50);
+  /** 时态倾向（多选，空集合表示不限） */
+  const [tenses, setTenses] = useState<Set<Tense>>(new Set());
+  /** 文章风格倾向（多选，空集合表示不限） */
+  const [styles, setStyles] = useState<Set<ArticleStyle>>(new Set());
   const [article, setArticle] = useState("");
   const [error, setError] = useState("");
   /** 当前阅读/出题对应的归档 id（生成文章后写入） */
@@ -130,13 +159,23 @@ export default function ArticleBuilder() {
     setPhase("loading");
     setError("");
     try {
-      const text = await generateArticle(selectedWords, difficulty, wordCount);
+      const tensesArr = Array.from(tenses);
+      const stylesArr = Array.from(styles);
+      const text = await generateArticle(
+        selectedWords,
+        difficulty,
+        wordCount,
+        tensesArr,
+        stylesArr,
+      );
       setArticle(text);
       // 写入归档
       const aid = addArchive({
         article: text,
         words: selectedWords,
         difficulty,
+        tenses: tensesArr,
+        styles: stylesArr,
       });
       setCurrentArchiveId(aid);
       setLastReadArchiveId(aid);
@@ -330,6 +369,8 @@ export default function ArticleBuilder() {
           selectedCount={selectedWords.length}
           difficulty={difficulty}
           wordCount={wordCount}
+          tenses={tenses}
+          styles={styles}
           error={error}
           wrongCountMap={wrongCountMap}
           onToggle={toggleSelect}
@@ -337,6 +378,8 @@ export default function ArticleBuilder() {
           onClearAll={clearAll}
           onDifficultyChange={setDifficulty}
           onWordCountChange={setWordCount}
+          onTensesChange={setTenses}
+          onStylesChange={setStyles}
           onGenerate={handleGenerate}
         />
       )}
@@ -414,6 +457,8 @@ function SelectPhase({
   selectedCount,
   difficulty,
   wordCount,
+  tenses,
+  styles,
   error,
   wrongCountMap,
   onToggle,
@@ -421,6 +466,8 @@ function SelectPhase({
   onClearAll,
   onDifficultyChange,
   onWordCountChange,
+  onTensesChange,
+  onStylesChange,
   onGenerate,
 }: {
   words: Word[];
@@ -428,6 +475,8 @@ function SelectPhase({
   selectedCount: number;
   difficulty: Difficulty;
   wordCount: number;
+  tenses: Set<Tense>;
+  styles: Set<ArticleStyle>;
   error: string;
   /** wordId → 错误次数 */
   wrongCountMap: Map<string, number>;
@@ -437,6 +486,8 @@ function SelectPhase({
   onClearAll: () => void;
   onDifficultyChange: (d: Difficulty) => void;
   onWordCountChange: (n: number) => void;
+  onTensesChange: (s: Set<Tense>) => void;
+  onStylesChange: (s: Set<ArticleStyle>) => void;
   onGenerate: () => void;
 }) {
   // ====== 筛选状态 ======
@@ -516,6 +567,22 @@ function SelectPhase({
     setExcludeMastered(true);
   };
 
+  /** 切换时态选中（单击选中，再单击取消） */
+  const toggleTense = (t: Tense) => {
+    const next = new Set(tenses);
+    if (next.has(t)) next.delete(t);
+    else next.add(t);
+    onTensesChange(next);
+  };
+
+  /** 切换文章风格选中（单击选中，再单击取消） */
+  const toggleStyle = (s: ArticleStyle) => {
+    const next = new Set(styles);
+    if (next.has(s)) next.delete(s);
+    else next.add(s);
+    onStylesChange(next);
+  };
+
   return (
     <div className="space-y-5 animate-fade-in">
       {/* 难度 + 字数设置 */}
@@ -588,6 +655,94 @@ function SelectPhase({
           <div className="mt-1 flex justify-between font-mono text-2xs text-ink-light">
             <span>50</span>
             <span>300</span>
+          </div>
+        </div>
+
+        {/* 时态倾向 - 多选，单击切换 */}
+        <div className="mt-4 border-t border-ink/10 pt-4">
+          <div className="mb-2 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
+                Tense · 时态倾向（可多选）
+              </span>
+              {tenses.size > 0 && (
+                <span className="font-mono text-2xs tabular-nums text-accent-gold">
+                  已选 {tenses.size}
+                </span>
+              )}
+            </div>
+            {tenses.size > 0 && (
+              <button
+                onClick={() => onTensesChange(new Set())}
+                className="rounded-md border border-ink/15 px-2 py-0.5 font-mono text-2xs uppercase tracking-editorial text-ink-light transition-colors hover:border-accent-red/40 hover:text-accent-red"
+              >
+                一键清空
+              </button>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {TENSE_OPTIONS.map((t) => {
+              const active = tenses.has(t.key);
+              return (
+                <button
+                  key={t.key}
+                  onClick={() => toggleTense(t.key)}
+                  className={cn(
+                    "rounded-md border px-2.5 py-1 font-body text-xs transition-all",
+                    active
+                      ? "border-accent-gold/50 bg-accent-gold/10 text-accent-gold"
+                      : "border-ink/15 text-ink-light hover:border-accent-gold/30 hover:text-ink",
+                  )}
+                >
+                  {active && <Check className="mr-1 inline h-3 w-3" strokeWidth={2} />}
+                  {t.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 文章风格倾向 - 多选，单击切换 */}
+        <div className="mt-4 border-t border-ink/10 pt-4">
+          <div className="mb-2 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
+                Style · 文章风格倾向（可多选）
+              </span>
+              {styles.size > 0 && (
+                <span className="font-mono text-2xs tabular-nums text-accent-gold">
+                  已选 {styles.size}
+                </span>
+              )}
+            </div>
+            {styles.size > 0 && (
+              <button
+                onClick={() => onStylesChange(new Set())}
+                className="rounded-md border border-ink/15 px-2 py-0.5 font-mono text-2xs uppercase tracking-editorial text-ink-light transition-colors hover:border-accent-red/40 hover:text-accent-red"
+              >
+                一键清空
+              </button>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {STYLE_OPTIONS.map((s) => {
+              const active = styles.has(s.key);
+              return (
+                <button
+                  key={s.key}
+                  onClick={() => toggleStyle(s.key)}
+                  className={cn(
+                    "rounded-md border px-2.5 py-1 font-body text-xs transition-all",
+                    active
+                      ? "border-accent-gold/50 bg-accent-gold/10 text-accent-gold"
+                      : "border-ink/15 text-ink-light hover:border-accent-gold/30 hover:text-ink",
+                  )}
+                >
+                  {active && <Check className="mr-1 inline h-3 w-3" strokeWidth={2} />}
+                  {s.label}
+                </button>
+              );
+            })}
           </div>
         </div>
       </section>

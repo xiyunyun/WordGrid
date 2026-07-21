@@ -16,6 +16,71 @@ const DIFFICULTY_DESC: Record<Difficulty, string> = {
     "适合高级学习者，使用复杂句型、高级词汇和修辞手法，接近母语表达",
 };
 
+/**
+ * 时态倾向选项（8 种）
+ * 用户可多选，AI 生成文章时会倾向于使用所选时态
+ */
+export type Tense =
+  | "simple_present" // 一般现在时
+  | "simple_past" // 一般过去时
+  | "simple_future" // 一般将来时
+  | "past_future" // 过去将来时
+  | "present_continuous" // 现在进行时
+  | "past_continuous" // 过去进行时
+  | "present_perfect" // 现在完成时
+  | "past_perfect"; // 过去完成时
+
+export const TENSE_LABELS: Record<Tense, string> = {
+  simple_present: "一般现在时",
+  simple_past: "一般过去时",
+  simple_future: "一般将来时",
+  past_future: "过去将来时",
+  present_continuous: "现在进行时",
+  past_continuous: "过去进行时",
+  present_perfect: "现在完成时",
+  past_perfect: "过去完成时",
+};
+
+/** 时态对应的英文写作提示（给 AI 的指令） */
+const TENSE_INSTRUCTIONS: Record<Tense, string> = {
+  simple_present: "一般现在时（simple present）：表达习惯、事实或普遍真理",
+  simple_past: "一般过去时（simple past）：表达过去发生的动作或状态",
+  simple_future: "一般将来时（simple future）：表达将要发生的动作或状态",
+  past_future: "过去将来时（past future）：从过去某时刻看将要发生的动作",
+  present_continuous: "现在进行时（present continuous）：表达正在进行的动作",
+  past_continuous: "过去进行时（past continuous）：表达过去某时刻正在进行的动作",
+  present_perfect: "现在完成时（present perfect）：表达过去发生并对现在有影响的动作",
+  past_perfect: "过去完成时（past perfect）：表达过去某时间点之前已完成的动作",
+};
+
+/**
+ * 文章风格倾向选项（5 种）
+ * 用户可多选，AI 生成文章时会倾向于使用所选风格
+ */
+export type ArticleStyle =
+  | "narrative" // 记叙文
+  | "expository" // 说明文
+  | "argumentative" // 议论文
+  | "practical" // 应用文
+  | "dialogue"; // 对话模拟文
+
+export const STYLE_LABELS: Record<ArticleStyle, string> = {
+  narrative: "记叙文",
+  expository: "说明文",
+  argumentative: "议论文",
+  practical: "应用文",
+  dialogue: "对话模拟文",
+};
+
+/** 风格对应的英文写作提示（给 AI 的指令） */
+const STYLE_INSTRUCTIONS: Record<ArticleStyle, string> = {
+  narrative: "记叙文（narrative）：讲述事件或故事，包含人物、情节、时间、地点",
+  expository: "说明文（expository）：客观说明事物或解释事理，结构清晰",
+  argumentative: "议论文（argumentative）：提出观点并用论据论证，说服读者",
+  practical: "应用文（practical）：实用文体，如书信、通知、日记、邮件等",
+  dialogue: "对话模拟文（dialogue）：模拟两个或多个人物 ABC 切换的对话形式",
+};
+
 /** 题目类型 */
 export type QuestionType = "fill_blank" | "choice";
 
@@ -96,11 +161,15 @@ async function callDeepSeek(
  * @param words 选中的单词列表
  * @param difficulty 难度级别
  * @param wordCount 目标文章字数（50-300）
+ * @param tenses 时态倾向（多选，空数组表示不限）
+ * @param styles 文章风格倾向（多选，空数组表示不限）
  */
 export async function generateArticle(
   words: Word[],
   difficulty: Difficulty,
   wordCount: number = 50,
+  tenses: Tense[] = [],
+  styles: ArticleStyle[] = [],
 ): Promise<string> {
   const wordList = words.map((w) => w.word).join(", ");
   const wordMeanings = words
@@ -109,26 +178,47 @@ export async function generateArticle(
 
   const systemPrompt = `你是一位专业的英语教育内容创作者，擅长根据指定单词编写生动有趣的英语阅读文章。`;
 
-  const userPrompt = `请基于以下单词，创作一篇英语短文。
+  // 构建时态倾向提示
+  const tenseSection =
+    tenses.length > 0
+      ? `【时态倾向】
+请在文章中倾向于使用以下时态，在需要时态的地方优先采用：
+${tenses.map((t) => `- ${TENSE_INSTRUCTIONS[t]}`).join("\n")}
+注意：是"倾向于"使用，不是"只能"使用。为保证文章自然，可适当穿插其他时态作为辅助。`
+      : "";
 
-【必须包含的单词】
-${wordList}
+  // 构建文章风格倾向提示
+  const styleSection =
+    styles.length > 0
+      ? `【文章风格倾向】
+请采用以下风格作为文章主体风格：
+${styles.map((s) => `- ${STYLE_INSTRUCTIONS[s]}`).join("\n")}
+${styles.includes("dialogue") ? "注意：对话模拟文使用 A/B/C 等标签前缀区分不同说话者，每行一句对话。" : ""}
+${styles.length > 1 ? "如选择了多个风格，可融合多种风格特点，但应有主次。" : ""}`
+      : "";
 
-【单词释义参考】
-${wordMeanings}
-
-【难度要求】
-${DIFFICULTY_DESC[difficulty]}
-
-【字数要求】
-文章长度严格控制在 ${wordCount} 词左右（允许上下浮动 10%），不要过长也不要太短。
-
-【写作要求】
+  // 组装最终 prompt
+  const sections = [
+    `请基于以下单词，创作一篇英语短文。`,
+    `【必须包含的单词】
+${wordList}`,
+    `【单词释义参考】
+${wordMeanings}`,
+    `【难度要求】
+${DIFFICULTY_DESC[difficulty]}`,
+    `【字数要求】
+文章长度严格控制在 ${wordCount} 词左右（允许上下浮动 10%），不要过长也不要太短。`,
+    tenseSection,
+    styleSection,
+    `【写作要求】
 1. 文章必须自然地使用上述所有单词，不要生硬堆砌
 2. 内容应有完整的情节或论述逻辑，可读性强
 3. 不要在文章中标注单词或加注中文
 4. 只输出文章正文，不要加标题、不要加任何说明文字
-5. 用换行符分隔段落`;
+5. 用换行符分隔段落`,
+  ].filter(Boolean);
+
+  const userPrompt = sections.join("\n\n");
 
   // 根据字数动态调整 max_tokens（留出余量）
   const maxTokens = Math.min(Math.max(Math.round(wordCount * 3), 800), 4096);
