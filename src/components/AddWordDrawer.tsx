@@ -433,6 +433,11 @@ export default function AddWordDrawer({
                   <span className="text-ink-light">示例：abandon|/əˈbændən/|v.|放弃；遗弃|派生：abandonment</span>
                   <br />
                   <br />
+                  笔记换行：用分号（;或；）分隔多段，导入后自动换行
+                  <br />
+                  <span className="text-ink-light">示例：happy|adj.|快乐的|反义词：unhappy；例句：He felt happy.</span>
+                  <br />
+                  <br />
                   也支持省略字段：
                   <br />
                   <span className="text-accent-gold">word|phonetic|pos|meaning</span>

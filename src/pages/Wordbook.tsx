@@ -18,7 +18,7 @@ import {
 import { useWordStore } from "@/store/wordStore";
 import {
   selectDifficultWords,
-  selectDueWords,
+  selectDueAndTodayNewWords,
   selectDueAndTodayNewCount,
   selectMasteredWords,
   selectRecentWords,
@@ -79,7 +79,10 @@ export default function Wordbook() {
   const focusWordId = searchParams.get("focus") || "";
 
   const difficultWords = selectDifficultWords(words);
-  const dueWords = selectDueWords(words);
+  // 待复习列表使用「到期词 ∪ 当日新词」合并列表，与计数红点严格一致
+  // 修复：之前列表只用 selectDueWords（仅到期词），导致当日新词不出现在列表中，
+  // 但红点数字却包含当日新词，造成「数字显示 20 但列表只有 5 个」的不一致
+  const dueWords = selectDueAndTodayNewWords(words);
   // Due Today 数量：与导航红点、Stats、DailyGrid 一致
   // （到期词 ∪ 当日新加未复习词，避免今日已复习的新词被重复计入）
   const dueTodayCount = selectDueAndTodayNewCount(words);
@@ -278,27 +281,9 @@ export default function Wordbook() {
                 if (selfCheckScope === "all_difficult") {
                   baseWords = difficultWords;
                 } else {
-                  // 默认：到期词 ∪ 当天新词（未复习）
-                  // 当天新加的词 nextReview 是明天，isDue 返回 false，但用户当天应该先学习一次
-                  // 注意：今日已复习过的词（lastReviewDate === today）不再计入，
-                  // 与导航红点（App.tsx）和 Due Today 数量逻辑保持一致，
-                  // 避免用户在 DailyGrid 复习完后进 SelfCheck 仍看到这些词
-                  const today = todayKey();
-                  const todayNewWords = words.filter(
-                    (w) =>
-                      w.date === today &&
-                      !w.isMastered &&
-                      w.lastReviewDate !== today,
-                  );
-                  // 合并去重（按 id）
-                  const seen = new Set(dueWords.map((w) => w.id));
-                  const merged = [
-                    ...dueWords,
-                    ...todayNewWords.filter((w) => !seen.has(w.id)),
-                  ];
-                  // 无待复习词时传入空数组，让 SelfCheckFlow 显示「今日无待复习词」空状态
-                  // 不再 fallback 到全部生词，避免用户误以为还要复习全部
-                  baseWords = merged;
+                  // 默认：到期词 ∪ 当天新词（未复习），与待复习列表、红点数字严格一致
+                  // dueWords 已是 selectDueAndTodayNewWords 的结果（含当日新词，已去重）
+                  baseWords = dueWords;
                 }
                 // 应用日期筛选（如果工具栏启用了日期筛选）
                 if (filter.dates && filter.dates.length > 0) {

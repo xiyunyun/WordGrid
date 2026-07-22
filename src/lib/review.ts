@@ -100,6 +100,25 @@ export function formatMDShort(dateKey: string): string {
   return `${m}/${d}`;
 }
 
+/**
+ * 格式化笔记：将半角/全角分号转换为换行符
+ *
+ * 批量导入时，一行就是一个单词（回车=新单词），所以笔记内无法直接换行。
+ * 用户可用分号分隔多段笔记，导入后自动转为多行显示。
+ * 例：「反义词：unhappy；近似词：sad；例句：He felt unhappy.」
+ *     → 「反义词：unhappy\n近似词：sad\n例句：He felt unhappy.」
+ */
+function formatNote(rawNote: string): string {
+  // 无分号时直接返回（trim 已在调用处完成）
+  if (!/[;；]/.test(rawNote)) return rawNote;
+  // 按半角或全角分号拆分，trim 每段，过滤空段，用换行符连接
+  return rawNote
+    .split(/[;；]/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .join("\n");
+}
+
 /** 解析多行文本为词条数组
  *
  * 优先识别竖线分隔格式（AI 友好，5 字段）：
@@ -107,6 +126,10 @@ export function formatMDShort(dateKey: string): string {
  *   word|phonetic|pos|meaning
  *   word|pos|meaning
  *   word|meaning
+ *
+ * 笔记字段支持分号换行：note 中的 ; 或 ；会被转为换行符，
+ * 这样用户可以在一行内写多段笔记（反义词；例句；派生词等）。
+ * 如果 note 本身包含 |，会被重新拼回（note 是最后一个字段，允许含 |）。
  *
  * 向下兼容旧格式：
  *   "word - pos. meaning" / "word pos. meaning" / "word meaning"
@@ -129,12 +152,14 @@ export function parseBulkText(
         // 根据字段数推断含义（向后兼容字段数变化）
         if (parts.length >= 5) {
           // word | phonetic | pos | meaning | note
+          // note 是最后一个字段，允许包含 |（重新拼回）
+          const noteRaw = parts.slice(4).join("|");
           return {
             word,
             phonetic: parts[1],
             pos: parts[2],
             meaning: parts[3],
-            note: parts[4],
+            note: formatNote(noteRaw),
           };
         }
         if (parts.length === 4) {

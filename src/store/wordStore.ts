@@ -498,6 +498,39 @@ export function selectDueWords(words: Word[]): Word[] {
 }
 
 /**
+ * 「到期词 ∪ 当日新词」合并列表 —— 用于生词本「待复习」标签的实际单词展示
+ *
+ * 与 selectDueAndTodayNewCount 的计数逻辑严格一致：
+ * - 到期词：isDifficult && !isMastered && isDue(nextReview)
+ * - 当日新词：date === today && !isMastered && lastReviewDate !== today（未复习过）
+ * - 去重：当日新词中已被计入到期词的不再重复添加
+ */
+export function selectDueAndTodayNewWords(words: Word[]): Word[] {
+  const today = todayKey();
+  const todayNewIds = new Set<string>();
+  for (const w of words) {
+    if (
+      w.date === today &&
+      !w.isMastered &&
+      w.lastReviewDate !== today
+    ) {
+      todayNewIds.add(w.id);
+    }
+  }
+  const result: Word[] = [];
+  for (const w of words) {
+    if (w.isDifficult && !w.isMastered && isDue(w.nextReview)) {
+      result.push(w);
+      todayNewIds.delete(w.id);
+    }
+  }
+  for (const w of words) {
+    if (todayNewIds.has(w.id)) result.push(w);
+  }
+  return result;
+}
+
+/**
  * 「到期词 ∪ 当日新词」合并数量 —— 用于导航红点与 DailyGrid 的 Due Today 提示
  *
  * 当天新加的词 nextReview 通常是明天，isDue 返回 false，但用户当天应该先学习一次，
