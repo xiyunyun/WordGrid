@@ -23,6 +23,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "2.7.1",
+    date: "2026-07-22",
+    items: [
+      "导出弹窗新增日期筛选与「排除已掌握」选项，可按特定日期或掌握状态灵活导出",
+      "统计页熟练度排行默认显示数量从 8 改为 10",
+      "关于页软件介绍文案重写，更新联系方式（新增邮箱）",
+    ],
+  },
+  {
     version: "2.7.0",
     date: "2026-07-22",
     items: [

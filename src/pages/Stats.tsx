@@ -113,8 +113,8 @@ export default function Stats() {
     });
   }, [dailyData]);
 
-  // 熟练度排行显示数量：默认 8，可选 5/10/20/50/全部
-  const [rankLimit, setRankLimit] = useState<number | "all">(8);
+  // 熟练度排行显示数量：默认 10，可选 5/10/20/50/全部
+  const [rankLimit, setRankLimit] = useState<number | "all">(10);
 
   // 今日复习统计
   const todayReviews = logs.filter(

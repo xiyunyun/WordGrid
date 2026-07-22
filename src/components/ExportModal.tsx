@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { X, Download, FileText, FileCode, Table, Layers } from "lucide-react";
 import type { Word } from "@/types";
 import {
@@ -9,6 +9,7 @@ import {
   type ExportScope,
 } from "@/lib/exporter";
 import { cn } from "@/lib/utils";
+import DatePickerCalendar from "@/components/DatePickerCalendar";
 
 interface ExportModalProps {
   open: boolean;
@@ -83,16 +84,43 @@ export default function ExportModal({ open, onClose, words }: ExportModalProps) 
   const [format, setFormat] = useState<ExportFormat>("txt");
   const [scope, setScope] = useState<ExportScope>("word_meaning");
   const [justExported, setJustExported] = useState(false);
+  // 筛选：日期（空=全部）+ 排除已掌握
+  const [filterDates, setFilterDates] = useState<string[]>([]);
+  const [excludeMastered, setExcludeMastered] = useState(false);
+
+  // 根据筛选项计算实际导出的单词（hooks 必须在 early return 之前调用）
+  const filteredWords = useMemo(() => {
+    let result = words;
+    if (filterDates.length > 0) {
+      const dateSet = new Set(filterDates);
+      result = result.filter((w) => dateSet.has(w.date));
+    }
+    if (excludeMastered) {
+      result = result.filter((w) => !w.isMastered);
+    }
+    return result;
+  }, [words, filterDates, excludeMastered]);
 
   if (!open) return null;
 
   const handleExport = () => {
-    const content = buildExportContent(words, format, scope);
+    const content = buildExportContent(filteredWords, format, scope);
     const fileName = buildFileName(format, scope);
     downloadFile(content, fileName);
     setJustExported(true);
     setTimeout(() => setJustExported(false), 2000);
   };
+
+  // 筛选状态描述
+  const filterDescParts: string[] = [];
+  if (filterDates.length === 0) {
+    filterDescParts.push("全部日期");
+  } else if (filterDates.length === 1) {
+    filterDescParts.push(`仅 ${filterDates[0]}`);
+  } else {
+    filterDescParts.push(`${filterDates.length} 个日期`);
+  }
+  if (excludeMastered) filterDescParts.push("排除已掌握");
 
   return (
     <div className="fixed inset-0 z-50 flex animate-fade-in items-center justify-center p-4">
@@ -126,11 +154,52 @@ export default function ExportModal({ open, onClose, words }: ExportModalProps) 
           {/* 统计 */}
           <div className="mb-5 rounded-md border border-ink/10 bg-paper p-3 text-center">
             <span className="font-display text-2xl font-medium text-ink md:text-3xl">
-              {words.length}
+              {filteredWords.length}
             </span>
             <span className="ml-2 font-mono text-2xs uppercase tracking-editorial text-ink-light">
-              words to export
+              / {words.length} words to export
             </span>
+            {/* 筛选状态描述 */}
+            <div className="mt-1 font-body text-2xs text-ink-muted">
+              {filterDescParts.join(" · ")}
+            </div>
+          </div>
+
+          {/* 筛选项：日期 + 排除已掌握 */}
+          <div className="mb-5">
+            <label className="eyebrow mb-3 block">Filter · 筛选</label>
+            <div className="flex flex-wrap items-center gap-2">
+              <DatePickerCalendar
+                selected={filterDates}
+                onChange={setFilterDates}
+                label="日期筛选"
+              />
+              {/* 排除已掌握 */}
+              <button
+                onClick={() => setExcludeMastered((v) => !v)}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-md border px-3 py-1.5 font-mono text-2xs uppercase tracking-editorial transition-colors",
+                  excludeMastered
+                    ? "border-accent-gold bg-accent-gold/10 text-accent-gold"
+                    : "border-ink/20 text-ink-light hover:border-ink/40 hover:text-ink",
+                )}
+                title="勾选后导出时不包含已掌握的单词"
+              >
+                {excludeMastered ? "✓ " : ""}排除已掌握
+              </button>
+              {/* 重置筛选 */}
+              {(filterDates.length > 0 || excludeMastered) && (
+                <button
+                  onClick={() => {
+                    setFilterDates([]);
+                    setExcludeMastered(false);
+                  }}
+                  className="rounded-md border border-ink/20 px-3 py-1.5 font-mono text-2xs uppercase tracking-editorial text-ink-light transition-colors hover:border-ink/40 hover:text-ink"
+                >
+                  重置
+                </button>
+              )}
+            </div>
           </div>
 
           {/* 格式选择 */}
@@ -238,11 +307,11 @@ export default function ExportModal({ open, onClose, words }: ExportModalProps) 
           </button>
           <button
             onClick={handleExport}
-            disabled={words.length === 0}
+            disabled={filteredWords.length === 0}
             className="btn-primary disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Download className="h-4 w-4" strokeWidth={1.5} />
-            导出 {words.length} 个单词
+            导出 {filteredWords.length} 个单词
           </button>
         </div>
       </div>
