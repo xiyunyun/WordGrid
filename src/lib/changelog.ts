@@ -23,6 +23,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "2.6.1",
+    date: "2026-07-22",
+    items: [
+      "修复答错后单词从待复习列表消失的 bug：答错的词始终保持在待复习中，只有答对才移除",
+      "修复「再来一轮」中先答对后答错时 resetReview 不被调用的问题（早期返回只对答对生效）",
+      "修复答错后清除 lastReviewDate，允许重问时答对能再次推进艾宾浩斯阶段",
+      "修复自我检测进度数值错误：consumedInInitial 只统计当前 initialWords 中的已消费词",
+      "修复重问队列关闭网页后丢失：改用 localStorage 持久化 reaskQueue",
+    ],
+  },
+  {
     version: "2.6.0",
     date: "2026-07-22",
     items: [

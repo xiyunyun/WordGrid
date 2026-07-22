@@ -340,11 +340,10 @@ export const useWordStore = create<WordStore>()(
           pushReviewLog(log).catch((e) => console.error("[云同步] 推送异常:", e));
         }
 
-        // 同一天最多只推进一次复习阶段
-        // 防止「再来一轮」重复认识导致阶段直接到永久
-        if (word.lastReviewDate === today) return;
-
         if (correct) {
+          // 同一天最多只推进一次复习阶段
+          // 防止「再来一轮」重复认识导致阶段直接到永久
+          if (word.lastReviewDate === today) return;
           const next = advanceReview(word.reviewStage);
           if (next.reviewStage >= 6) {
             // 推进到「永久」阶段即视为已掌握
@@ -359,13 +358,14 @@ export const useWordStore = create<WordStore>()(
             });
           }
         } else {
-          // 答错：重置复习阶段到 stage=0，nextReview 保持今天（仍然到期）
-          // 不设置 lastReviewDate，允许今日重问时再次推进阶段
+          // 答错：始终重置复习阶段到 stage=0，nextReview 设为今天（仍然到期）
+          // 清除 lastReviewDate，允许重问时答对能再次推进阶段
           // 这样答错的词仍然计入"待复习"红点数字，只有答对时才从红点中移除
           const next = resetReview();
           get().updateWord(id, {
             ...next,
             isMastered: false,
+            lastReviewDate: "",
           });
         }
       },

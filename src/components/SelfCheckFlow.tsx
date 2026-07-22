@@ -6,13 +6,13 @@ import { formatMD, todayKey } from "@/lib/review";
 import SpeakButton from "@/components/SpeakButton";
 
 /**
- * 模块级缓存：路由切换时保留「再来一轮」状态
+ * localStorage 持久化缓存：跨路由切换 AND 跨页面刷新/关闭保留状态
  *
  * 设计原理：
  * - SelfCheckFlow 的进度（已消费的词）从今日 review_logs 派生，天然跨设备同步
- * - 但「再来一轮」是本地行为，不入 logs（避免污染统计），所以需要手动缓存
+ * - 但「再来一轮」和「重问队列」是本地行为，不入 logs（避免污染统计），所以需要手动缓存
  * - 缓存 key = persistKey + 当日日期，确保每天重置
- * - 刷新页面/关闭标签页后缓存丢失（重新从 logs 派生，合理）
+ * - 使用 localStorage 而非模块级 Map，确保关闭网页后重问队列不丢失
  */
 interface RestartCache {
   restarted: boolean;
@@ -22,25 +22,39 @@ interface RestartCache {
   reaskIds: string[];
 }
 
-const restartCacheMap = new Map<string, RestartCache>();
+const REASK_STORAGE_PREFIX = "wordgrid-reask-";
 
 function getRestartCacheKey(persistKey: string | undefined): string {
-  return `${persistKey ?? "default"}-${todayKey()}`;
+  return `${REASK_STORAGE_PREFIX}${persistKey ?? "default"}-${todayKey()}`;
 }
 
 function loadRestartCache(persistKey: string | undefined): RestartCache | null {
-  const key = getRestartCacheKey(persistKey);
-  return restartCacheMap.get(key) ?? null;
+  try {
+    const key = getRestartCacheKey(persistKey);
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    return JSON.parse(raw) as RestartCache;
+  } catch {
+    return null;
+  }
 }
 
 function saveRestartCache(persistKey: string | undefined, cache: RestartCache): void {
-  const key = getRestartCacheKey(persistKey);
-  restartCacheMap.set(key, cache);
+  try {
+    const key = getRestartCacheKey(persistKey);
+    localStorage.setItem(key, JSON.stringify(cache));
+  } catch {
+    // localStorage 不可用时静默降级
+  }
 }
 
 function clearRestartCache(persistKey: string | undefined): void {
-  const key = getRestartCacheKey(persistKey);
-  restartCacheMap.delete(key);
+  try {
+    const key = getRestartCacheKey(persistKey);
+    localStorage.removeItem(key);
+  } catch {
+    // ignore
+  }
 }
 
 interface SelfCheckFlowProps {
@@ -153,17 +167,16 @@ export default function SelfCheckFlow({
     () => cachedRestart?.restartedConsumed ?? 0,
   );
 
-  // 当 restarted/restartedStats/restartedConsumed/reaskQueue 变化时，同步到模块级缓存
-  // 这样路由切换后重新挂载能恢复「再来一轮」进度
+  // 当 restarted/restartedStats/restartedConsumed/reaskQueue 变化时，同步到 localStorage
+  // 这样路由切换或关闭网页后重新挂载能恢复进度和重问队列
+  // 关键：无论是否 restarted 都要保存，否则非 restarted 模式下的 reaskQueue 会丢失
   useEffect(() => {
-    if (restarted) {
-      saveRestartCache(persistKey, {
-        restarted,
-        restartedStats,
-        restartedConsumed,
-        reaskIds: reaskQueue.map((w) => w.id),
-      });
-    }
+    saveRestartCache(persistKey, {
+      restarted,
+      restartedStats,
+      restartedConsumed,
+      reaskIds: reaskQueue.map((w) => w.id),
+    });
   }, [restarted, restartedStats, restartedConsumed, reaskQueue, persistKey]);
 
   // 从今日 logs 派生已消费集合与统计（跨设备同步的进度来源）
@@ -171,6 +184,19 @@ export default function SelfCheckFlow({
     () => getTodaySelfCheckStats(logs, mode),
     [logs, mode],
   );
+
+  // 仅统计 initialWords 中已消费的词（避免历史 logs 中已不在 initialWords 的词干扰进度）
+  // 场景：用户学了 20 个词（答对→nextReview 推进到明天），关闭网页再打开，
+  //       initialWords 变成 30 个（不含旧的 20 个），但 consumedIds 仍有 20 个。
+  //       如果用 consumedIds.size 判断 done，会错误地认为已完成 20/30。
+  //       用 consumedInInitial 只统计当前 initialWords 中的已消费词，进度才准确。
+  const consumedInInitial = useMemo(() => {
+    const set = new Set<string>();
+    for (const w of initialWords) {
+      if (consumedIds.has(w.id)) set.add(w.id);
+    }
+    return set;
+  }, [initialWords, consumedIds]);
 
   // 主队列 = initialWords 中尚未消费的词 + 本轮重问队列
   // dryRun 模式下不从 logs 派生（因为 dryRun 不写 logs）
@@ -181,9 +207,9 @@ export default function SelfCheckFlow({
       const remaining = initialWords.slice(restartedConsumed);
       return [...remaining, ...reaskQueue];
     }
-    const remaining = initialWords.filter((w) => !consumedIds.has(w.id));
+    const remaining = initialWords.filter((w) => !consumedInInitial.has(w.id));
     return [...remaining, ...reaskQueue];
-  }, [initialWords, consumedIds, reaskQueue, dryRun, restarted, restartedConsumed]);
+  }, [initialWords, consumedInInitial, reaskQueue, dryRun, restarted, restartedConsumed]);
 
   // total 包含重问的词：答错后词会被追加到 reaskQueue，总数应相应增加
   // 这样进度显示为 "1 / 41 (含重问 1)" 而不是 "1 / 40 (含重问 1)"
@@ -192,11 +218,11 @@ export default function SelfCheckFlow({
   const current = queue[0];
 
   // done 判断：所有原始词都已消费 且 重问队列清空
-  // 用 initialTotal（不含重问）判断，因为 consumedIds 只统计唯一 wordId
-  // 重问的词不会增加 consumedIds.size，所以用 initialTotal 才能正确判断完成
+  // 用 consumedInInitial.size（只统计 initialWords 中的已消费词）判断完成
+  // 这样关闭网页再打开后，不会因历史 logs 中的词错误判断为已完成
   const done = restarted
     ? restartedConsumed >= initialTotal && reaskQueue.length === 0
-    : !dryRun && consumedIds.size >= initialTotal && reaskQueue.length === 0;
+    : !dryRun && consumedInInitial.size >= initialTotal && reaskQueue.length === 0;
 
   // 统计展示
   const stats = restarted
@@ -209,6 +235,8 @@ export default function SelfCheckFlow({
   // - initialTotal===0 且 今日没有 self_check 日志 → 真正无待复习，显示空状态
   // - initialTotal===0 但 今日有 self_check 日志 → 已复习完毕，进入 done 分支显示完成页 + 再来一轮
   //   （避免用户刚复习完进 SelfCheck 看到空状态而非完成页）
+  // 注意：这里用全局 consumedIds 判断"今日是否复习过"，而非 consumedInInitial
+  //       因为 initialTotal===0 时 consumedInInitial 也必然为 0，无法区分两种情况
   const hasTodayLogs = !dryRun && consumedIds.size > 0;
 
   // 当 initialTotal===0 但今日已有 logs 时，强制 done=true，显示完成页
@@ -243,10 +271,11 @@ export default function SelfCheckFlow({
     }
 
     // 正常模式：
-    // - 首次复习的词（来自 remaining）：日志写入后 consumedIds 自动更新，remaining 缩减
+    // - 首次复习的词（来自 remaining）：日志写入后 consumedInInitial 自动更新，remaining 缩减
     // - 重问的词（来自 reaskQueue）：需要手动管理 reaskQueue
-    // 判断 current 是否来自 reaskQueue：检查它是否已在 consumedIds 中（重问的词之前一定被消费过）
-    const isFromReask = !dryRun && consumedIds.has(current.id);
+    // 判断 current 是否来自 reaskQueue：直接检查 reaskQueue 中是否包含该词
+    // （不再用 consumedIds.has 判断，因为 consumedIds 可能包含已不在 initialWords 中的历史词）
+    const isFromReask = reaskQueue.some((w) => w.id === current.id);
 
     if (isFromReask) {
       // 来自重问队列：无论对错都从 reaskQueue 移除当前位置
@@ -363,7 +392,8 @@ export default function SelfCheckFlow({
   }
 
   // 计算进度条位置（基于已消费数）
-  const consumedCount = restarted ? restartedConsumed : (dryRun ? 0 : consumedIds.size);
+  // 用 consumedInInitial.size 而非 consumedIds.size，确保只统计当前 initialWords 中的已消费词
+  const consumedCount = restarted ? restartedConsumed : (dryRun ? 0 : consumedInInitial.size);
 
   return (
     <div className="animate-fade-in">
