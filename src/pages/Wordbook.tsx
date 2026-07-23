@@ -893,10 +893,10 @@ function RandomView({ words, filter, onRequestNote }: { words: Word[]; filter: F
                       Note · 笔记
                     </span>
                     <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
-                      点击展开
+                      点击编辑
                     </span>
                   </div>
-                  <p className="font-body text-sm leading-relaxed text-ink-muted whitespace-pre-wrap line-clamp-2">
+                  <p className="font-body text-sm leading-relaxed text-ink-muted whitespace-pre-wrap line-clamp-7">
                     {liveCurrent.note}
                   </p>
                 </div>
@@ -1209,10 +1209,10 @@ function DictationView({ words, filter, onRequestNote }: { words: Word[]; filter
                       Note · 笔记
                     </span>
                     <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
-                      点击展开
+                      点击编辑
                     </span>
                   </div>
-                  <p className="font-body text-sm leading-relaxed text-ink-muted whitespace-pre-wrap line-clamp-2">
+                  <p className="font-body text-sm leading-relaxed text-ink-muted whitespace-pre-wrap line-clamp-7">
                     {liveCurrent.note}
                   </p>
                 </div>
@@ -1370,10 +1370,10 @@ function CardsView({
                 Note · 笔记
               </span>
               <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
-                点击展开
+                点击编辑
               </span>
             </div>
-            <p className="font-body text-sm leading-relaxed text-ink-muted whitespace-pre-wrap line-clamp-2">
+            <p className="font-body text-sm leading-relaxed text-ink-muted whitespace-pre-wrap line-clamp-7">
               {current.note}
             </p>
           </div>

@@ -466,11 +466,11 @@ export default function SelfCheckFlow({
                     </span>
                     {onRequestNote && (
                       <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
-                        点击展开
+                        点击编辑
                       </span>
                     )}
                   </div>
-                  <p className="font-body text-sm leading-relaxed text-ink-muted whitespace-pre-wrap line-clamp-2">
+                  <p className="font-body text-sm leading-relaxed text-ink-muted whitespace-pre-wrap line-clamp-7">
                     {liveCurrent.note}
                   </p>
                 </div>
