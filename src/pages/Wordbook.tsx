@@ -14,6 +14,9 @@ import {
   Download,
   Volume2,
   Loader2,
+  Layers,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useWordStore } from "@/store/wordStore";
 import {
@@ -37,7 +40,7 @@ import WordbookFilterBar, {
   type FilterState,
 } from "@/components/WordbookFilterBar";
 
-type ViewMode = "list" | "self_check" | "random" | "dictation";
+type ViewMode = "list" | "self_check" | "random" | "dictation" | "cards";
 type ListTag = "due" | "difficult" | "mastered" | "recent7" | "all";
 /** 自我检测练习范围 */
 type SelfCheckScope = "due" | "all_difficult";
@@ -161,11 +164,12 @@ export default function Wordbook() {
       {/* 模式切换 */}
       <nav className="flex flex-wrap gap-2">
         {[
-          { key: "list" as ViewMode, label: "List", labelCN: "单词列表", icon: List },
-          { key: "self_check" as ViewMode, label: "Self-Check", labelCN: "自我检测", icon: Eye },
-          { key: "random" as ViewMode, label: "Random", labelCN: "随机抽查", icon: Shuffle },
-          { key: "dictation" as ViewMode, label: "Dictation", labelCN: "听写测试", icon: Keyboard },
-        ].map((m) => {
+    { key: "list" as ViewMode, label: "List", labelCN: "单词列表", icon: List },
+    { key: "self_check" as ViewMode, label: "Self-Check", labelCN: "自我检测", icon: Eye },
+    { key: "random" as ViewMode, label: "Random", labelCN: "随机抽查", icon: Shuffle },
+    { key: "dictation" as ViewMode, label: "Dictation", labelCN: "听写测试", icon: Keyboard },
+    { key: "cards" as ViewMode, label: "Cards", labelCN: "卡片浏览", icon: Layers },
+  ].map((m) => {
           const Icon = m.icon;
           const active = mode === m.key;
           return (
@@ -194,10 +198,10 @@ export default function Wordbook() {
         <WordbookFilterBar
           filter={filter}
           onChange={setFilter}
-          showStage={mode === "list" || mode === "random" || mode === "dictation"}
-          showPos={mode === "list" || mode === "random" || mode === "dictation"}
+          showStage={mode === "list" || mode === "random" || mode === "dictation" || mode === "cards"}
+          showPos={mode === "list" || mode === "random" || mode === "dictation" || mode === "cards"}
           showExcludeMastered={
-            mode === "list" || mode === "random" || mode === "dictation"
+            mode === "list" || mode === "random" || mode === "dictation" || mode === "cards"
           }
           showDates={true}
           selfCheckPlaceholder={
@@ -303,6 +307,13 @@ export default function Wordbook() {
           )}
           {mode === "dictation" && (
             <DictationView
+              words={words}
+              filter={filter}
+              onRequestNote={openNoteModal}
+            />
+          )}
+          {mode === "cards" && (
+            <CardsView
               words={words}
               filter={filter}
               onRequestNote={openNoteModal}
@@ -1232,6 +1243,172 @@ function DictationView({ words, filter, onRequestNote }: { words: Word[]; filter
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ============ 卡片浏览模式 - 纯查看完整单词信息，上一个/下一个轮播 ============ */
+
+function CardsView({
+  words,
+  filter,
+  onRequestNote,
+}: {
+  words: Word[];
+  filter: FilterState;
+  onRequestNote: (word: Word) => void;
+}) {
+  // 应用筛选：与 RandomView/DictationView 一致的筛选逻辑
+  const filteredWords = useMemo(() => {
+    return words.filter((w) => {
+      if (filter.excludeMastered && w.isMastered) return false;
+      if (filter.stages) {
+        const wordStage = w.isMastered ? -1 : w.reviewStage;
+        if (!filter.stages.includes(wordStage)) return false;
+      }
+      if (filter.pos && !filter.pos.includes(w.pos)) return false;
+      if (filter.dates && filter.dates.length > 0 && !filter.dates.includes(w.date))
+        return false;
+      return true;
+    });
+  }, [words, filter]);
+
+  const [idx, setIdx] = useState(0);
+
+  // 筛选变化时重置索引
+  useEffect(() => {
+    setIdx(0);
+  }, [filteredWords.length]);
+
+  // 键盘左右切换
+  useEffect(() => {
+    if (filteredWords.length === 0) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") {
+        setIdx((i) => (i - 1 + filteredWords.length) % filteredWords.length);
+      } else if (e.key === "ArrowRight") {
+        setIdx((i) => (i + 1) % filteredWords.length);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [filteredWords.length]);
+
+  if (filteredWords.length === 0) {
+    return (
+      <div className="mx-auto max-w-2xl">
+        <div className="rounded-md border border-ink/15 bg-paper-card p-12 text-center">
+          <div className="eyebrow mb-4 text-ink-light">Cards</div>
+          <p className="font-body text-sm text-ink-muted">
+            当前筛选条件下没有单词
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const current = filteredWords[idx];
+  const stageLabels = ["初识", "巩固", "熟悉", "稳定", "深植", "长期", "永久"];
+
+  const goPrev = () =>
+    setIdx((i) => (i - 1 + filteredWords.length) % filteredWords.length);
+  const goNext = () => setIdx((i) => (i + 1) % filteredWords.length);
+
+  return (
+    <div className="mx-auto max-w-2xl">
+      {/* 卡片本体 - 与 RandomView/DictationView 统一样式 */}
+      <div className="rounded-md border border-ink/15 bg-paper-card p-6 md:p-12 text-center hover:shadow-paper-hover">
+        <div className="eyebrow mb-4 text-ink-light">
+          Cards · {idx + 1} / {filteredWords.length}
+        </div>
+
+        {/* 单词 */}
+        <h3 className="font-serif text-3xl md:text-5xl font-medium tracking-word text-ink">
+          {current.word}
+        </h3>
+
+        {/* 音标 */}
+        {current.phonetic && (
+          <div className="mt-2 font-mono text-sm italic text-accent-gold">
+            {current.phonetic}
+          </div>
+        )}
+
+        {/* 词性 + 发音 */}
+        <div className="mt-2 flex items-center justify-center gap-3">
+          {current.pos && (
+            <span className="font-mono text-sm italic text-ink-light">
+              {current.pos}
+            </span>
+          )}
+          <SpeakButton text={current.word} size="md" />
+        </div>
+
+        <div className="my-8 border-t border-dashed border-ink/15" />
+
+        {/* 词意 */}
+        <p className="font-body text-xl md:text-2xl text-ink-soft">
+          {current.meaning}
+        </p>
+
+        {/* 笔记（点击展开） */}
+        {current.note && (
+          <div
+            className="mt-4 cursor-pointer rounded-md border border-accent-gold/30 bg-accent-gold/5 px-4 py-3 text-left transition-colors hover:bg-accent-gold/10"
+            onClick={() => onRequestNote(current)}
+          >
+            <div className="mb-1 flex items-center justify-between">
+              <span className="font-mono text-2xs uppercase tracking-editorial text-accent-gold">
+                Note · 笔记
+              </span>
+              <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
+                点击展开
+              </span>
+            </div>
+            <p className="font-body text-sm leading-relaxed text-ink-muted whitespace-pre-wrap line-clamp-2">
+              {current.note}
+            </p>
+          </div>
+        )}
+
+        {/* 记忆阶段标签 */}
+        <div className="mt-6 flex items-center justify-center gap-2">
+          {current.isMastered ? (
+            <span className="rounded border border-accent-green/30 bg-accent-green/5 px-2 py-0.5 font-mono text-2xs uppercase tracking-editorial text-accent-green">
+              已掌握
+            </span>
+          ) : (
+            <span className="rounded border border-ink/15 px-2 py-0.5 font-mono text-2xs uppercase tracking-editorial text-ink-light">
+              {stageLabels[current.reviewStage] ?? "初识"}
+            </span>
+          )}
+          <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
+            · {current.date}
+          </span>
+        </div>
+      </div>
+
+      {/* 上一个/下一个按钮 */}
+      <div className="mt-6 flex items-center justify-center gap-4">
+        <button
+          onClick={goPrev}
+          className="flex items-center gap-2 rounded-md border border-ink/20 px-6 py-2.5 font-mono text-2xs uppercase tracking-editorial text-ink-light transition-colors hover:border-ink/40 hover:text-ink"
+        >
+          <ChevronLeft className="h-4 w-4" strokeWidth={1.5} />
+          上一个
+        </button>
+        <button
+          onClick={goNext}
+          className="flex items-center gap-2 rounded-md border border-ink/20 px-6 py-2.5 font-mono text-2xs uppercase tracking-editorial text-ink-light transition-colors hover:border-ink/40 hover:text-ink"
+        >
+          下一个
+          <ChevronRight className="h-4 w-4" strokeWidth={1.5} />
+        </button>
+      </div>
+
+      <p className="mt-3 text-center font-mono text-2xs uppercase tracking-editorial text-ink-light/60">
+        ← → 键盘左右切换
+      </p>
     </div>
   );
 }

@@ -16,6 +16,7 @@ import {
   Trash2,
   CheckCircle2,
   AlertTriangle,
+  Check,
 } from "lucide-react";
 import { useWordStore } from "@/store/wordStore";
 import { selectDueAndTodayNewCount } from "@/store/wordStore";
@@ -58,6 +59,7 @@ let cachedFilterDueOnly = false;
 let cachedFilterNoteKeyword = "";
 let cachedFilterPos: Set<string> | null = null;
 let cachedFilterStages: Set<number> | null = null;
+let cachedExcludeMastered = false;
 
 /**
  * 记忆阶段筛选项（与 WordbookFilterBar 一致）
@@ -136,6 +138,10 @@ export default function DailyGrid({
   // 记忆阶段筛选（多选，与生词本一致：-1 表示「永久（已掌握）」）
   const [filterStages, setFilterStages] = useState<Set<number>>(() => cachedFilterStages ?? new Set());
   useEffect(() => { cachedFilterStages = filterStages; }, [filterStages]);
+
+  // 排除已掌握（与生词本一致）
+  const [excludeMastered, setExcludeMastered] = useState<boolean>(() => cachedExcludeMastered);
+  useEffect(() => { cachedExcludeMastered = excludeMastered; }, [excludeMastered]);
 
   // 词性筛选面板展开/收起
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
@@ -246,7 +252,8 @@ export default function DailyGrid({
     filterDueOnly ||
     filterNoteKeyword.trim().length > 0 ||
     filterPos.size > 0 ||
-    filterStages.size > 0;
+    filterStages.size > 0 ||
+    excludeMastered;
 
   // 清空所有筛选
   const clearAllFilters = () => {
@@ -254,6 +261,7 @@ export default function DailyGrid({
     setFilterNoteKeyword("");
     setFilterPos(new Set());
     setFilterStages(new Set());
+    setExcludeMastered(false);
   };
 
   // 按日期分组（先按筛选条件过滤单词，再按日期分组）
@@ -264,6 +272,8 @@ export default function DailyGrid({
     // 第一轮：按单词/日期筛选
     const map = new Map<string, Word[]>();
     for (const w of words) {
+      // 排除已掌握
+      if (excludeMastered && w.isMastered) continue;
       // 词性筛选：多词性单词任一命中即保留
       if (filterPos.size > 0) {
         if (!w.pos) continue;
@@ -297,7 +307,7 @@ export default function DailyGrid({
     return entries.sort((a, b) =>
       sortAsc ? (a.date < b.date ? -1 : 1) : a.date < b.date ? 1 : -1,
     );
-  }, [words, filterPos, filterStages, filterDueOnly, filterNoteKeyword, dateNotes, sortAsc]);
+  }, [words, filterPos, filterStages, filterDueOnly, filterNoteKeyword, excludeMastered, dateNotes, sortAsc]);
 
   // 批量删除模式：按日历选中的日期二次筛选（只显示选中日期的板块）
   const visibleGroups = useMemo(() => {
@@ -486,9 +496,26 @@ export default function DailyGrid({
                   {(filterDueOnly ? 1 : 0) +
                     (filterNoteKeyword.trim() ? 1 : 0) +
                     (filterPos.size > 0 ? 1 : 0) +
-                    (filterStages.size > 0 ? 1 : 0)}
+                    (filterStages.size > 0 ? 1 : 0) +
+                    (excludeMastered ? 1 : 0)}
                 </span>
               )}
+            </button>
+
+            {/* 排除已掌握按钮 */}
+            <button
+              onClick={() => setExcludeMastered((v) => !v)}
+              className={cn(
+                "flex items-center gap-1.5 rounded-md border px-3 py-1.5 font-mono text-2xs uppercase tracking-editorial transition-colors",
+                excludeMastered
+                  ? "border-ink bg-ink text-paper"
+                  : "border-ink/15 bg-paper-card text-ink-light hover:border-ink/30 hover:text-ink",
+              )}
+              title="排除已掌握的单词"
+            >
+              <Filter className="h-3.5 w-3.5" strokeWidth={1.5} />
+              排除已掌握
+              {excludeMastered && <Check className="h-3 w-3" strokeWidth={2} />}
             </button>
 
             {/* 批量删除按钮：进入多选模式 */}

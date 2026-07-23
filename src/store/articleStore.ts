@@ -34,6 +34,8 @@ export interface ArticleArchive {
   questions: QuizQuestion[];
   /** 最近一次作答记录 */
   attempt?: QuizAttempt;
+  /** 文章翻译（AI 翻译后持久化，避免重复调用 API） */
+  translation?: string;
 }
 
 /** 一次作答记录 */
@@ -76,6 +78,9 @@ interface ArticleStore {
 
   /** 清除作答记录（追加题目后旧作答不再适用） */
   clearAttempt: (archiveId: string) => void;
+
+  /** 保存文章翻译到归档（避免重复调用 API） */
+  setTranslation: (archiveId: string, translation: string) => void;
 
   /** 删除归档（若删除的是 lastReadArchiveId 则一并清除） */
   removeArchive: (id: string) => void;
@@ -169,6 +174,18 @@ export const useArticleStore = create<ArticleStore>()(
         set((s) => ({
           archives: s.archives.map((a) =>
             a.id === archiveId ? { ...a, attempt: undefined } : a,
+          ),
+        }));
+        if (get().syncEnabled) {
+          const updated = get().archives.find((a) => a.id === archiveId);
+          if (updated) pushArticle(updated).catch((e) => console.error("[云同步] 文章推送异常:", e));
+        }
+      },
+
+      setTranslation: (archiveId, translation) => {
+        set((s) => ({
+          archives: s.archives.map((a) =>
+            a.id === archiveId ? { ...a, translation } : a,
           ),
         }));
         if (get().syncEnabled) {

@@ -23,6 +23,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "2.8.0",
+    date: "2026-07-22",
+    items: [
+      "生词本新增「卡片浏览」模式：以卡片轮播展示完整单词信息，支持上一个/下一个切换和键盘左右键，筛选项与其他模式一致",
+      "积木造文翻译结果持久化：翻译后自动保存到归档并云同步，再次打开归档不再重复调用 API",
+      "每日网格工具栏新增「排除已掌握」筛选按钮，位于筛选与批量删除之间",
+    ],
+  },
+  {
     version: "2.7.2",
     date: "2026-07-22",
     items: [

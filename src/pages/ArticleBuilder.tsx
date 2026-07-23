@@ -67,6 +67,7 @@ export default function ArticleBuilder() {
   const setQuestions = useArticleStore((s) => s.setQuestions);
   const setAttempt = useArticleStore((s) => s.setAttempt);
   const clearAttempt = useArticleStore((s) => s.clearAttempt);
+  const setTranslationStore = useArticleStore((s) => s.setTranslation);
   const removeArchive = useArticleStore((s) => s.removeArchive);
 
   const [phase, setPhase] = useState<Phase>("select");
@@ -232,6 +233,10 @@ export default function ArticleBuilder() {
       const result = await translateArticle(activeArticle);
       setTranslation(result);
       setShowTranslation(true);
+      // 持久化到归档，避免重复翻译浪费 API token
+      if (activeArchiveId) {
+        setTranslationStore(activeArchiveId, result);
+      }
     } catch (e) {
       setTranslateError(e instanceof Error ? e.message : "翻译失败，请稍后重试");
     } finally {
@@ -303,7 +308,8 @@ export default function ArticleBuilder() {
     setViewingArchive(a);
     setLastReadArchiveId(a.id);
     setQuestionsState(a.questions);
-    setTranslation("");
+    // 从归档恢复翻译（避免重复调用 API）
+    setTranslation(a.translation || "");
     setShowTranslation(false);
     setTranslateError("");
     setQuizError("");

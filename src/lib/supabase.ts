@@ -79,6 +79,7 @@ export interface ArticleArchiveRow {
   difficulty: string | null;
   questions: unknown;
   attempt: unknown;
+  translation: string | null;
   server_created_at: string;
 }
 
@@ -194,6 +195,7 @@ export function toArticleArchiveRow(
     difficulty: a.difficulty,
     questions: a.questions,
     attempt: a.attempt ?? null,
+    translation: a.translation ?? null,
     server_created_at: new Date().toISOString(),
   };
 }
@@ -209,6 +211,7 @@ export function fromArticleArchiveRow(r: ArticleArchiveRow): ArticleArchive {
     difficulty: (r.difficulty as ArticleArchive["difficulty"]) || "intermediate",
     questions: (r.questions as ArticleArchive["questions"]) || [],
     attempt: (r.attempt as ArticleArchive["attempt"]) || undefined,
+    translation: (r.translation as ArticleArchive["translation"]) || undefined,
   };
 }
 
