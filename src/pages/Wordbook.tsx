@@ -291,18 +291,21 @@ export default function Wordbook() {
                 }
                 return baseWords;
               })()}
+              onRequestNote={openNoteModal}
             />
           )}
           {mode === "random" && (
             <RandomView
               words={words}
               filter={filter}
+              onRequestNote={openNoteModal}
             />
           )}
           {mode === "dictation" && (
             <DictationView
               words={words}
               filter={filter}
+              onRequestNote={openNoteModal}
             />
           )}
         </>
@@ -712,10 +715,10 @@ function MinimalRow({
 }
 
 /* ============ 自我检测模式 ============ */
-function SelfCheckView({ words }: { words: Word[] }) {
+function SelfCheckView({ words, onRequestNote }: { words: Word[]; onRequestNote: (word: Word) => void }) {
   return (
     <div className="mx-auto max-w-2xl px-0">
-      <SelfCheckFlow words={words} mode="self_check" persistKey="wordgrid-selfcheck-wordbook" />
+      <SelfCheckFlow words={words} mode="self_check" persistKey="wordgrid-selfcheck-wordbook" onRequestNote={onRequestNote} />
     </div>
   );
 }
@@ -741,7 +744,7 @@ function getPracticeStats(
   return { today, total };
 }
 
-function RandomView({ words, filter }: { words: Word[]; filter: FilterState }) {
+function RandomView({ words, filter, onRequestNote }: { words: Word[]; filter: FilterState; onRequestNote: (word: Word) => void }) {
   // 应用筛选：记忆阶段 + 词性 + 排除已掌握 + 日期
   const filteredWords = useMemo(() => {
     return words.filter((w) => {
@@ -866,11 +869,19 @@ function RandomView({ words, filter }: { words: Word[]; filter: FilterState }) {
                 {current.meaning}
               </p>
               {current.note && (
-                <div className="mt-4 rounded-md border border-accent-gold/30 bg-accent-gold/5 px-4 py-3 text-left">
-                  <div className="mb-1 font-mono text-2xs uppercase tracking-editorial text-accent-gold">
-                    Note · 笔记
+                <div
+                  className="mt-4 cursor-pointer rounded-md border border-accent-gold/30 bg-accent-gold/5 px-4 py-3 text-left transition-colors hover:bg-accent-gold/10"
+                  onClick={() => onRequestNote(current)}
+                >
+                  <div className="mb-1 flex items-center justify-between">
+                    <span className="font-mono text-2xs uppercase tracking-editorial text-accent-gold">
+                      Note · 笔记
+                    </span>
+                    <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
+                      点击展开
+                    </span>
                   </div>
-                  <p className="font-body text-sm leading-relaxed text-ink-muted whitespace-pre-wrap">
+                  <p className="font-body text-sm leading-relaxed text-ink-muted whitespace-pre-wrap line-clamp-2">
                     {current.note}
                   </p>
                 </div>
@@ -911,7 +922,7 @@ function RandomView({ words, filter }: { words: Word[]; filter: FilterState }) {
 
 /* ============ 听写测试模式 - 基于全部单词的无限听写练习 ============ */
 
-function DictationView({ words, filter }: { words: Word[]; filter: FilterState }) {
+function DictationView({ words, filter, onRequestNote }: { words: Word[]; filter: FilterState; onRequestNote: (word: Word) => void }) {
   // 应用筛选：记忆阶段 + 词性 + 排除已掌握 + 日期
   const filteredWords = useMemo(() => {
     return words.filter((w) => {
@@ -1170,11 +1181,19 @@ function DictationView({ words, filter }: { words: Word[]; filter: FilterState }
                 <SpeakButton text={current.word} size="md" />
               </div>
               {current.note && (
-                <div className="mt-4 rounded-md border border-accent-gold/30 bg-accent-gold/5 px-4 py-3 text-left">
-                  <div className="mb-1 font-mono text-2xs uppercase tracking-editorial text-accent-gold">
-                    Note · 笔记
+                <div
+                  className="mt-4 cursor-pointer rounded-md border border-accent-gold/30 bg-accent-gold/5 px-4 py-3 text-left transition-colors hover:bg-accent-gold/10"
+                  onClick={() => onRequestNote(current)}
+                >
+                  <div className="mb-1 flex items-center justify-between">
+                    <span className="font-mono text-2xs uppercase tracking-editorial text-accent-gold">
+                      Note · 笔记
+                    </span>
+                    <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
+                      点击展开
+                    </span>
                   </div>
-                  <p className="font-body text-sm leading-relaxed text-ink-muted whitespace-pre-wrap">
+                  <p className="font-body text-sm leading-relaxed text-ink-muted whitespace-pre-wrap line-clamp-2">
                     {current.note}
                   </p>
                 </div>

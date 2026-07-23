@@ -10,6 +10,7 @@ import {
 } from "@/lib/exporter";
 import { cn } from "@/lib/utils";
 import DatePickerCalendar from "@/components/DatePickerCalendar";
+import { useDateNotesStore } from "@/store/dateNotes";
 
 interface ExportModalProps {
   open: boolean;
@@ -87,6 +88,8 @@ export default function ExportModal({ open, onClose, words }: ExportModalProps) 
   // 筛选：日期（空=全部）+ 排除已掌握
   const [filterDates, setFilterDates] = useState<string[]>([]);
   const [excludeMastered, setExcludeMastered] = useState(false);
+  // 日期备注：传给日历组件显示小圆点（与其他页面的日历样式一致）
+  const dateNotes = useDateNotesStore((s) => s.notes);
 
   // 根据筛选项计算实际导出的单词（hooks 必须在 early return 之前调用）
   const filteredWords = useMemo(() => {
@@ -172,6 +175,7 @@ export default function ExportModal({ open, onClose, words }: ExportModalProps) 
               <DatePickerCalendar
                 selected={filterDates}
                 onChange={setFilterDates}
+                notes={dateNotes}
                 label="日期筛选"
               />
               {/* 排除已掌握 */}

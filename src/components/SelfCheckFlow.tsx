@@ -3,6 +3,7 @@ import { Check, X, Eye, RotateCcw } from "lucide-react";
 import type { Word, ReviewMode, ReviewLog } from "@/types";
 import { useWordStore } from "@/store/wordStore";
 import { formatMD, todayKey } from "@/lib/review";
+import { cn } from "@/lib/utils";
 import SpeakButton from "@/components/SpeakButton";
 
 /**
@@ -75,6 +76,8 @@ interface SelfCheckFlowProps {
    * 保留参数仅为向后兼容，不再有实际作用。
    */
   persistKey?: string;
+  /** 点击笔记时打开笔记弹窗（查看/编辑），可选 */
+  onRequestNote?: (word: Word) => void;
 }
 
 /**
@@ -121,6 +124,7 @@ export default function SelfCheckFlow({
   showRestart = true,
   dryRun = false,
   persistKey,
+  onRequestNote,
 }: SelfCheckFlowProps) {
   const reviewWord = useWordStore((s) => s.reviewWord);
   const logs = useWordStore((s) => s.logs);
@@ -444,11 +448,24 @@ export default function SelfCheckFlow({
                 {current.meaning}
               </p>
               {current.note && (
-                <div className="mt-4 rounded-md border border-accent-gold/30 bg-accent-gold/5 px-4 py-3 text-left">
-                  <div className="mb-1 font-mono text-2xs uppercase tracking-editorial text-accent-gold">
-                    Note · 笔记
+                <div
+                  className={cn(
+                    "mt-4 rounded-md border border-accent-gold/30 bg-accent-gold/5 px-4 py-3 text-left",
+                    onRequestNote && "cursor-pointer transition-colors hover:bg-accent-gold/10",
+                  )}
+                  onClick={onRequestNote ? () => onRequestNote(current) : undefined}
+                >
+                  <div className="mb-1 flex items-center justify-between">
+                    <span className="font-mono text-2xs uppercase tracking-editorial text-accent-gold">
+                      Note · 笔记
+                    </span>
+                    {onRequestNote && (
+                      <span className="font-mono text-2xs uppercase tracking-editorial text-ink-light">
+                        点击展开
+                      </span>
+                    )}
                   </div>
-                  <p className="font-body text-sm leading-relaxed text-ink-muted whitespace-pre-wrap">
+                  <p className="font-body text-sm leading-relaxed text-ink-muted whitespace-pre-wrap line-clamp-2">
                     {current.note}
                   </p>
                 </div>

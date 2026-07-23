@@ -795,28 +795,23 @@ export default function DailyGrid({
             >
               {/* 日期行头部 */}
               <header
-                className="flex cursor-pointer items-center gap-3 px-3 py-3 transition-colors hover:bg-paper-warm/40 md:gap-8 md:px-6 md:py-4"
+                className="flex cursor-pointer items-center gap-3 px-3 py-3 transition-colors hover:bg-paper-warm/40 md:gap-4 md:px-6 md:py-4"
                 onClick={() => toggleCollapse(group.date)}
               >
-                {/* 区块 1：日期 + 今日标记 */}
-                <div className="flex flex-shrink-0 items-baseline gap-2">
+                {/* 区块 1：日期（固定宽度，保证各日期条对齐） */}
+                <div className="flex w-[5.5rem] flex-shrink-0 items-baseline md:w-[7rem]">
                   <div
                     className={cn(
                       "font-serif text-base font-medium leading-none tracking-tight md:text-xl",
-                      isToday ? "text-ink" : "text-ink-soft",
+                      isToday ? "text-accent-red" : "text-ink-soft",
                     )}
                   >
                     {formatMD(group.date)}
                   </div>
-                  {isToday && (
-                    <span className="font-mono text-2xs uppercase tracking-editorial text-accent-red">
-                      · 今日
-                    </span>
-                  )}
                 </div>
 
-                {/* 区块 2：周几（中文 + 英文） */}
-                <div className="flex flex-shrink-0 flex-col justify-center border-l border-ink/10 pl-3 md:pl-8">
+                {/* 区块 2：周几（固定宽度，避免 Wednesday 太长导致列宽不齐） */}
+                <div className="flex w-[3rem] flex-shrink-0 flex-col justify-center border-l border-ink/10 pl-3 md:w-[5.5rem] md:pl-4">
                   <div
                     className={cn(
                       "font-mono text-2xs uppercase tracking-editorial",
