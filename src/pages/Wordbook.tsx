@@ -790,6 +790,10 @@ function RandomView({ words, filter, onRequestNote }: { words: Word[]; filter: F
   }, [filteredWords.length]);
 
   const current = queue[idx];
+  // 从 live words prop 按 id 解析最新 word 对象，确保编辑笔记后卡片即时刷新
+  const liveCurrent = current
+    ? words.find((w) => w.id === current.id) ?? current
+    : null;
 
   // 筛选后无可用单词
   if (!current) {
@@ -865,24 +869,24 @@ function RandomView({ words, filter, onRequestNote }: { words: Word[]; filter: F
         <div className="rounded-md border border-accent-gold/30 bg-paper-card p-6 md:p-12 text-center hover:shadow-paper-hover">
           <div className="eyebrow mb-4 text-accent-gold">Random Quiz</div>
           <h3 className="font-serif text-3xl md:text-5xl font-medium tracking-word text-ink">
-            {current.word}
+            {liveCurrent?.word}
           </h3>
           <div className="mt-2 font-mono text-sm italic text-accent-gold">
-            {current.pos}
+            {liveCurrent?.pos}
           </div>
           <div className="mt-3 flex justify-center">
-            <SpeakButton text={current.word} size="md" />
+            <SpeakButton text={liveCurrent?.word ?? ""} size="md" />
           </div>
           <div className="my-8 border-t border-dashed border-ink/15" />
           {revealed ? (
             <div className="animate-ink-bloom">
               <p className="font-body text-xl md:text-2xl text-ink-soft">
-                {current.meaning}
+                {liveCurrent?.meaning}
               </p>
-              {current.note && (
+              {liveCurrent?.note && (
                 <div
                   className="mt-4 cursor-pointer rounded-md border border-accent-gold/30 bg-accent-gold/5 px-4 py-3 text-left transition-colors hover:bg-accent-gold/10"
-                  onClick={() => onRequestNote(current)}
+                  onClick={() => liveCurrent && onRequestNote(liveCurrent)}
                 >
                   <div className="mb-1 flex items-center justify-between">
                     <span className="font-mono text-2xs uppercase tracking-editorial text-accent-gold">
@@ -893,7 +897,7 @@ function RandomView({ words, filter, onRequestNote }: { words: Word[]; filter: F
                     </span>
                   </div>
                   <p className="font-body text-sm leading-relaxed text-ink-muted whitespace-pre-wrap line-clamp-2">
-                    {current.note}
+                    {liveCurrent.note}
                   </p>
                 </div>
               )}
@@ -1019,6 +1023,10 @@ function DictationView({ words, filter, onRequestNote }: { words: Word[]; filter
   }, [result, idx, queue.length, words]);
 
   const current = queue[idx];
+  // 从 live words prop 按 id 解析最新 word 对象，确保编辑笔记后卡片即时刷新
+  const liveCurrent = current
+    ? words.find((w) => w.id === current.id) ?? current
+    : null;
 
   // 筛选后无可用单词
   if (!current) {
@@ -1140,10 +1148,10 @@ function DictationView({ words, filter, onRequestNote }: { words: Word[]; filter
 
           {/* 显示词性与释义作为提示 */}
           <div className="font-mono text-sm italic text-accent-gold">
-            {current.pos}
+            {liveCurrent?.pos}
           </div>
           <h3 className="mt-3 font-body text-2xl md:text-4xl font-medium text-ink">
-            {current.meaning}
+            {liveCurrent?.meaning}
           </h3>
 
           <div className="my-8 border-t border-dashed border-ink/15" />
@@ -1179,7 +1187,7 @@ function DictationView({ words, filter, onRequestNote }: { words: Word[]; filter
                     正确答案
                   </div>
                   <div className="font-serif text-3xl font-medium tracking-word text-accent-green">
-                    {current.word}
+                    {liveCurrent?.word}
                   </div>
                 </div>
               )}
@@ -1189,12 +1197,12 @@ function DictationView({ words, filter, onRequestNote }: { words: Word[]; filter
                 </div>
               )}
               <div className="mt-3 flex justify-center">
-                <SpeakButton text={current.word} size="md" />
+                <SpeakButton text={liveCurrent?.word ?? ""} size="md" />
               </div>
-              {current.note && (
+              {liveCurrent?.note && (
                 <div
                   className="mt-4 cursor-pointer rounded-md border border-accent-gold/30 bg-accent-gold/5 px-4 py-3 text-left transition-colors hover:bg-accent-gold/10"
-                  onClick={() => onRequestNote(current)}
+                  onClick={() => liveCurrent && onRequestNote(liveCurrent)}
                 >
                   <div className="mb-1 flex items-center justify-between">
                     <span className="font-mono text-2xs uppercase tracking-editorial text-accent-gold">
@@ -1205,7 +1213,7 @@ function DictationView({ words, filter, onRequestNote }: { words: Word[]; filter
                     </span>
                   </div>
                   <p className="font-body text-sm leading-relaxed text-ink-muted whitespace-pre-wrap line-clamp-2">
-                    {current.note}
+                    {liveCurrent.note}
                   </p>
                 </div>
               )}

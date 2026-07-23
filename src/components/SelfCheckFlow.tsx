@@ -220,6 +220,11 @@ export default function SelfCheckFlow({
   const initialTotal = initialWords.length;
   const total = initialTotal + reaskQueue.length;
   const current = queue[0];
+  // 从 live words prop 按 id 解析最新 word 对象，确保编辑笔记后卡片即时刷新
+  // current 用于队列逻辑（id/顺序），liveCurrent 用于显示（note 等字段实时）
+  const liveCurrent = current
+    ? words.find((w) => w.id === current.id) ?? current
+    : null;
 
   // done 判断：所有原始词都已消费 且 重问队列清空
   // 用 consumedInInitial.size（只统计 initialWords 中的已消费词）判断完成
@@ -424,19 +429,19 @@ export default function SelfCheckFlow({
         <div className="rounded-md border border-ink/15 bg-paper-card p-5 text-center hover:shadow-paper-hover md:p-10">
           <div className="eyebrow mb-4">Self-Check</div>
           <h3 className="font-serif text-3xl font-medium tracking-word text-ink md:text-5xl">
-            {current.word}
+            {liveCurrent?.word}
           </h3>
-          {current.phonetic && (
+          {liveCurrent?.phonetic && (
             <div className="mt-2 font-mono text-sm text-ink-light">
-              {current.phonetic}
+              {liveCurrent.phonetic}
             </div>
           )}
           <div className="mt-2 font-mono text-sm italic text-accent-gold">
-            {current.pos}
+            {liveCurrent?.pos}
           </div>
           {revealed && (
             <div className="mt-3 flex justify-center">
-              <SpeakButton text={current.word} size="md" />
+              <SpeakButton text={liveCurrent?.word ?? ""} size="md" />
             </div>
           )}
 
@@ -445,15 +450,15 @@ export default function SelfCheckFlow({
           {revealed ? (
             <div className="animate-ink-bloom">
               <p className="font-body text-xl text-ink-soft md:text-2xl">
-                {current.meaning}
+                {liveCurrent?.meaning}
               </p>
-              {current.note && (
+              {liveCurrent?.note && (
                 <div
                   className={cn(
                     "mt-4 rounded-md border border-accent-gold/30 bg-accent-gold/5 px-4 py-3 text-left",
                     onRequestNote && "cursor-pointer transition-colors hover:bg-accent-gold/10",
                   )}
-                  onClick={onRequestNote ? () => onRequestNote(current) : undefined}
+                  onClick={onRequestNote && liveCurrent ? () => onRequestNote(liveCurrent) : undefined}
                 >
                   <div className="mb-1 flex items-center justify-between">
                     <span className="font-mono text-2xs uppercase tracking-editorial text-accent-gold">
@@ -466,7 +471,7 @@ export default function SelfCheckFlow({
                     )}
                   </div>
                   <p className="font-body text-sm leading-relaxed text-ink-muted whitespace-pre-wrap line-clamp-2">
-                    {current.note}
+                    {liveCurrent.note}
                   </p>
                 </div>
               )}
