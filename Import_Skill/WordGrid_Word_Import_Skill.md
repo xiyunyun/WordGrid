@@ -39,13 +39,13 @@ kind|/kaɪnd/|adj. / n.|友好的；种类|...
 1. **谐音**：帮助记忆的中文谐音，用引号包裹
 2. **近似词**：列出近似词并说明区别
 3. **反义词**：如有则写出
-4. **派生词**：列出常见派生（动词形式、名词形式、形容词形式等），标注词性
+4. **派生词**：列出常见派生（动词形式、名词形式、形容词形式等），标注词性和词意
 5. **例句**：1-2 个带翻译的例句，每个例句单独用分号分隔（即各占一行）
 
 ### 笔记示例
 
 ```
-谐音："凯的"；近似词：type（作名词时 type 与 kind 同义，但 type 更强调分类，kind 更常用）；反义词：unkind/cruel；派生：kindness(n.), kindly(adv.)；例句：She is a kind person.（她是个善良的人。）；例句：What kind of music do you like?（你喜欢哪种音乐？）
+谐音："凯的"；近似词：type（作名词时 type 与 kind 同义，但 type 更强调分类，kind 更常用）；反义词：unkind/cruel；派生：kindness(n.)(善良),, kindly(adv.)(善良的)；例句：She is a kind person.（她是个善良的人。）；例句：What kind of music do you like?（你喜欢哪种音乐？）
 ```
 
 导入后在笔记弹窗中显示为：
@@ -54,7 +54,7 @@ kind|/kaɪnd/|adj. / n.|友好的；种类|...
 谐音："凯的"
 近似词：type（作名词时 type 与 kind 同义，但 type 更强调分类，kind 更常用）
 反义词：unkind/cruel
-派生：kindness(n.), kindly(adv.)
+派生：kindness(n.)(善良), kindly(adv.)(善良的)
 例句：She is a kind person.（她是个善良的人。）
 例句：What kind of music do you like?（你喜欢哪种音乐？）
 ```
