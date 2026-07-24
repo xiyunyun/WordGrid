@@ -977,9 +977,10 @@ function DictationView({ words, filter, onRequestNote }: { words: Word[]; filter
     setResult("idle");
   }, [filteredWords.length]);
 
+  // 答对切题（idx 变化）或答错重试（result 回到 idle）时，都要把光标拉回输入框
   useEffect(() => {
-    inputRef.current?.focus();
-  }, [idx]);
+    if (result === "idle") inputRef.current?.focus();
+  }, [idx, result]);
 
   // 以下函数和 hooks 必须在条件 return 之前定义（React Hooks 规则）
   const advance = () => {
@@ -1003,10 +1004,14 @@ function DictationView({ words, filter, onRequestNote }: { words: Word[]; filter
 
   // 答题后回车连贯操作：答对→下一题，答错/显示答案→再来一次
   // 防抖：提交答案后 500ms 内的回车忽略，避免键盘连发导致结果一闪而过
+  // 弹窗打开时（如 NoteModal 编辑笔记）不响应，避免回车换行触发下层跳题
   useEffect(() => {
     if (result === "idle") return;
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Enter") {
+        // 弹窗打开时回车交给弹窗处理（如笔记编辑换行），不触发下层快捷键
+        const target = e.target as HTMLElement | null;
+        if (target?.closest("[data-modal='true']")) return;
         e.preventDefault();
         // 提交瞬间键盘连发的回车不应触发跳转，等用户松手后再按
         if (Date.now() - lastActionRef.current < 500) return;
@@ -1289,9 +1294,13 @@ function CardsView({
   }, [filteredWords.length]);
 
   // 键盘左右切换
+  // 弹窗打开时不响应，避免左右键干扰弹窗内操作
   useEffect(() => {
     if (filteredWords.length === 0) return;
     const handler = (e: KeyboardEvent) => {
+      // 弹窗打开时左右键交给弹窗处理，不触发下层切卡
+      const target = e.target as HTMLElement | null;
+      if (target?.closest("[data-modal='true']")) return;
       if (e.key === "ArrowLeft") {
         setIdx((i) => (i - 1 + filteredWords.length) % filteredWords.length);
       } else if (e.key === "ArrowRight") {

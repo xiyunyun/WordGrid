@@ -66,7 +66,6 @@ export default function ArticleBuilder() {
   const addArchive = useArticleStore((s) => s.addArchive);
   const setQuestions = useArticleStore((s) => s.setQuestions);
   const setAttempt = useArticleStore((s) => s.setAttempt);
-  const clearAttempt = useArticleStore((s) => s.clearAttempt);
   const setTranslationStore = useArticleStore((s) => s.setTranslation);
   const removeArchive = useArticleStore((s) => s.removeArchive);
 
@@ -265,23 +264,26 @@ export default function ArticleBuilder() {
 
   /** 追加生成题目：在现有题目基础上，再生成一批新题追加到末尾
    *  - 累加题目数量：合并旧题和新题
-   *  - 归档保存记录：调用 setQuestions 持久化合并后的完整题目列表
-   *  - 作答记录清空：题目集变化后旧作答不再适用，调用 clearAttempt 清除归档中的 attempt
+   *  - 避免重复：把已有题干传给 AI，要求生成不同角度的新题
+   *  - 保留作答：不清除旧作答记录，用户可继续作答新题（已批改状态自动重置为作答中）
    */
   const handleAppendQuiz = async () => {
     if (!activeArticle || activeWords.length === 0) return;
     setQuizLoading(true);
     setQuizError("");
     try {
-      const newQs = await generateQuiz(activeArticle, activeWords);
+      // 传入已有题干，避免 AI 生成重复题目
+      const newQs = await generateQuiz(
+        activeArticle,
+        activeWords,
+        questions.map((q) => q.stem),
+      );
       // 合并：旧题 + 新题（避免 id 冲突，generateQuiz 已用时间戳生成 id）
       const merged = [...questions, ...newQs];
       setQuestionsState(merged);
-      // 同步到归档
+      // 同步到归档（保留旧作答记录，不清除 attempt）
       if (activeArchiveId) {
         setQuestions(activeArchiveId, merged);
-        // 追加题目后旧作答记录不再适用，清除归档中的 attempt
-        clearAttempt(activeArchiveId);
       }
     } catch (e) {
       setQuizError(e instanceof Error ? e.message : "题目生成失败，请稍后重试");
@@ -1286,7 +1288,7 @@ function ReadingPhase({
                 onClick={onAppendQuiz}
                 disabled={quizLoading}
                 className="btn-ghost disabled:opacity-40"
-                title="追加生成 4 道新题，合并到现有题目末尾"
+                title="追加生成 4 道新题到现有题目末尾，保留已有作答"
               >
                 {quizLoading ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={1.5} />

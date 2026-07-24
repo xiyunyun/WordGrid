@@ -229,14 +229,22 @@ ${DIFFICULTY_DESC[difficulty]}`,
  * 基于文章和选中单词生成题目
  *
  * 生成 4 道题：2 道填空 + 2 道选择。返回 JSON 数组。
+ *
+ * existingStems 用于追加题目时避免与已有题目重复。
  */
 export async function generateQuiz(
   article: string,
   words: Word[],
+  existingStems?: string[],
 ): Promise<QuizQuestion[]> {
   const wordList = words.map((w) => w.word).join(", ");
 
   const systemPrompt = `你是一位严谨的英语阅读理解出题专家，擅长根据阅读材料设计考察词汇理解和上下文推断的题目。你必须严格按照 JSON 格式输出，不输出任何说明文字。`;
+
+  const avoidRepeat =
+    existingStems && existingStems.length > 0
+      ? `\n5. 不要与以下已有题目重复（题干、考点句、考察角度都应不同）：\n${existingStems.map((s, i) => `${i + 1}. ${s}`).join("\n")}`
+      : "";
 
   const userPrompt = `请基于以下文章和单词，生成 4 道题目：2 道填空题 + 2 道单项选择题。
 
@@ -250,7 +258,7 @@ ${wordList}
 1. 题目应考察对文章内容和指定单词的理解
 2. 填空题：从文章中摘取包含目标单词的原句，将目标单词替换为空位 ___
 3. 选择题：4 个选项（A/B/C/D），干扰项应合理但不正确
-4. 每题附简短解析
+4. 每题附简短解析${avoidRepeat}
 
 【输出格式】
 只输出 JSON 数组，不要 markdown 代码块，不要任何说明文字。格式如下：

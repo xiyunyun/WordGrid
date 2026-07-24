@@ -21,6 +21,8 @@ interface RestartCache {
   restartedConsumed: number;
   /** 重问队列只存 id，重新挂载时从 initialWords 恢复 Word 对象 */
   reaskIds: string[];
+  /** 持久化 initialWords 的 ID 列表，确保切走再回来时 total 不缩水 */
+  initialIds: string[];
 }
 
 const REASK_STORAGE_PREFIX = "wordgrid-reask-";
@@ -131,7 +133,23 @@ export default function SelfCheckFlow({
 
   // 挂载时锁定快照（之后不受 props 变化影响）
   // 但当 words prop 中出现新词（如用户在 SelfCheck 期间添加了新词）时，追加到 initialWords
-  const [initialWords, setInitialWords] = useState<Word[]>(() => words);
+  //
+  // 关键修复：优先从 localStorage 缓存恢复 initialIds，避免切走再回来时 total 缩水
+  // 场景：100 个待复习词，答对 50 个后切走，dueWords 选择器缩小为 50 个。
+  // 如果直接用 words prop 初始化，重挂载后 initialWords 只剩 50 个 → total 显示 50。
+  // 从缓存的 initialIds 恢复（从 store 完整 words 中按 ID 查找），total 保持 100。
+  const [initialWords, setInitialWords] = useState<Word[]>(() => {
+    const cached = loadRestartCache(persistKey);
+    // 兼容旧缓存（可能没有 initialIds 字段）
+    if (cached && cached.initialIds && cached.initialIds.length > 0) {
+      const allWords = useWordStore.getState().words;
+      const restored = cached.initialIds
+        .map((id) => allWords.find((w) => w.id === id))
+        .filter((w): w is Word => Boolean(w));
+      if (restored.length > 0) return restored;
+    }
+    return words;
+  });
 
   // 当 words prop 中的 ID 集合变化时，将新词追加到 initialWords 末尾
   // 这样用户在 SelfCheck 期间添加的"当日新词"也能进入队列
@@ -171,17 +189,19 @@ export default function SelfCheckFlow({
     () => cachedRestart?.restartedConsumed ?? 0,
   );
 
-  // 当 restarted/restartedStats/restartedConsumed/reaskQueue 变化时，同步到 localStorage
+  // 当 restarted/restartedStats/restartedConsumed/reaskQueue/initialWords 变化时，同步到 localStorage
   // 这样路由切换或关闭网页后重新挂载能恢复进度和重问队列
   // 关键：无论是否 restarted 都要保存，否则非 restarted 模式下的 reaskQueue 会丢失
+  // initialIds 也需保存，否则切走再回来时 total 会缩水（dueWords 选择器缩小了）
   useEffect(() => {
     saveRestartCache(persistKey, {
       restarted,
       restartedStats,
       restartedConsumed,
       reaskIds: reaskQueue.map((w) => w.id),
+      initialIds: initialWords.map((w) => w.id),
     });
-  }, [restarted, restartedStats, restartedConsumed, reaskQueue, persistKey]);
+  }, [restarted, restartedStats, restartedConsumed, reaskQueue, persistKey, initialWords]);
 
   // 从今日 logs 派生已消费集合与统计（跨设备同步的进度来源）
   const { consumedIds, correct: logCorrect, wrong: logWrong } = useMemo(

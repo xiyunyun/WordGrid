@@ -101,7 +101,7 @@ export default function NoteModal({ open, onClose, word }: NoteModalProps) {
   const heightRem = Math.max(lineCount * 1.8 + 10, 14);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center animate-fade-in" data-modal="true">
       {/* 背景虚焦遮罩 */}
       <div
         className="absolute inset-0 bg-ink/40 backdrop-blur-sm"

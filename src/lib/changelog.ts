@@ -23,6 +23,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "2.9.0",
+    date: "2026-07-24",
+    items: [
+      "修复自我检测切走再回来 total 缩水：持久化 initialIds 到 localStorage，重挂载时从 store 完整词库按 ID 恢复，total/correct/wrong 三项数值均保持准确",
+      "修复听写测试笔记弹窗中回车触发下层跳题：弹窗打开时下层快捷键自动失效，回车由弹窗处理（换行/编辑），关闭后恢复",
+      "修复听写测试答错后光标不回输入框：retry 时 result 回到 idle 触发 focus，与答对切题行为一致",
+      "修复积木造文追加题目清空旧作答：移除 clearAttempt 调用，旧题答案保留；已批改状态自动回到作答中，可继续答新题",
+      "积木造文追加题目避免重复：把已有题干传给 AI，要求生成不同角度的新题",
+    ],
+  },
+  {
     version: "2.8.1",
     date: "2026-07-24",
     items: [

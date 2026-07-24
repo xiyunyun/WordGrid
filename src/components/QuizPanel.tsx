@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Check, X, Loader2, Award, RotateCcw } from "lucide-react";
 import type { QuizQuestion } from "@/lib/deepseek";
 import { gradeAnswer } from "@/lib/deepseek";
@@ -40,6 +40,17 @@ export default function QuizPanel({
   const [results, setResults] = useState<Record<string, boolean>>(
     initialAttempt?.results || {},
   );
+  // 记录上次的题目数量，用于检测追加题目
+  const prevLenRef = useRef(questions.length);
+
+  // 追加题目时（题目数量增加），从已批改状态回到作答状态，保留已有答案
+  // 这样用户可以继续作答新题，旧题答案不丢失
+  useEffect(() => {
+    if (questions.length > prevLenRef.current && status === "graded") {
+      setStatus("answering");
+    }
+    prevLenRef.current = questions.length;
+  }, [questions.length, status]);
 
   const total = questions.length;
   const answered = questions.filter((q) => answers[q.id]?.trim()).length;
