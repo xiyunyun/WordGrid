@@ -23,6 +23,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "2.10.0",
+    date: "2026-07-26",
+    items: [
+      "笔记弹窗「编辑」按钮扩展为可编辑单词拼写、词意和笔记：无需进入每日网格即可在任意页面修正单词导入时的拼写错误或调整释义，词性保持只读",
+      "编辑模式统一保存：点击「完成」或按 ESC 退出编辑时，自动比对三个字段并调用 updateWord 同步到 store，云同步机制自动推送至 Supabase",
+    ],
+  },
+  {
     version: "2.9.0",
     date: "2026-07-24",
     items: [
