@@ -775,6 +775,7 @@ function RandomView({ words, filter, onRequestNote }: { words: Word[]; filter: F
   const [revealed, setRevealed] = useState(false);
   const [sessionCount, setSessionCount] = useState(0);
   const logReview = useWordStore((s) => s.logReview);
+  const markMastered = useWordStore((s) => s.markMastered);
   // 统计直接从 logs 聚合（已同步），无需独立 localStorage
   const logs = useWordStore((s) => s.logs);
   const stats = useMemo(
@@ -815,6 +816,21 @@ function RandomView({ words, filter, onRequestNote }: { words: Word[]; filter: F
     setSessionCount((n) => n + 1);
 
     // 推进：队列耗尽则自动重新洗牌（无限练习，不触发完成页）
+    setRevealed(false);
+    const nextIdx = idx + 1;
+    if (nextIdx >= queue.length) {
+      setQueue(shuffle(filteredWords));
+      setIdx(0);
+    } else {
+      setIdx(nextIdx);
+    }
+  };
+
+  /** 标记当前词为已掌握：写一条 correct 日志 + markMastered + 推进队列 */
+  const handleMaster = () => {
+    logReview(current.id, true, "random");
+    markMastered(current.id);
+    setSessionCount((n) => n + 1);
     setRevealed(false);
     const nextIdx = idx + 1;
     if (nextIdx >= queue.length) {
@@ -866,7 +882,16 @@ function RandomView({ words, filter, onRequestNote }: { words: Word[]; filter: F
       </div>
 
       <div className="mx-auto max-w-2xl">
-        <div className="rounded-md border border-accent-gold/30 bg-paper-card p-6 md:p-12 text-center hover:shadow-paper-hover">
+        <div className="relative rounded-md border border-accent-gold/30 bg-paper-card p-6 md:p-12 text-center hover:shadow-paper-hover">
+          {/* 右上角：标记已掌握按钮 */}
+          <button
+            onClick={handleMaster}
+            className="absolute right-3 top-3 flex items-center gap-1 rounded-md border border-accent-green/30 bg-accent-green/5 px-2.5 py-1 font-mono text-2xs uppercase tracking-editorial text-accent-green/80 transition-colors hover:border-accent-green hover:bg-accent-green hover:text-paper"
+            title="标记为已掌握，不再出现在随机抽查"
+          >
+            <Bookmark className="h-3 w-3" strokeWidth={1.5} />
+            已掌握
+          </button>
           <div className="eyebrow mb-4 text-accent-gold">Random Quiz</div>
           <h3 className="font-serif text-3xl md:text-5xl font-medium tracking-word text-ink">
             {liveCurrent?.word}
@@ -962,6 +987,7 @@ function DictationView({ words, filter, onRequestNote }: { words: Word[]; filter
   // 记录上次提交答案的时间戳，防止键盘连发导致刚出结果就自动跳到下一题
   const lastActionRef = useRef(0);
   const logReview = useWordStore((s) => s.logReview);
+  const markMastered = useWordStore((s) => s.markMastered);
   // 统计直接从 logs 聚合（已同步），无需独立 localStorage
   const logs = useWordStore((s) => s.logs);
   const stats = useMemo(
@@ -1000,6 +1026,22 @@ function DictationView({ words, filter, onRequestNote }: { words: Word[]; filter
   const retry = () => {
     setInput("");
     setResult("idle");
+  };
+
+  /** 标记当前词为已掌握：写一条 correct 日志 + markMastered + 推进到下一题 */
+  const handleMaster = () => {
+    logReview(liveCurrent?.id ?? current.id, true, "dictation");
+    markMastered(liveCurrent?.id ?? current.id);
+    setSessionCount((n) => n + 1);
+    setInput("");
+    setResult("idle");
+    const nextIdx = idx + 1;
+    if (nextIdx >= queue.length) {
+      setQueue(shuffle(filteredWords));
+      setIdx(0);
+    } else {
+      setIdx(nextIdx);
+    }
   };
 
   // 答题后回车连贯操作：答对→下一题，答错/显示答案→再来一次
@@ -1120,7 +1162,7 @@ function DictationView({ words, filter, onRequestNote }: { words: Word[]; filter
       <div className="mx-auto max-w-2xl">
         <div
           className={cn(
-            "rounded-md border bg-paper-card p-6 md:p-12 text-center hover:shadow-paper-hover transition-colors",
+            "relative rounded-md border bg-paper-card p-6 md:p-12 text-center hover:shadow-paper-hover transition-colors",
             result === "correct"
               ? "border-accent-green/50"
               : result === "wrong"
@@ -1128,6 +1170,15 @@ function DictationView({ words, filter, onRequestNote }: { words: Word[]; filter
                 : "border-ink/15",
           )}
         >
+          {/* 右上角：标记已掌握按钮 */}
+          <button
+            onClick={handleMaster}
+            className="absolute right-3 top-3 flex items-center gap-1 rounded-md border border-accent-green/30 bg-accent-green/5 px-2.5 py-1 font-mono text-2xs uppercase tracking-editorial text-accent-green/80 transition-colors hover:border-accent-green hover:bg-accent-green hover:text-paper"
+            title="标记为已掌握，不再出现在听写测试"
+          >
+            <Bookmark className="h-3 w-3" strokeWidth={1.5} />
+            已掌握
+          </button>
           <div className="eyebrow mb-4">听发音拼写单词</div>
 
           {/* 发音按钮 - 听写核心功能 */}
@@ -1287,6 +1338,7 @@ function CardsView({
   }, [words, filter]);
 
   const [idx, setIdx] = useState(0);
+  const markMastered = useWordStore((s) => s.markMastered);
 
   // 筛选变化时重置索引
   useEffect(() => {
@@ -1334,7 +1386,22 @@ function CardsView({
   return (
     <div className="mx-auto max-w-2xl">
       {/* 卡片本体 - 与 RandomView/DictationView 统一样式 */}
-      <div className="rounded-md border border-ink/15 bg-paper-card p-6 md:p-12 text-center hover:shadow-paper-hover">
+      <div className="relative rounded-md border border-ink/15 bg-paper-card p-6 md:p-12 text-center hover:shadow-paper-hover">
+        {/* 右上角：标记已掌握按钮 */}
+        <button
+          onClick={() => markMastered(current.id)}
+          disabled={current.isMastered}
+          className={cn(
+            "absolute right-3 top-3 flex items-center gap-1 rounded-md border px-2.5 py-1 font-mono text-2xs uppercase tracking-editorial transition-colors",
+            current.isMastered
+              ? "cursor-default border-accent-green/40 bg-accent-green/10 text-accent-green"
+              : "border-accent-green/30 bg-accent-green/5 text-accent-green/80 hover:border-accent-green hover:bg-accent-green hover:text-paper",
+          )}
+          title={current.isMastered ? "已标记为掌握" : "标记为已掌握，不再出现在复习队列"}
+        >
+          <Bookmark className="h-3 w-3" strokeWidth={1.5} />
+          {current.isMastered ? "已掌握" : "标记掌握"}
+        </button>
         <div className="eyebrow mb-4 text-ink-light">
           Cards · {idx + 1} / {filteredWords.length}
         </div>

@@ -23,6 +23,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "2.11.0",
+    date: "2026-07-26",
+    items: [
+      "自我检测/随机抽查/听写测试/卡片浏览四个练习界面卡片右上角新增「已掌握」按钮：与认识/不认识按钮分离避免误触，点击后调用 markMastered 并推进到下一题",
+      "练习模式标记掌握会同时记录一条 correct 复习日志，确保统计页面的熟练度排行正确计入",
+      "卡片浏览模式标记掌握后按钮变为已标记状态，不切走当前卡片方便继续查看",
+    ],
+  },
+  {
     version: "2.10.0",
     date: "2026-07-26",
     items: [

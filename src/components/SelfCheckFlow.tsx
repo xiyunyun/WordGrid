@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Check, X, Eye, RotateCcw } from "lucide-react";
+import { Check, X, Eye, RotateCcw, Bookmark } from "lucide-react";
 import type { Word, ReviewMode, ReviewLog } from "@/types";
 import { useWordStore } from "@/store/wordStore";
 import { formatMD, todayKey } from "@/lib/review";
@@ -130,6 +130,7 @@ export default function SelfCheckFlow({
 }: SelfCheckFlowProps) {
   const reviewWord = useWordStore((s) => s.reviewWord);
   const logs = useWordStore((s) => s.logs);
+  const markMastered = useWordStore((s) => s.markMastered);
 
   // 挂载时锁定快照（之后不受 props 变化影响）
   // 但当 words prop 中出现新词（如用户在 SelfCheck 期间添加了新词）时，追加到 initialWords
@@ -325,6 +326,17 @@ export default function SelfCheckFlow({
     }
   };
 
+  /** 标记当前词为已掌握：写一条 correct 日志（计入统计）+ markMastered + 推进队列
+   *  复用 handle(true) 的队列推进逻辑，额外调用 markMastered 更新单词状态 */
+  const handleMaster = () => {
+    if (!current) return;
+    if (!dryRun) {
+      reviewWord(current.id, true, mode);
+      markMastered(current.id);
+    }
+    handle(true);
+  };
+
   const restart = () => {
     setRestarted(true);
     setRestartedStats({ correct: 0, wrong: 0 });
@@ -446,7 +458,18 @@ export default function SelfCheckFlow({
 
       {/* 单词卡片 */}
       <div>
-        <div className="rounded-md border border-ink/15 bg-paper-card p-5 text-center hover:shadow-paper-hover md:p-10">
+        <div className="relative rounded-md border border-ink/15 bg-paper-card p-5 text-center hover:shadow-paper-hover md:p-10">
+          {/* 右上角：标记已掌握按钮（独立位置避免与认识/不认识误触） */}
+          {!dryRun && (
+            <button
+              onClick={handleMaster}
+              className="absolute right-3 top-3 flex items-center gap-1 rounded-md border border-accent-green/30 bg-accent-green/5 px-2.5 py-1 font-mono text-2xs uppercase tracking-editorial text-accent-green/80 transition-colors hover:border-accent-green hover:bg-accent-green hover:text-paper"
+              title="标记为已掌握，不再出现在复习队列"
+            >
+              <Bookmark className="h-3 w-3" strokeWidth={1.5} />
+              已掌握
+            </button>
+          )}
           <div className="eyebrow mb-4">Self-Check</div>
           <h3 className="font-serif text-3xl font-medium tracking-word text-ink md:text-5xl">
             {liveCurrent?.word}
