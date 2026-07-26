@@ -886,11 +886,11 @@ function RandomView({ words, filter, onRequestNote }: { words: Word[]; filter: F
           {/* 右上角：标记已掌握按钮 */}
           <button
             onClick={handleMaster}
-            className="absolute right-3 top-3 flex items-center gap-1 rounded-md border border-accent-green/30 bg-accent-green/5 px-2.5 py-1 font-mono text-2xs uppercase tracking-editorial text-accent-green/80 transition-colors hover:border-accent-green hover:bg-accent-green hover:text-paper"
+            className="absolute right-3 top-3 flex items-center gap-1 rounded-md border border-ink/20 bg-paper px-2.5 py-1 font-mono text-2xs uppercase tracking-editorial text-ink-light transition-colors hover:border-accent-green hover:bg-accent-green hover:text-paper"
             title="标记为已掌握，不再出现在随机抽查"
           >
             <Bookmark className="h-3 w-3" strokeWidth={1.5} />
-            已掌握
+            标记掌握
           </button>
           <div className="eyebrow mb-4 text-accent-gold">Random Quiz</div>
           <h3 className="font-serif text-3xl md:text-5xl font-medium tracking-word text-ink">
@@ -1173,11 +1173,11 @@ function DictationView({ words, filter, onRequestNote }: { words: Word[]; filter
           {/* 右上角：标记已掌握按钮 */}
           <button
             onClick={handleMaster}
-            className="absolute right-3 top-3 flex items-center gap-1 rounded-md border border-accent-green/30 bg-accent-green/5 px-2.5 py-1 font-mono text-2xs uppercase tracking-editorial text-accent-green/80 transition-colors hover:border-accent-green hover:bg-accent-green hover:text-paper"
+            className="absolute right-3 top-3 flex items-center gap-1 rounded-md border border-ink/20 bg-paper px-2.5 py-1 font-mono text-2xs uppercase tracking-editorial text-ink-light transition-colors hover:border-accent-green hover:bg-accent-green hover:text-paper"
             title="标记为已掌握，不再出现在听写测试"
           >
             <Bookmark className="h-3 w-3" strokeWidth={1.5} />
-            已掌握
+            标记掌握
           </button>
           <div className="eyebrow mb-4">听发音拼写单词</div>
 
@@ -1387,7 +1387,7 @@ function CardsView({
     <div className="mx-auto max-w-2xl">
       {/* 卡片本体 - 与 RandomView/DictationView 统一样式 */}
       <div className="relative rounded-md border border-ink/15 bg-paper-card p-6 md:p-12 text-center hover:shadow-paper-hover">
-        {/* 右上角：标记已掌握按钮 */}
+        {/* 右上角：标记已掌握按钮（默认灰色"标记掌握"，已掌握后绿色"已掌握"） */}
         <button
           onClick={() => markMastered(current.id)}
           disabled={current.isMastered}
@@ -1395,7 +1395,7 @@ function CardsView({
             "absolute right-3 top-3 flex items-center gap-1 rounded-md border px-2.5 py-1 font-mono text-2xs uppercase tracking-editorial transition-colors",
             current.isMastered
               ? "cursor-default border-accent-green/40 bg-accent-green/10 text-accent-green"
-              : "border-accent-green/30 bg-accent-green/5 text-accent-green/80 hover:border-accent-green hover:bg-accent-green hover:text-paper",
+              : "border-ink/20 bg-paper text-ink-light hover:border-accent-green hover:bg-accent-green hover:text-paper",
           )}
           title={current.isMastered ? "已标记为掌握" : "标记为已掌握，不再出现在复习队列"}
         >

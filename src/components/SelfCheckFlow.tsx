@@ -463,11 +463,11 @@ export default function SelfCheckFlow({
           {!dryRun && (
             <button
               onClick={handleMaster}
-              className="absolute right-3 top-3 flex items-center gap-1 rounded-md border border-accent-green/30 bg-accent-green/5 px-2.5 py-1 font-mono text-2xs uppercase tracking-editorial text-accent-green/80 transition-colors hover:border-accent-green hover:bg-accent-green hover:text-paper"
+              className="absolute right-3 top-3 flex items-center gap-1 rounded-md border border-ink/20 bg-paper px-2.5 py-1 font-mono text-2xs uppercase tracking-editorial text-ink-light transition-colors hover:border-accent-green hover:bg-accent-green hover:text-paper"
               title="标记为已掌握，不再出现在复习队列"
             >
               <Bookmark className="h-3 w-3" strokeWidth={1.5} />
-              已掌握
+              标记掌握
             </button>
           )}
           <div className="eyebrow mb-4">Self-Check</div>
