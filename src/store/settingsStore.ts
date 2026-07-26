@@ -14,7 +14,7 @@ import { getSupabase } from "@/lib/supabase";
 import { getCurrentUsername } from "@/lib/supabase";
 
 export interface SettingsState {
-  /** TTS 音量 0-1，默认 1（最大） */
+  /** TTS 音量 0-1，默认 0.5（50%） */
   ttsVolume: number;
   /** 学习时长追踪开关 */
   trackStudyTime: boolean;
@@ -42,7 +42,7 @@ export interface SettingsState {
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set, get) => ({
-      ttsVolume: 1,
+      ttsVolume: 0.5,
       trackStudyTime: false,
       totalStudySeconds: 0,
       lastActivityAt: Date.now(),
@@ -96,6 +96,17 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: "wordgrid-settings",
+      version: 1,
+      // 旧版本（version 0）默认 ttsVolume=1，迁移到 0.5
+      // 这样已有用户也会降到 50%，新用户直接是 0.5
+      migrate: () => ({
+        ttsVolume: 0.5,
+        trackStudyTime: false,
+        totalStudySeconds: 0,
+        lastActivityAt: Date.now(),
+        lastSyncedSeconds: 0,
+        syncEnabled: !import.meta.env.DEV,
+      }),
       partialize: (s) => ({
         ttsVolume: s.ttsVolume,
         trackStudyTime: s.trackStudyTime,
