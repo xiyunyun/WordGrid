@@ -18,6 +18,27 @@ const API_URL = "https://openapi.youdao.com/ttsapi";
 // 词典美式发音，最适合单词朗读
 const VOICE_NAME = "youmeimei";
 
+/** 从 settingsStore 读取 TTS 音量（懒加载避免循环依赖） */
+function getTtsVolume(): number {
+  try {
+    // 动态 import 在模块加载时不可用，改用全局缓存引用
+    // settingsStore 在首次调用时已初始化完毕（playUrl 仅在用户点击播放时调用）
+    return useSettingsStoreVolume();
+  } catch {
+    return 1;
+  }
+}
+
+// 延迟引用 settingsStore，避免 lib 层与 store 层循环依赖
+let _volumeGetter: (() => number) | null = null;
+export function __setVolumeGetter(fn: () => number) {
+  _volumeGetter = fn;
+}
+function useSettingsStoreVolume(): number {
+  if (_volumeGetter) return _volumeGetter();
+  return 1;
+}
+
 // 内存缓存：当前页面会话内复用 blob URL
 const audioCache = new Map<string, string>();
 
@@ -181,10 +202,13 @@ export async function speak(text: string): Promise<boolean> {
   }
 }
 
-/** 播放音频 URL，返回 Promise 在播放结束时 resolve */
+/** 播放音频 URL，返回 Promise 在播放结束时 resolve
+ *  音量从 settingsStore 读取，用户可在设置页面调节 */
 function playUrl(url: string): Promise<void> {
   return new Promise((resolve) => {
     const audio = new Audio(url);
+    // 从 store 读取音量设置（延迟读取，避免初始化顺序问题）
+    audio.volume = getTtsVolume();
     audio.onended = () => resolve();
     audio.onerror = () => resolve();
     audio.play().catch(() => resolve());

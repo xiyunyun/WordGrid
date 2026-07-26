@@ -23,6 +23,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "2.12.0",
+    date: "2026-07-26",
+    items: [
+      "新增设置页面（右上角齿轮入口）：独立页面，进入流畅度与每日网格/生词本一致",
+      "语音音量设置：0-100% 滑块调节 TTS 播放音量，内置试听按钮即时验证效果",
+      "学习时长追踪：开启后自动记录活跃学习时长（10 秒粒度，60 秒无操作暂停），跨设备云同步累计",
+      "学习时长数据通过 Supabase user_settings 表云同步，多设备取最大值避免重复计数",
+    ],
+  },
+  {
     version: "2.11.0",
     date: "2026-07-26",
     items: [

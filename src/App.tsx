@@ -16,19 +16,25 @@ import ArticleBuilder from "@/pages/ArticleBuilder";
 import Stats from "@/pages/Stats";
 import About from "@/pages/About";
 import Essays from "@/pages/Essays";
+import Settings from "@/pages/Settings";
 import LoginPage from "@/pages/Login";
+import StudyTimeTracker from "@/components/StudyTimeTracker";
 import { useWordStore, selectDueWords, selectTomorrowWords } from "@/store/wordStore";
 import { useArticleStore } from "@/store/articleStore";
 import { useDateNotesStore } from "@/store/dateNotes";
 import { useEssayStore } from "@/store/essayStore";
 import { useThemeStore } from "@/store/theme";
+import { useSettingsStore } from "@/store/settingsStore";
+import { __setVolumeGetter } from "@/lib/tts";
 import { buildSeedWords } from "@/store/seedData";
 import { todayKey } from "@/lib/review";
 import { isAuthenticated, logout, getCurrentUser } from "@/lib/auth";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import {
   pullAll,
+  pullUserSettings,
   subscribeChanges,
+  subscribeUserSettings,
   migrateFromLocal,
   setMigratedToSupabase,
 } from "@/lib/cloudSyncSupabase";
@@ -129,6 +135,7 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
     console.log("[云同步] 初始化同步，用户:", user.username);
 
     let unsubscribeRealtime: (() => void) | null = null;
+    let unsubscribeSettings: (() => void) | null = null;
     let cancelled = false;
 
     (async () => {
@@ -152,6 +159,19 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
           "dateNotes:",
           pullRes.data ? Object.keys(pullRes.data.dateNotes).length : 0,
         );
+      }
+
+      // 1b. 拉取用户设置（学习时长）
+      const settingsRes = await pullUserSettings();
+      if (cancelled) return;
+      if (settingsRes.success && typeof settingsRes.totalSeconds === "number") {
+        useSettingsStore.getState().setSyncEnabled(false);
+        try {
+          useSettingsStore.getState().hydrateFromCloud(settingsRes.totalSeconds);
+        } finally {
+          useSettingsStore.getState().setSyncEnabled(true);
+        }
+        console.log("[云同步] 学习时长:", settingsRes.totalSeconds, "秒");
       }
 
       if (pullRes.success && pullRes.data && (pullRes.count ?? 0) > 0) {
@@ -211,11 +231,22 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
           useEssayStore.getState().applyRemoteEssay(type, essay);
         },
       });
+
+      // 2b. 订阅 user_settings 表变更（其他设备更新学习时长时实时同步）
+      unsubscribeSettings = subscribeUserSettings((totalSeconds) => {
+        useSettingsStore.getState().setSyncEnabled(false);
+        try {
+          useSettingsStore.getState().hydrateFromCloud(totalSeconds);
+        } finally {
+          useSettingsStore.getState().setSyncEnabled(true);
+        }
+      });
     })();
 
     return () => {
       cancelled = true;
       if (unsubscribeRealtime) unsubscribeRealtime();
+      if (unsubscribeSettings) unsubscribeSettings();
     };
   }, [hydrated]);
 
@@ -317,6 +348,7 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
             element={<Essays addTrigger={essayAddTrigger} />}
           />
           <Route path="/about" element={<About />} />
+          <Route path="/settings" element={<Settings />} />
         </Routes>
       </AppShell>
 
@@ -369,6 +401,11 @@ export default function App() {
   // 认证状态：首次从 localStorage 读取
   const [authed, setAuthed] = useState(() => isAuthenticated());
 
+  // 注入 TTS 音量读取器（一次即可，settingsStore 后续变化通过 getState 实时读取）
+  useEffect(() => {
+    __setVolumeGetter(() => useSettingsStore.getState().ttsVolume);
+  }, []);
+
   const handleLoginSuccess = () => setAuthed(true);
 
   const handleLogout = () => {
@@ -385,6 +422,7 @@ export default function App() {
   return (
     <Router>
       <AppContent onLogout={handleLogout} />
+      <StudyTimeTracker />
       <UpdateNotice />
       <PWAUpdatePrompt />
     </Router>

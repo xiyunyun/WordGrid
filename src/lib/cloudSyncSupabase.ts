@@ -463,6 +463,68 @@ export function subscribeChanges(callbacks: RealtimeCallbacks): () => void {
   };
 }
 
+/* ============ 用户设置（user_settings 表） ============ */
+
+/** 拉取当前用户的设置（学习时长） */
+export async function pullUserSettings(): Promise<{
+  success: boolean;
+  totalSeconds?: number;
+  error?: string;
+}> {
+  const supabase = getSupabase();
+  if (!supabase) return { success: false, error: "Supabase 未配置" };
+  const username = getCurrentUsername();
+  if (!username) return { success: false, error: "未登录" };
+
+  try {
+    const { data, error } = await (supabase.from("user_settings") as any)
+      .select("total_seconds")
+      .eq("username", username)
+      .maybeSingle();
+    if (error) {
+      console.error("[云同步] pullUserSettings 错误:", error.message);
+      return { success: false, error: error.message };
+    }
+    return {
+      success: true,
+      totalSeconds: (data?.total_seconds as number) ?? 0,
+    };
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : "网络错误" };
+  }
+}
+
+/** 订阅 user_settings 表变更（其他设备更新学习时长时实时同步） */
+export function subscribeUserSettings(
+  onUpdate: (totalSeconds: number) => void,
+): () => void {
+  const supabase = getSupabase();
+  if (!supabase) return () => {};
+  const username = getCurrentUsername();
+  if (!username) return () => {};
+
+  const channel = supabase
+    .channel("user_settings_changes")
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "user_settings",
+        filter: `username=eq.${username}`,
+      },
+      (payload) => {
+        const total = (payload.new as any)?.total_seconds;
+        if (typeof total === "number") onUpdate(total);
+      },
+    )
+    .subscribe();
+
+  return () => {
+    channel.unsubscribe();
+  };
+}
+
 /* ============ 首次迁移：本地数据 → Supabase ============ */
 
 /** localStorage 标记：是否已完成本地 → Supabase 迁移 */

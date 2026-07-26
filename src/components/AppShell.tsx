@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Grid3x3, BookOpen, BarChart3, Blocks, Plus, LogOut, Info, Palette, Quote } from "lucide-react";
+import { Grid3x3, BookOpen, BarChart3, Blocks, Plus, LogOut, Info, Palette, Quote, Settings as SettingsIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useWordStore } from "@/store/wordStore";
 import { selectDueAndTodayNewCount } from "@/store/wordStore";
@@ -70,6 +70,20 @@ export default function AppShell({ children, onQuickAdd, onLogout, onPickWord, o
                   <Palette className="h-3.5 w-3.5" strokeWidth={1.5} />
                 </button>
               )}
+              <NavLink
+                to="/settings"
+                className={({ isActive }) =>
+                  cn(
+                    "btn-ghost ml-1 md:ml-2",
+                    isActive && "border-ink/30 bg-ink/5",
+                  )
+                }
+                aria-label="设置"
+                title="设置"
+              >
+                <SettingsIcon className="h-3.5 w-3.5" strokeWidth={1.5} />
+                <span className="hidden sm:inline">设置</span>
+              </NavLink>
               {onLogout && (
                 <button
                   onClick={onLogout}
