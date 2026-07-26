@@ -279,6 +279,7 @@ export default function Wordbook() {
           {mode === "self_check" && (
             <SelfCheckView
               key={`${selfCheckScope}-${filter.dates?.join(",") ?? ""}`}
+              selfCheckScope={selfCheckScope}
               words={(() => {
                 // 自我检测列表根据 selfCheckScope 决定
                 let baseWords: Word[];
@@ -726,10 +727,12 @@ function MinimalRow({
 }
 
 /* ============ 自我检测模式 ============ */
-function SelfCheckView({ words, onRequestNote }: { words: Word[]; onRequestNote: (word: Word) => void }) {
+function SelfCheckView({ words, onRequestNote, selfCheckScope }: { words: Word[]; onRequestNote: (word: Word) => void; selfCheckScope: SelfCheckScope }) {
+  // persistKey 包含 scope，确保"到期词+今日新词"和"全部生词"两个范围的缓存隔离
+  // 避免切换范围时从另一个范围的缓存恢复 initialIds 导致 total 数量错误
   return (
     <div className="mx-auto max-w-2xl px-0">
-      <SelfCheckFlow words={words} mode="self_check" persistKey="wordgrid-selfcheck-wordbook" onRequestNote={onRequestNote} />
+      <SelfCheckFlow words={words} mode="self_check" persistKey={`wordgrid-selfcheck-${selfCheckScope}`} onRequestNote={onRequestNote} />
     </div>
   );
 }
