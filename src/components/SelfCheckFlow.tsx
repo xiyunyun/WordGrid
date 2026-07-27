@@ -135,19 +135,28 @@ export default function SelfCheckFlow({
   // 挂载时锁定快照（之后不受 props 变化影响）
   // 但当 words prop 中出现新词（如用户在 SelfCheck 期间添加了新词）时，追加到 initialWords
   //
-  // 缓存恢复策略：从 localStorage 缓存恢复 initialIds，但只用当前 words prop 过滤，
-  // 丢弃已不在当前 dueWords/生词范围中的词（如已答对推进到明天、已掌握的词）。
-  // 这样 total 始终反映"当前待复习数量"，而不是"开始时的数量"。
+  // 缓存恢复策略：从完整词库恢复 initialIds，保留两类词：
+  // 1. 仍在当前 dueWords 中的词（words prop）—— 还需要复习的词
+  // 2. 今日已在 SelfCheck 中复习过的词（有 self_check 日志）—— 即使已离开 dueWords 也要保留
+  //    这样在 SelfCheck 内答对的词（推进到明天、离开 dueWords）仍留在 snapshot 中，
+  //    进度保持 10/100 而非缩水为 3/93。
+  // 而在 SelfCheck 外被掌握/删除的词（无 self_check 日志且已离开 dueWords）会被排除。
   const [initialWords, setInitialWords] = useState<Word[]>(() => {
     const cached = loadRestartCache(persistKey);
     // 兼容旧缓存（可能没有 initialIds 字段）
     if (cached && cached.initialIds && cached.initialIds.length > 0) {
-      // 从当前 words prop 过滤：只保留仍在当前范围的词
-      // 这样即使缓存了 101 个 ID，但当前 dueWords 只有 42 个，也只恢复 42 个
       const currentIds = new Set(words.map((w) => w.id));
+      // 今日 SelfCheck 已消费的 wordId（用于保留答对但离开 dueWords 的词）
+      const { consumedIds } = getTodaySelfCheckStats(
+        useWordStore.getState().logs,
+        mode,
+      );
+      // 从完整词库恢复 Word 对象（不能用 words prop，因为答对的词已不在其中）
+      const allWords = useWordStore.getState().words;
+      const wordMap = new Map(allWords.map((w) => [w.id, w]));
       const restored = cached.initialIds
-        .filter((id) => currentIds.has(id))
-        .map((id) => words.find((w) => w.id === id))
+        .filter((id) => currentIds.has(id) || consumedIds.has(id))
+        .map((id) => wordMap.get(id))
         .filter((w): w is Word => Boolean(w));
       if (restored.length > 0) return restored;
     }
