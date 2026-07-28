@@ -17,6 +17,7 @@ import {
   Check,
   TrendingUp,
   Archive,
+  RotateCcw,
 } from "lucide-react";
 import { useWordStore } from "@/store/wordStore";
 import {
@@ -34,6 +35,7 @@ import DateRangePicker from "@/components/DateRangePicker";
 export default function Stats() {
   const words = useWordStore((s) => s.words);
   const logs = useWordStore((s) => s.logs);
+  const clearAllLogs = useWordStore((s) => s.clearAllLogs);
 
   const today = todayKey();
   const todayAdded = words.filter((w) => w.date === today).length;
@@ -115,6 +117,12 @@ export default function Stats() {
 
   // 熟练度排行显示数量：默认 10，可选 5/10/20/50/全部
   const [rankLimit, setRankLimit] = useState<number | "all">(10);
+
+  // 重置熟练度统计：清空所有复习日志
+  const handleResetMastery = async () => {
+    if (!window.confirm("确定要重置熟练度统计吗？\n\n这将清空所有复习记录，熟练度排行将从零开始重新计算。此操作不可撤销。")) return;
+    await clearAllLogs();
+  };
 
   // 今日复习统计
   const todayReviews = logs.filter(
@@ -463,6 +471,15 @@ export default function Stats() {
                 </button>
               ))}
             </div>
+            {/* 重置熟练度统计 */}
+            <button
+              onClick={handleResetMastery}
+              className="flex items-center gap-1 rounded border border-ink/15 px-2 py-0.5 font-mono text-2xs text-ink-light transition-colors hover:border-accent-red/40 hover:text-accent-red"
+              title="清空所有复习记录，重新计算熟练度"
+            >
+              <RotateCcw className="h-3 w-3" strokeWidth={1.5} />
+              重置
+            </button>
             <Archive className="h-5 w-5 text-ink-light" strokeWidth={1.5} />
           </div>
         </div>

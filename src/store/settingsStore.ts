@@ -43,7 +43,7 @@ export const useSettingsStore = create<SettingsState>()(
   persist(
     (set, get) => ({
       ttsVolume: 0.5,
-      trackStudyTime: false,
+      trackStudyTime: true,
       totalStudySeconds: 0,
       lastActivityAt: Date.now(),
       lastSyncedSeconds: 0,
@@ -96,16 +96,13 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: "wordgrid-settings",
-      version: 1,
-      // 旧版本（version 0）默认 ttsVolume=1，迁移到 0.5
-      // 这样已有用户也会降到 50%，新用户直接是 0.5
-      migrate: () => ({
-        ttsVolume: 0.5,
-        trackStudyTime: false,
-        totalStudySeconds: 0,
-        lastActivityAt: Date.now(),
-        lastSyncedSeconds: 0,
-        syncEnabled: !import.meta.env.DEV,
+      version: 2,
+      // v0→v1: ttsVolume 从 1 迁移到 0.5
+      // v1→v2: trackStudyTime 默认改为 true（开启学习时长追踪）
+      migrate: (persistedState: any, version: number) => ({
+        ttsVolume: version < 1 ? 0.5 : (persistedState?.ttsVolume ?? 0.5),
+        trackStudyTime: true,
+        totalStudySeconds: persistedState?.totalStudySeconds ?? 0,
       }),
       partialize: (s) => ({
         ttsVolume: s.ttsVolume,

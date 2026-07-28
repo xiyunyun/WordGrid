@@ -199,6 +199,18 @@ export async function deleteReviewLogsByWordId(
   return { success: true };
 }
 
+/** 删除当前用户的所有复习日志（重置熟练度统计） */
+export async function deleteAllReviewLogs(): Promise<CloudSyncResult> {
+  const supabase = getSupabase();
+  if (!supabase) return { success: false, error: "Supabase 未配置" };
+  const username = getCurrentUsername();
+  if (!username) return { success: false, error: "未登录" };
+
+  const { error } = await (supabase.from("review_logs") as any).delete().eq("username", username);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
 /** 推送文章归档 */
 export async function pushArticle(
   article: ArticleArchive,

@@ -340,7 +340,7 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
               />
             }
           />
-          <Route path="/wordbook" element={<Wordbook />} />
+          <Route path="/wordbook" element={<Wordbook onRequestNote={openNoteModal} />} />
           <Route path="/blocks" element={<ArticleBuilder />} />
           <Route path="/stats" element={<Stats />} />
           <Route

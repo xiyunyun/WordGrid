@@ -33,7 +33,6 @@ import { cn } from "@/lib/utils";
 import { speakWord } from "@/lib/tts";
 import SpeakButton from "@/components/SpeakButton";
 import SelfCheckFlow from "@/components/SelfCheckFlow";
-import NoteModal from "@/components/NoteModal";
 import ExportModal from "@/components/ExportModal";
 import WordbookFilterBar, {
   DEFAULT_FILTER,
@@ -51,7 +50,11 @@ let cachedTag: ListTag | null = null;
 let cachedFilter: FilterState | null = null;
 let cachedSelfCheckScope: SelfCheckScope | null = null;
 
-export default function Wordbook() {
+interface WordbookProps {
+  onRequestNote?: (word: Word) => void;
+}
+
+export default function Wordbook({ onRequestNote }: WordbookProps) {
   const words = useWordStore((s) => s.words);
   // 从模块级缓存恢复，无缓存则默认 list
   const [mode, setMode] = useState<ViewMode>(() => cachedMode ?? "list");
@@ -71,9 +74,6 @@ export default function Wordbook() {
   useEffect(() => {
     cachedSelfCheckScope = selfCheckScope;
   }, [selfCheckScope]);
-  // 笔记查看弹窗
-  const [noteModalOpen, setNoteModalOpen] = useState(false);
-  const [noteWord, setNoteWord] = useState<Word | null>(null);
   // 导出弹窗
   const [exportModalOpen, setExportModalOpen] = useState(false);
 
@@ -91,11 +91,6 @@ export default function Wordbook() {
   const dueTodayCount = selectDueAndTodayNewCount(words);
   const masteredWords = selectMasteredWords(words);
   const recentWords = selectRecentWords(words, 7);
-
-  const openNoteModal = (word: Word) => {
-    setNoteWord(word);
-    setNoteModalOpen(true);
-  };
 
   // 完全没有任何单词时才显示空状态
   const hasAnyWords = words.length > 0;
@@ -273,7 +268,7 @@ export default function Wordbook() {
                 // 定位完成后清除 URL 中的 focus，避免刷新重复滚动
                 setSearchParams({}, { replace: true });
               }}
-              onRequestNote={openNoteModal}
+              onRequestNote={onRequestNote}
             />
           )}
           {mode === "self_check" && (
@@ -296,39 +291,32 @@ export default function Wordbook() {
                 }
                 return baseWords;
               })()}
-              onRequestNote={openNoteModal}
+              onRequestNote={onRequestNote}
             />
           )}
           {mode === "random" && (
             <RandomView
               words={words}
               filter={filter}
-              onRequestNote={openNoteModal}
+              onRequestNote={onRequestNote}
             />
           )}
           {mode === "dictation" && (
             <DictationView
               words={words}
               filter={filter}
-              onRequestNote={openNoteModal}
+              onRequestNote={onRequestNote}
             />
           )}
           {mode === "cards" && (
             <CardsView
               words={words}
               filter={filter}
-              onRequestNote={openNoteModal}
+              onRequestNote={onRequestNote}
             />
           )}
         </>
       )}
-
-      {/* 笔记查看弹窗 */}
-      <NoteModal
-        open={noteModalOpen}
-        onClose={() => setNoteModalOpen(false)}
-        word={noteWord}
-      />
 
       {/* 导出弹窗 */}
       <ExportModal

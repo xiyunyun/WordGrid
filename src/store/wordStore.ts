@@ -16,6 +16,7 @@ import {
   pushReviewLog,
   deleteWord as cloudDeleteWord,
   deleteReviewLogsByWordId,
+  deleteAllReviewLogs,
 } from "@/lib/cloudSyncSupabase";
 
 interface WordStore {
@@ -67,6 +68,8 @@ interface WordStore {
   reviewWord: (id: string, correct: boolean, mode: ReviewMode) => void;
   /** 只记录复习日志，不推进艾宾浩斯节点（用于随机抽查、听写测试等非正式复习） */
   logReview: (id: string, correct: boolean, mode: ReviewMode) => void;
+  /** 清空所有复习日志（重置熟练度统计），同时删除云端日志 */
+  clearAllLogs: () => Promise<void>;
 
   setHydrated: () => void;
 
@@ -384,6 +387,17 @@ export const useWordStore = create<WordStore>()(
         // 云同步：推送复习日志
         if (get().syncEnabled) {
           pushReviewLog(log).catch((e) => console.error("[云同步] 推送异常:", e));
+        }
+      },
+
+      clearAllLogs: async () => {
+        set({ logs: [] });
+        if (get().syncEnabled) {
+          try {
+            await deleteAllReviewLogs();
+          } catch (e) {
+            console.error("[云同步] 清空日志异常:", e);
+          }
         }
       },
 
