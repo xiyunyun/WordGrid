@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Check, X, Eye, RotateCcw, Bookmark } from "lucide-react";
 import type { Word, ReviewMode, ReviewLog } from "@/types";
+import { STAGE_LABELS } from "@/types";
 import { useWordStore } from "@/store/wordStore";
 import { formatMD, todayKey } from "@/lib/review";
 import { cn } from "@/lib/utils";
@@ -470,17 +471,44 @@ export default function SelfCheckFlow({
       {/* 单词卡片 */}
       <div>
         <div className="relative rounded-md border border-ink/15 bg-paper-card p-5 text-center hover:shadow-paper-hover md:p-10">
-          {/* 右上角：标记已掌握按钮（独立位置避免与认识/不认识误触） */}
-          {!dryRun && (
-            <button
-              onClick={handleMaster}
-              className="absolute right-3 top-3 flex items-center gap-1 rounded-md border border-ink/20 bg-paper px-2.5 py-1 font-mono text-2xs uppercase tracking-editorial text-ink-light transition-colors hover:border-accent-green hover:bg-accent-green hover:text-paper"
-              title="标记为已掌握，不再出现在复习队列"
+          {/* 右上角：记忆阶段 + 标记已掌握按钮 */}
+          <div className="absolute right-3 top-3 flex items-center gap-2">
+            <span
+              className={cn(
+                "font-mono text-2xs uppercase tracking-editorial",
+                liveCurrent?.isMastered
+                  ? "text-accent-green"
+                  : [
+                      "text-ink-light",
+                      "text-ink-muted",
+                      "text-accent-gold/70",
+                      "text-accent-gold",
+                      "text-accent-green/60",
+                      "text-accent-green/80",
+                      "text-accent-green",
+                    ][liveCurrent?.reviewStage ?? 0] ?? "text-ink-light",
+              )}
+              title={
+                liveCurrent?.isMastered
+                  ? "永久（已掌握）"
+                  : `记忆阶段：${STAGE_LABELS[liveCurrent?.reviewStage ?? 0] || "初识"}`
+              }
             >
-              <Bookmark className="h-3 w-3" strokeWidth={1.5} />
-              标记掌握
-            </button>
-          )}
+              {liveCurrent?.isMastered
+                ? "永"
+                : STAGE_LABELS[liveCurrent?.reviewStage ?? 0]?.[0] || "初"}
+            </span>
+            {!dryRun && (
+              <button
+                onClick={handleMaster}
+                className="flex items-center gap-1 rounded-md border border-ink/20 bg-paper px-2.5 py-1 font-mono text-2xs uppercase tracking-editorial text-ink-light transition-colors hover:border-accent-green hover:bg-accent-green hover:text-paper"
+                title="标记为已掌握，不再出现在复习队列"
+              >
+                <Bookmark className="h-3 w-3" strokeWidth={1.5} />
+                标记掌握
+              </button>
+            )}
+          </div>
           <div className="eyebrow mb-4">Self-Check</div>
           <h3 className="font-serif text-3xl font-medium tracking-word text-ink md:text-5xl">
             {liveCurrent?.word}

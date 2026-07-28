@@ -11,6 +11,7 @@ import {
   RotateCcw,
   Bookmark,
   NotebookPen,
+  Pencil,
   Download,
   Volume2,
   Loader2,
@@ -49,12 +50,14 @@ let cachedMode: ViewMode | null = null;
 let cachedTag: ListTag | null = null;
 let cachedFilter: FilterState | null = null;
 let cachedSelfCheckScope: SelfCheckScope | null = null;
+let cachedSortBy: string | null = null;
 
 interface WordbookProps {
   onRequestNote?: (word: Word) => void;
+  onRequestEdit?: (word: Word) => void;
 }
 
-export default function Wordbook({ onRequestNote }: WordbookProps) {
+export default function Wordbook({ onRequestNote, onRequestEdit }: WordbookProps) {
   const words = useWordStore((s) => s.words);
   // 从模块级缓存恢复，无缓存则默认 list
   const [mode, setMode] = useState<ViewMode>(() => cachedMode ?? "list");
@@ -269,6 +272,7 @@ export default function Wordbook({ onRequestNote }: WordbookProps) {
                 setSearchParams({}, { replace: true });
               }}
               onRequestNote={onRequestNote}
+              onRequestEdit={onRequestEdit}
             />
           )}
           {mode === "self_check" && (
@@ -340,6 +344,7 @@ function ListView({
   focusWordId,
   onConsumeFocus,
   onRequestNote,
+  onRequestEdit,
 }: {
   dueWords: Word[];
   /** Due Today 标签显示的数量（到期词 ∪ 当日新加未复习词，与导航红点一致） */
@@ -353,6 +358,7 @@ function ListView({
   focusWordId?: string;
   onConsumeFocus?: () => void;
   onRequestNote: (word: Word) => void;
+  onRequestEdit?: (word: Word) => void;
 }) {
   const markMastered = useWordStore((s) => s.markMastered);
   const toggleDifficult = useWordStore((s) => s.toggleDifficult);
@@ -365,6 +371,13 @@ function ListView({
   useEffect(() => {
     cachedTag = activeTag;
   }, [activeTag]);
+
+  // 排序状态：模块级缓存，刷新页面时重置
+  type SortBy = "default" | "mastery" | "createdAt" | "masteredAt";
+  const [sortBy, setSortBy] = useState<SortBy>(() => (cachedSortBy as SortBy) ?? "default");
+  useEffect(() => {
+    cachedSortBy = sortBy;
+  }, [sortBy]);
 
   // 搜索跳转：自动切到「全部」标签（确保目标词必定在列表中）
   useEffect(() => {
@@ -403,22 +416,42 @@ function ListView({
   // 应用筛选工具栏的筛选（记忆阶段 + 词性 + 排除已掌握 + 日期）
   // 筛选为空时直接使用 tagWords，避免无谓的 filter 开销
   const filteredWords = useMemo(() => {
-    if (!filter.stages && !filter.pos && !filter.excludeMastered && !filter.dates) return tagWords;
-    return tagWords.filter((w) => {
-      // 排除已掌握
-      if (filter.excludeMastered && w.isMastered) return false;
-      // 记忆阶段筛选：-1 表示已掌握，0-6 对应 reviewStage
-      if (filter.stages) {
-        const wordStage = w.isMastered ? -1 : w.reviewStage;
-        if (!filter.stages.includes(wordStage)) return false;
-      }
-      // 词性筛选
-      if (filter.pos && !filter.pos.includes(w.pos)) return false;
-      // 日期筛选（多选）
-      if (filter.dates && filter.dates.length > 0 && !filter.dates.includes(w.date)) return false;
-      return true;
-    });
-  }, [tagWords, filter.stages, filter.pos, filter.excludeMastered, filter.dates]);
+    const base = (!filter.stages && !filter.pos && !filter.excludeMastered && !filter.dates)
+      ? tagWords
+      : tagWords.filter((w) => {
+        // 排除已掌握
+        if (filter.excludeMastered && w.isMastered) return false;
+        // 记忆阶段筛选：-1 表示已掌握，0-6 对应 reviewStage
+        if (filter.stages) {
+          const wordStage = w.isMastered ? -1 : w.reviewStage;
+          if (!filter.stages.includes(wordStage)) return false;
+        }
+        // 词性筛选
+        if (filter.pos && !filter.pos.includes(w.pos)) return false;
+        // 日期筛选（多选）
+        if (filter.dates && filter.dates.length > 0 && !filter.dates.includes(w.date)) return false;
+        return true;
+      });
+
+    // 排序
+    if (sortBy === "default") return base;
+    const sorted = [...base];
+    if (sortBy === "mastery") {
+      // 按熟练度排序：reviewStage 升序（0=初识最前，6=永久/已掌握最后）
+      sorted.sort((a, b) => {
+        const sa = a.isMastered ? 7 : a.reviewStage;
+        const sb = b.isMastered ? 7 : b.reviewStage;
+        return sa - sb;
+      });
+    } else if (sortBy === "createdAt") {
+      // 按添加日期排序：正序（最早添加在前）
+      sorted.sort((a, b) => a.createdAt - b.createdAt);
+    } else if (sortBy === "masteredAt") {
+      // 按已掌握时间排序：最近的在前
+      sorted.sort((a, b) => (b.masteredAt ?? 0) - (a.masteredAt ?? 0));
+    }
+    return sorted;
+  }, [tagWords, filter.stages, filter.pos, filter.excludeMastered, filter.dates, sortBy]);
 
   // 复习标签下隐藏释义（点击显示），其余标签（含全部单词、近七日）直接显示
   const hideMeaning = activeTag === "due";
@@ -519,6 +552,61 @@ function ListView({
           })}
         </div>
 
+        {/* 排序选择器 - 根据当前标签提供不同排序选项 */}
+        <div className="mb-3 flex flex-wrap items-center gap-1">
+          <span className="mr-1 font-mono text-2xs uppercase tracking-editorial text-ink-light">
+            排序
+          </span>
+          <button
+            onClick={() => setSortBy("default")}
+            className={cn(
+              "rounded border px-2 py-0.5 font-mono text-2xs transition-colors",
+              sortBy === "default"
+                ? "border-ink bg-ink text-paper"
+                : "border-ink/15 text-ink-light hover:border-ink/30 hover:text-ink",
+            )}
+          >
+            默认
+          </button>
+          {/* 已掌握标签：按已掌握时间排序；其他标签：按熟练度排序 */}
+          {activeTag === "mastered" ? (
+            <button
+              onClick={() => setSortBy("masteredAt")}
+              className={cn(
+                "rounded border px-2 py-0.5 font-mono text-2xs transition-colors",
+                sortBy === "masteredAt"
+                  ? "border-ink bg-ink text-paper"
+                  : "border-ink/15 text-ink-light hover:border-ink/30 hover:text-ink",
+              )}
+            >
+              掌握时间
+            </button>
+          ) : (
+            <button
+              onClick={() => setSortBy("mastery")}
+              className={cn(
+                "rounded border px-2 py-0.5 font-mono text-2xs transition-colors",
+                sortBy === "mastery"
+                  ? "border-ink bg-ink text-paper"
+                  : "border-ink/15 text-ink-light hover:border-ink/30 hover:text-ink",
+              )}
+            >
+              熟练度
+            </button>
+          )}
+          <button
+            onClick={() => setSortBy("createdAt")}
+            className={cn(
+              "rounded border px-2 py-0.5 font-mono text-2xs transition-colors",
+              sortBy === "createdAt"
+                ? "border-ink bg-ink text-paper"
+                : "border-ink/15 text-ink-light hover:border-ink/30 hover:text-ink",
+            )}
+          >
+            添加日期
+          </button>
+        </div>
+
         {/* 当前标签下的单词列表（应用筛选工具栏筛选后）
          * v2.3.5：ul 自身承载统一背景 bg-paper-card/60，li 之间用 border-b 主题色细分隔线，
          * hover 时整行高亮 bg-paper-deep/40，背景无断开，行间分隔仅靠一条细线
@@ -534,6 +622,7 @@ function ListView({
                 onMaster={() => markMastered(w.id)}
                 onForget={() => toggleDifficult(w.id)}
                 onRequestNote={onRequestNote}
+                onRequestEdit={onRequestEdit}
               />
             ))}
           </ul>
@@ -555,6 +644,7 @@ function MinimalRow({
   onMaster,
   onForget,
   onRequestNote,
+  onRequestEdit,
 }: {
   word: Word;
   highlighted?: boolean;
@@ -564,6 +654,7 @@ function MinimalRow({
   onMaster: () => void;
   onForget: () => void;
   onRequestNote: (word: Word) => void;
+  onRequestEdit?: (word: Word) => void;
 }) {
   const [revealed, setRevealed] = useState(false);
   const showMeaning = !hideMeaning || revealed;
@@ -662,6 +753,19 @@ function MinimalRow({
       <div className="opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
         <SpeakButton text={word.word} />
       </div>
+
+      {/* 编辑按钮 - 与每日网格同款样式 */}
+      {onRequestEdit && (
+        <div className="opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
+          <button
+            onClick={() => onRequestEdit(word)}
+            className="rounded p-1 text-ink-light transition-colors hover:bg-accent-gold/10 hover:text-accent-gold"
+            title="编辑"
+          >
+            <Pencil className="h-3 w-3" strokeWidth={1.5} />
+          </button>
+        </div>
+      )}
 
       {/* 笔记按钮 - 点击打开二级菜单（NoteModal） */}
       <div className="hidden sm:flex">
@@ -874,15 +978,42 @@ function RandomView({ words, filter, onRequestNote }: { words: Word[]; filter: F
 
       <div className="mx-auto max-w-2xl">
         <div className="relative rounded-md border border-accent-gold/30 bg-paper-card p-6 md:p-12 text-center hover:shadow-paper-hover">
-          {/* 右上角：标记已掌握按钮 */}
-          <button
-            onClick={handleMaster}
-            className="absolute right-3 top-3 flex items-center gap-1 rounded-md border border-ink/20 bg-paper px-2.5 py-1 font-mono text-2xs uppercase tracking-editorial text-ink-light transition-colors hover:border-accent-green hover:bg-accent-green hover:text-paper"
-            title="标记为已掌握，不再出现在随机抽查"
-          >
-            <Bookmark className="h-3 w-3" strokeWidth={1.5} />
-            标记掌握
-          </button>
+          {/* 右上角：记忆阶段 + 标记已掌握按钮 */}
+          <div className="absolute right-3 top-3 flex items-center gap-2">
+            <span
+              className={cn(
+                "font-mono text-2xs uppercase tracking-editorial",
+                liveCurrent?.isMastered
+                  ? "text-accent-green"
+                  : [
+                      "text-ink-light",
+                      "text-ink-muted",
+                      "text-accent-gold/70",
+                      "text-accent-gold",
+                      "text-accent-green/60",
+                      "text-accent-green/80",
+                      "text-accent-green",
+                    ][liveCurrent?.reviewStage ?? 0] ?? "text-ink-light",
+              )}
+              title={
+                liveCurrent?.isMastered
+                  ? "永久（已掌握）"
+                  : `记忆阶段：${STAGE_LABELS[liveCurrent?.reviewStage ?? 0] || "初识"}`
+              }
+            >
+              {liveCurrent?.isMastered
+                ? "永"
+                : STAGE_LABELS[liveCurrent?.reviewStage ?? 0]?.[0] || "初"}
+            </span>
+            <button
+              onClick={handleMaster}
+              className="flex items-center gap-1 rounded-md border border-ink/20 bg-paper px-2.5 py-1 font-mono text-2xs uppercase tracking-editorial text-ink-light transition-colors hover:border-accent-green hover:bg-accent-green hover:text-paper"
+              title="标记为已掌握，不再出现在随机抽查"
+            >
+              <Bookmark className="h-3 w-3" strokeWidth={1.5} />
+              标记掌握
+            </button>
+          </div>
           <div className="eyebrow mb-4 text-accent-gold">Random Quiz</div>
           <h3 className="font-serif text-3xl md:text-5xl font-medium tracking-word text-ink">
             {liveCurrent?.word}
@@ -1161,15 +1292,42 @@ function DictationView({ words, filter, onRequestNote }: { words: Word[]; filter
                 : "border-ink/15",
           )}
         >
-          {/* 右上角：标记已掌握按钮 */}
-          <button
-            onClick={handleMaster}
-            className="absolute right-3 top-3 flex items-center gap-1 rounded-md border border-ink/20 bg-paper px-2.5 py-1 font-mono text-2xs uppercase tracking-editorial text-ink-light transition-colors hover:border-accent-green hover:bg-accent-green hover:text-paper"
-            title="标记为已掌握，不再出现在听写测试"
-          >
-            <Bookmark className="h-3 w-3" strokeWidth={1.5} />
-            标记掌握
-          </button>
+          {/* 右上角：记忆阶段 + 标记已掌握按钮 */}
+          <div className="absolute right-3 top-3 flex items-center gap-2">
+            <span
+              className={cn(
+                "font-mono text-2xs uppercase tracking-editorial",
+                (liveCurrent ?? current)?.isMastered
+                  ? "text-accent-green"
+                  : [
+                      "text-ink-light",
+                      "text-ink-muted",
+                      "text-accent-gold/70",
+                      "text-accent-gold",
+                      "text-accent-green/60",
+                      "text-accent-green/80",
+                      "text-accent-green",
+                    ][(liveCurrent ?? current)?.reviewStage ?? 0] ?? "text-ink-light",
+              )}
+              title={
+                (liveCurrent ?? current)?.isMastered
+                  ? "永久（已掌握）"
+                  : `记忆阶段：${STAGE_LABELS[(liveCurrent ?? current)?.reviewStage ?? 0] || "初识"}`
+              }
+            >
+              {(liveCurrent ?? current)?.isMastered
+                ? "永"
+                : STAGE_LABELS[(liveCurrent ?? current)?.reviewStage ?? 0]?.[0] || "初"}
+            </span>
+            <button
+              onClick={handleMaster}
+              className="flex items-center gap-1 rounded-md border border-ink/20 bg-paper px-2.5 py-1 font-mono text-2xs uppercase tracking-editorial text-ink-light transition-colors hover:border-accent-green hover:bg-accent-green hover:text-paper"
+              title="标记为已掌握，不再出现在听写测试"
+            >
+              <Bookmark className="h-3 w-3" strokeWidth={1.5} />
+              标记掌握
+            </button>
+          </div>
           <div className="eyebrow mb-4">听发音拼写单词</div>
 
           {/* 发音按钮 - 听写核心功能 */}
@@ -1378,21 +1536,48 @@ function CardsView({
     <div className="mx-auto max-w-2xl">
       {/* 卡片本体 - 与 RandomView/DictationView 统一样式 */}
       <div className="relative rounded-md border border-ink/15 bg-paper-card p-6 md:p-12 text-center hover:shadow-paper-hover">
-        {/* 右上角：标记已掌握按钮（默认灰色"标记掌握"，已掌握后绿色"已掌握"） */}
-        <button
-          onClick={() => markMastered(current.id)}
-          disabled={current.isMastered}
-          className={cn(
-            "absolute right-3 top-3 flex items-center gap-1 rounded-md border px-2.5 py-1 font-mono text-2xs uppercase tracking-editorial transition-colors",
-            current.isMastered
-              ? "cursor-default border-accent-green/40 bg-accent-green/10 text-accent-green"
-              : "border-ink/20 bg-paper text-ink-light hover:border-accent-green hover:bg-accent-green hover:text-paper",
-          )}
-          title={current.isMastered ? "已标记为掌握" : "标记为已掌握，不再出现在复习队列"}
-        >
-          <Bookmark className="h-3 w-3" strokeWidth={1.5} />
-          {current.isMastered ? "已掌握" : "标记掌握"}
-        </button>
+        {/* 右上角：记忆阶段 + 标记已掌握按钮 */}
+        <div className="absolute right-3 top-3 flex items-center gap-2">
+          <span
+            className={cn(
+              "font-mono text-2xs uppercase tracking-editorial",
+              current.isMastered
+                ? "text-accent-green"
+                : [
+                    "text-ink-light",
+                    "text-ink-muted",
+                    "text-accent-gold/70",
+                    "text-accent-gold",
+                    "text-accent-green/60",
+                    "text-accent-green/80",
+                    "text-accent-green",
+                  ][current.reviewStage] ?? "text-ink-light",
+            )}
+            title={
+              current.isMastered
+                ? "永久（已掌握）"
+                : `记忆阶段：${STAGE_LABELS[current.reviewStage] || "初识"}`
+            }
+          >
+            {current.isMastered
+              ? "永"
+              : STAGE_LABELS[current.reviewStage]?.[0] || "初"}
+          </span>
+          <button
+            onClick={() => markMastered(current.id)}
+            disabled={current.isMastered}
+            className={cn(
+              "flex items-center gap-1 rounded-md border px-2.5 py-1 font-mono text-2xs uppercase tracking-editorial transition-colors",
+              current.isMastered
+                ? "cursor-default border-accent-green/40 bg-accent-green/10 text-accent-green"
+                : "border-ink/20 bg-paper text-ink-light hover:border-accent-green hover:bg-accent-green hover:text-paper",
+            )}
+            title={current.isMastered ? "已标记为掌握" : "标记为已掌握，不再出现在复习队列"}
+          >
+            <Bookmark className="h-3 w-3" strokeWidth={1.5} />
+            {current.isMastered ? "已掌握" : "标记掌握"}
+          </button>
+        </div>
         <div className="eyebrow mb-4 text-ink-light">
           Cards · {idx + 1} / {filteredWords.length}
         </div>

@@ -14,6 +14,7 @@ export interface Word {
   reviewStage: number; // 0-6 对应艾宾浩斯节点
   lastReviewDate?: string; // 最后一次推进复习阶段的日期 YYYY-MM-DD（同一天不重复推进）
   createdAt: number;
+  masteredAt?: number; // 标记为已掌握的时间戳（毫秒），用于已掌握列表按时间排序
 }
 
 export type ReviewMode = "self_check" | "dictation" | "random";

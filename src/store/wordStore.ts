@@ -289,6 +289,7 @@ export const useWordStore = create<WordStore>()(
                   isDifficult: false,
                   nextReview: "",
                   reviewStage: -1,
+                  masteredAt: Date.now(),
                 }
               : w,
           ),
