@@ -18,6 +18,8 @@ import {
   Layers,
   ChevronLeft,
   ChevronRight,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { useWordStore } from "@/store/wordStore";
 import {
@@ -51,6 +53,7 @@ let cachedTag: ListTag | null = null;
 let cachedFilter: FilterState | null = null;
 let cachedSelfCheckScope: SelfCheckScope | null = null;
 let cachedSortBy: string | null = null;
+let cachedSortOrder: string | null = null;
 
 interface WordbookProps {
   onRequestNote?: (word: Word) => void;
@@ -374,10 +377,15 @@ function ListView({
 
   // 排序状态：模块级缓存，刷新页面时重置
   type SortBy = "default" | "mastery" | "createdAt" | "masteredAt";
+  type SortOrder = "asc" | "desc";
   const [sortBy, setSortBy] = useState<SortBy>(() => (cachedSortBy as SortBy) ?? "default");
   useEffect(() => {
     cachedSortBy = sortBy;
   }, [sortBy]);
+  const [sortOrder, setSortOrder] = useState<SortOrder>(() => (cachedSortOrder as SortOrder) ?? "asc");
+  useEffect(() => {
+    cachedSortOrder = sortOrder;
+  }, [sortOrder]);
 
   // 搜索跳转：自动切到「全部」标签（确保目标词必定在列表中）
   useEffect(() => {
@@ -436,22 +444,24 @@ function ListView({
     // 排序
     if (sortBy === "default") return base;
     const sorted = [...base];
+    // sortOrder: asc=正序，desc=倒序。统一用 asc 计算后按需 reverse
     if (sortBy === "mastery") {
-      // 按熟练度排序：reviewStage 升序（0=初识最前，6=永久/已掌握最后）
+      // 按熟练度排序：asc = reviewStage 升序（0=初识最前，6=永久/已掌握最后）
       sorted.sort((a, b) => {
         const sa = a.isMastered ? 7 : a.reviewStage;
         const sb = b.isMastered ? 7 : b.reviewStage;
         return sa - sb;
       });
     } else if (sortBy === "createdAt") {
-      // 按添加日期排序：正序（最早添加在前）
+      // 按添加日期排序：asc = 正序（最早添加在前）
       sorted.sort((a, b) => a.createdAt - b.createdAt);
     } else if (sortBy === "masteredAt") {
-      // 按已掌握时间排序：最近的在前
-      sorted.sort((a, b) => (b.masteredAt ?? 0) - (a.masteredAt ?? 0));
+      // 按已掌握时间排序：asc = 正序（最早掌握在前）
+      sorted.sort((a, b) => (a.masteredAt ?? 0) - (b.masteredAt ?? 0));
     }
+    if (sortOrder === "desc") sorted.reverse();
     return sorted;
-  }, [tagWords, filter.stages, filter.pos, filter.excludeMastered, filter.dates, sortBy]);
+  }, [tagWords, filter.stages, filter.pos, filter.excludeMastered, filter.dates, sortBy, sortOrder]);
 
   // 复习标签下隐藏释义（点击显示），其余标签（含全部单词、近七日）直接显示
   const hideMeaning = activeTag === "due";
@@ -604,6 +614,25 @@ function ListView({
             )}
           >
             添加日期
+          </button>
+          {/* 正序/倒序切换 - 默认排序时禁用 */}
+          <button
+            onClick={() => setSortOrder((o) => (o === "asc" ? "desc" : "asc"))}
+            disabled={sortBy === "default"}
+            className={cn(
+              "ml-1 flex items-center gap-0.5 rounded border px-2 py-0.5 font-mono text-2xs transition-colors",
+              sortBy === "default"
+                ? "cursor-not-allowed border-ink/10 text-ink-light/30"
+                : "border-ink bg-ink text-paper",
+            )}
+            title={sortOrder === "asc" ? "当前正序，点击切换为倒序" : "当前倒序，点击切换为正序"}
+          >
+            {sortOrder === "asc" ? (
+              <ArrowUp className="h-3 w-3" strokeWidth={1.5} />
+            ) : (
+              <ArrowDown className="h-3 w-3" strokeWidth={1.5} />
+            )}
+            {sortOrder === "asc" ? "正序" : "倒序"}
           </button>
         </div>
 
