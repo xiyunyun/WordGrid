@@ -149,7 +149,7 @@ export default function DatePicker({ onJump }: DatePickerProps) {
           <div className="border-b border-ink/8 px-2 py-2">
             <button
               onClick={handleJumpToday}
-              className="flex w-full items-center justify-between rounded px-2 py-2 text-left transition-colors hover:bg-paper-warm/60"
+              className="flex w-full items-center justify-between rounded px-2 py-2 text-left transition-colors hover:bg-paper-warm"
             >
               <div className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-accent-red" />
@@ -200,8 +200,8 @@ export default function DatePicker({ onJump }: DatePickerProps) {
                             className={cn(
                               "group flex w-full items-center justify-between rounded px-2 py-2 transition-colors",
                               isToday
-                                ? "bg-accent-red/8 hover:bg-accent-red/12"
-                                : "hover:bg-paper-warm/60",
+                                ? "bg-accent-red/10 hover:bg-accent-red/15"
+                                : "hover:bg-paper-warm",
                             )}
                           >
                             <button
@@ -269,7 +269,7 @@ export default function DatePicker({ onJump }: DatePickerProps) {
           </div>
 
           {/* 底部统计 */}
-          <div className="border-t border-ink/8 bg-paper-warm/40 px-4 py-2 font-mono text-2xs uppercase tracking-editorial text-ink-light">
+          <div className="border-t border-ink/8 bg-paper-warm px-4 py-2 font-mono text-2xs uppercase tracking-editorial text-ink-light">
             {dates.length} days · {words.length} entries
           </div>
         </div>

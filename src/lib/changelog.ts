@@ -23,6 +23,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.3.0",
+    date: "2026-07-29",
+    items: [
+      "修复每日网格右下角日历按键滚动时漏风：DatePicker 面板内部多处使用半透明背景（bg-paper-warm/40、hover:bg-paper-warm/60、bg-accent-red/8），body 固定背景纹理透过这些区域产生泄漏。将所有半透明背景改为完全不透明",
+      "积木造文选择阶段新增「随机选择」功能：从筛选后的单词中随机选取指定数量（5-30 可调，默认 10），确保随机选择尊重当前筛选条件，不会选中被筛选掉的单词",
+    ],
+  },
+  {
     version: "3.2.0",
     date: "2026-07-29",
     items: [

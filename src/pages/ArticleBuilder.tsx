@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
-import { Blocks, Check, Loader2, RotateCcw, BookOpen, AlertCircle, Archive, FileQuestion, Languages, Search, Filter } from "lucide-react";
+import { Blocks, Check, Loader2, RotateCcw, BookOpen, AlertCircle, Archive, FileQuestion, Languages, Search, Filter, Shuffle } from "lucide-react";
 import { useWordStore } from "@/store/wordStore";
 import { useArticleStore } from "@/store/articleStore";
 import type { ArticleArchive } from "@/store/articleStore";
@@ -16,6 +16,7 @@ import {
 } from "@/lib/deepseek";
 import type { Word } from "@/types";
 import { cn } from "@/lib/utils";
+import { shuffle } from "@/lib/review";
 import { COMMON_POS } from "@/lib/pos";
 import { useDateNotesStore } from "@/store/dateNotes";
 import DatePickerCalendar from "@/components/DatePickerCalendar";
@@ -575,6 +576,16 @@ function SelectPhase({
     setExcludeMastered(true);
   };
 
+  // 随机选择数量（5-30，默认 10）
+  const [randomCount, setRandomCount] = useState(10);
+
+  /** 从筛选后的单词中随机选取指定数量 */
+  const handleRandomSelect = () => {
+    if (filteredWords.length === 0) return;
+    const picked = shuffle(filteredWords).slice(0, Math.min(randomCount, filteredWords.length));
+    onSelectAll(picked.map((w) => w.id));
+  };
+
   /** 切换时态选中（单击选中，再单击取消） */
   const toggleTense = (t: Tense) => {
     const next = new Set(tenses);
@@ -898,6 +909,28 @@ function SelectPhase({
           >
             全选
           </button>
+          {/* 随机选择：从筛选后的单词中随机选取指定数量 */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handleRandomSelect}
+              disabled={filteredWords.length === 0}
+              className="flex items-center gap-1 rounded-md border border-ink/15 px-2.5 py-1 font-mono text-2xs uppercase tracking-editorial text-ink-light transition-colors hover:border-accent-gold/40 hover:text-accent-gold disabled:opacity-40 disabled:hover:border-ink/15 disabled:hover:text-ink-light"
+              title={`从筛选结果中随机选取 ${randomCount} 个单词`}
+            >
+              <Shuffle className="h-3 w-3" strokeWidth={1.5} />
+              随机
+            </button>
+            <select
+              value={randomCount}
+              onChange={(e) => setRandomCount(Number(e.target.value))}
+              className="rounded-md border border-ink/15 bg-paper-card px-1.5 py-1 font-mono text-2xs tabular-nums text-ink-light transition-colors hover:border-ink/30 hover:text-ink focus:border-ink/30 focus:outline-none"
+              title="随机选择数量"
+            >
+              {Array.from({ length: 26 }, (_, i) => i + 5).map((n) => (
+                <option key={n} value={n}>{n}</option>
+              ))}
+            </select>
+          </div>
           <button
             onClick={onClearAll}
             className="rounded-md border border-ink/15 px-2.5 py-1 font-mono text-2xs uppercase tracking-editorial text-ink-light transition-colors hover:border-ink/30 hover:text-ink"
