@@ -615,14 +615,13 @@ function ListView({
           >
             添加日期
           </button>
-          {/* 正序/倒序切换 - 默认排序时禁用 */}
+          {/* 正序/倒序切换 - 始终可见，默认排序时为未激活样式 */}
           <button
             onClick={() => setSortOrder((o) => (o === "asc" ? "desc" : "asc"))}
-            disabled={sortBy === "default"}
             className={cn(
               "ml-1 flex items-center gap-0.5 rounded border px-2 py-0.5 font-mono text-2xs transition-colors",
               sortBy === "default"
-                ? "cursor-not-allowed border-ink/10 text-ink-light/30"
+                ? "border-ink/15 text-ink-light hover:border-ink/30 hover:text-ink"
                 : "border-ink bg-ink text-paper",
             )}
             title={sortOrder === "asc" ? "当前正序，点击切换为倒序" : "当前倒序，点击切换为正序"}
@@ -641,7 +640,7 @@ function ListView({
          * hover 时整行高亮 bg-paper-deep/40，背景无断开，行间分隔仅靠一条细线
          */}
         {filteredWords.length > 0 ? (
-          <ul className="wordbook-grid overflow-hidden rounded-md border border-ink/10 bg-paper-card/60">
+          <ul className="wordbook-grid overflow-hidden rounded-md border border-ink/10 bg-paper-card">
             {filteredWords.map((w) => (
               <MinimalRow
                 key={w.id}

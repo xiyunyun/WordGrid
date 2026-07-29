@@ -4,6 +4,7 @@ import type { Word, ReviewLog, ReviewMode } from "@/types";
 import {
   uid,
   todayKey,
+  toDateKey,
   addDays,
   initReview,
   advanceReview,
@@ -109,6 +110,7 @@ export const useWordStore = create<WordStore>()(
         if (exists) return null;
 
         const { nextReview, reviewStage } = initReview();
+        const now = Date.now();
         const word: Word = {
           id: uid(),
           word: trimmedWord,
@@ -122,7 +124,8 @@ export const useWordStore = create<WordStore>()(
           isMastered: false,
           nextReview,
           reviewStage,
-          createdAt: Date.now(),
+          createdAt: now,
+          updatedAt: now,
         };
         set((s) => ({ words: [word, ...s.words] }));
         // 云同步：后台推送（不阻塞 UI，失败记录到控制台便于排查）
@@ -173,6 +176,7 @@ export const useWordStore = create<WordStore>()(
             continue;
           }
           seenInBatch.add(lower);
+          const now = Date.now();
           newWords.push({
             id: uid(),
             word: trimmed,
@@ -186,7 +190,8 @@ export const useWordStore = create<WordStore>()(
             isMastered: false,
             nextReview,
             reviewStage,
-            createdAt: Date.now(),
+            createdAt: now,
+            updatedAt: now,
           });
         }
 
@@ -219,7 +224,7 @@ export const useWordStore = create<WordStore>()(
 
       updateWord: (id, patch) => {
         set((s) => ({
-          words: s.words.map((w) => (w.id === id ? { ...w, ...patch } : w)),
+          words: s.words.map((w) => (w.id === id ? { ...w, ...patch, updatedAt: Date.now() } : w)),
         }));
         // 云同步：推送更新后的完整单词（需从 state 取最新值）
         if (get().syncEnabled) {
@@ -269,6 +274,7 @@ export const useWordStore = create<WordStore>()(
               isMastered: false,
               nextReview,
               reviewStage,
+              updatedAt: Date.now(),
             };
           }),
         }));
@@ -280,6 +286,7 @@ export const useWordStore = create<WordStore>()(
       },
 
       markMastered: (id) => {
+        const now = Date.now();
         set((s) => ({
           words: s.words.map((w) =>
             w.id === id
@@ -289,7 +296,8 @@ export const useWordStore = create<WordStore>()(
                   isDifficult: false,
                   nextReview: "",
                   reviewStage: -1,
-                  masteredAt: Date.now(),
+                  masteredAt: now,
+                  updatedAt: now,
                 }
               : w,
           ),
@@ -314,6 +322,7 @@ export const useWordStore = create<WordStore>()(
                   reviewStage,
                   // 清除今日复习标记，允许今日重新开始推进阶段
                   lastReviewDate: "",
+                  updatedAt: Date.now(),
                 }
               : w,
           ),
@@ -459,7 +468,15 @@ export const useWordStore = create<WordStore>()(
               set((s) => ({ words: [word, ...s.words] }));
             }
           } else {
-            // UPDATE：直接覆盖（Last-Write-Wins；更精细的冲突解决可比较 updatedAt）
+            // UPDATE：Last-Write-Wins，比较 updatedAt 时间戳
+            // 避免晚到的旧版本覆盖本地更新的新版本（多设备交叉复习的核心 bug）
+            const local = get().words.find((w) => w.id === word.id);
+            if (local) {
+              const localTs = local.updatedAt ?? 0;
+              const remoteTs = word.updatedAt ?? 0;
+              // 远端版本更旧或相同时，跳过（保留本地新版本）
+              if (remoteTs < localTs) return;
+            }
             set((s) => ({
               words: s.words.map((w) => (w.id === word.id ? word : w)),
             }));
@@ -479,6 +496,81 @@ export const useWordStore = create<WordStore>()(
             const exists = get().logs.some((l) => l.id === log.id);
             if (!exists) {
               set((s) => ({ logs: [log, ...s.logs] }));
+              // 收到对端推送的复习日志时，同步更新对应 word 的复习进度
+              // 这是多设备同步的关键：仅靠 word UPDATE 事件可能丢失/乱序，
+              // 收到 log 时反推 word 状态能确保待复习列表准确
+              const word = get().words.find((w) => w.id === log.wordId);
+              if (word) {
+                const logDate = toDateKey(new Date(log.reviewedAt));
+                if (log.correct) {
+                  // 仅处理比本地 lastReviewDate 更新的日志，避免旧日志回退复习进度
+                  // - lastReviewDate 为空/undefined：本地从未推进过，处理
+                  // - lastReviewDate < logDate：日志来自更新的日期，处理
+                  // - lastReviewDate >= logDate：日志来自同一天或更早，跳过（幂等 + 防回退）
+                  //
+                  // 这是多设备同步待复习残留词 bug 的关键修复：
+                  // 旧代码用 !== 判断，导致收到旧日期日志时仍会处理，把 lastReviewDate 倒退回旧日期，
+                  // 随后对应的 word UPDATE 又因 updatedAt 不小于本地而覆盖本地更新的复习状态
+                  const shouldProcess =
+                    !word.lastReviewDate || word.lastReviewDate < logDate;
+                  if (shouldProcess) {
+                    const next = advanceReview(word.reviewStage);
+                    if (next.reviewStage >= 6) {
+                      const now = log.reviewedAt;
+                      set((s) => ({
+                        words: s.words.map((w) =>
+                          w.id === word.id
+                            ? {
+                                ...w,
+                                isMastered: true,
+                                isDifficult: false,
+                                nextReview: "",
+                                reviewStage: -1,
+                                masteredAt: now,
+                                lastReviewDate: logDate,
+                                updatedAt: now,
+                              }
+                            : w,
+                        ),
+                      }));
+                    } else {
+                      set((s) => ({
+                        words: s.words.map((w) =>
+                          w.id === word.id
+                            ? {
+                                ...w,
+                                ...next,
+                                isMastered: false,
+                                lastReviewDate: logDate,
+                                updatedAt: log.reviewedAt,
+                              }
+                            : w,
+                        ),
+                      }));
+                    }
+                  }
+                } else {
+                  // 答错：重置到 stage=0，nextReview 设为今天（保持到期）
+                  // 用日志时间判断是否需要更新：若本地已是更晚的复习状态则跳过
+                  const localTs = word.updatedAt ?? 0;
+                  if (log.reviewedAt > localTs) {
+                    const next = resetReview();
+                    set((s) => ({
+                      words: s.words.map((w) =>
+                        w.id === word.id
+                          ? {
+                              ...w,
+                              ...next,
+                              isMastered: false,
+                              lastReviewDate: "",
+                              updatedAt: log.reviewedAt,
+                            }
+                          : w,
+                      ),
+                    }));
+                  }
+                }
+              }
             }
           } else {
             set((s) => ({

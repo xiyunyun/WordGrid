@@ -23,9 +23,27 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.2.0",
+    date: "2026-07-29",
+    items: [
+      "修复每日网格日历滚动时内容「漏风」：日期区块背景从 bg-paper-card/60（60% 半透明）改为 bg-paper-card（完全不透明），消除 body 固定背景纹理透过半透明区块产生的视差泄漏效果",
+      "修复生词本正序/倒序按钮在默认排序模式下几乎不可见：旧样式 text-ink-light/30（30% 透明度）+ border-ink/10（10% 透明度）导致按钮几乎隐形，改为与其他排序按钮一致的未激活样式，始终可见可点击",
+    ],
+  },
+  {
+    version: "3.1.1",
+    date: "2026-07-28",
+    items: [
+      "重要更新⚠️⚠️⚠️：修复多设备云同步待复习列表残留词的遗留 bug。v3.1.0 的修复仍不完整：applyRemoteLog 用 lastReviewDate !== logDate 判断是否处理答对日志，仅跳过同一天日志，导致收到旧日期日志时仍会处理——把 lastReviewDate 倒退回旧日期并设置 updatedAt 为旧时间戳，随后对应的旧 word UPDATE 覆盖本地更新的复习状态，单词重新进入待复习列表。修复方案：(1) applyRemoteLog 改用 lastReviewDate < logDate 判断，仅处理比本地更新的日志，同一天和更早的日志一律跳过（幂等 + 防回退）；(2) toWordRow 改用 w.updatedAt（实际修改时间）而非 Date.now()（推送时间），确保云端 updated_at 精确反映数据版本",
+      "修复每日网格日历滚动时内容「漏风」：日期区块背景从 bg-paper-card/60（60% 半透明）改为 bg-paper-card（完全不透明），消除 body 固定背景纹理透过半透明区块产生的视差泄漏效果",
+      "修复生词本正序/倒序按钮在默认排序模式下几乎不可见：旧样式 text-ink-light/30（30% 透明度）+ border-ink/10（10% 透明度）导致按钮几乎隐形，改为与其他排序按钮一致的未激活样式，始终可见可点击",
+    ],
+  },
+  {
     version: "3.1.0",
     date: "2026-07-26",
     items: [
+      "重要更新⚠️⚠️⚠️：修复多设备云同步导致待复习列表残留词的 bug。根本原因是 applyRemoteLog 收到对端复习日志时只更新 logs 数组、不更新对应 word 的复习进度，且 applyRemoteWord 在 UPDATE 时无时间戳比较，晚到的旧版本会覆盖本地新版本。修复方案：(1) Word 类型新增 updatedAt 字段做 Last-Write-Wins 冲突解决；(2) applyRemoteWord 比较时间戳拒绝旧版本覆盖；(3) applyRemoteLog 收到复习日志时根据 correct 字段反推并更新 word 的 nextReview/reviewStage/lastReviewDate，确保即使 word UPDATE 事件丢失也能正确移出待复习列表",
       "生词本四个练习模式（自我检测/随机抽查/听写测试/卡片浏览）卡片右上角新增记忆阶段显示：单字样式与每日网格一致（初/巩/熟/稳/深/长/永），七色渐进配色",
       "生词本单词列表新增排序功能：待复习/生词/近七日/全部支持按熟练度排序，已掌握支持按掌握时间排序，五个标签均支持按添加日期排序，所有排序均支持正序/倒序切换",
       "生词本单词列表每行新增编辑按钮（语音旁，铅笔图标）：与每日网格同款样式，可修改单词拼写、音标、词性、词意、笔记全部内容",

@@ -15,6 +15,7 @@ export interface Word {
   lastReviewDate?: string; // 最后一次推进复习阶段的日期 YYYY-MM-DD（同一天不重复推进）
   createdAt: number;
   masteredAt?: number; // 标记为已掌握的时间戳（毫秒），用于已掌握列表按时间排序
+  updatedAt?: number; // 云端最后更新时间戳（毫秒），用于多设备 Last-Write-Wins 冲突解决
 }
 
 export type ReviewMode = "self_check" | "dictation" | "random";

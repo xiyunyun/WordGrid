@@ -115,6 +115,10 @@ export function getCurrentUsername(): string | null {
 
 /** Word（本地）→ WordRow（DB） */
 export function toWordRow(w: Word, username: string): WordRow {
+  // 使用 w.updatedAt（单词实际修改时间）而非 Date.now()（推送时间），
+  // 确保云端 updated_at 准确反映数据版本，Last-Write-Wins 冲突解决更精确。
+  // 旧数据可能没有 updatedAt 字段，回退到 Date.now()。
+  const ts = w.updatedAt ?? Date.now();
   return {
     id: w.id,
     username,
@@ -130,7 +134,7 @@ export function toWordRow(w: Word, username: string): WordRow {
     review_stage: w.reviewStage,
     last_review_date: w.lastReviewDate || null,
     created_at: w.createdAt,
-    updated_at: new Date().toISOString(),
+    updated_at: new Date(ts).toISOString(),
   };
 }
 
@@ -150,6 +154,7 @@ export function fromWordRow(r: WordRow): Word {
     reviewStage: r.review_stage,
     lastReviewDate: r.last_review_date || undefined,
     createdAt: r.created_at,
+    updatedAt: new Date(r.updated_at).getTime(),
   };
 }
 

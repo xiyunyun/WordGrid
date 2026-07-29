@@ -814,7 +814,7 @@ export default function DailyGrid({
               key={group.date}
               id={`date-${group.date}`}
               className={cn(
-                "scroll-mt-32 overflow-hidden rounded-md border bg-paper-card/60",
+                "scroll-mt-32 overflow-hidden rounded-md border bg-paper-card",
                 isToday
                   ? "border-ink/25 hover:shadow-paper-hover"
                   : "border-ink/10",
