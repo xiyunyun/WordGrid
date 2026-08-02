@@ -211,7 +211,7 @@ export default function Stats() {
               </div>
               <div
                 className={cn(
-                  "font-display text-3xl md:text-5xl font-medium leading-none",
+                  "font-mono text-3xl md:text-5xl font-medium leading-none tabular-nums",
                   s.valueClass,
                 )}
               >

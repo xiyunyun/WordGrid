@@ -23,6 +23,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.4.0",
+    date: "2026-07-30",
+    items: [
+      "优化数字字体对齐：设置页「累计学习时长」与统计页「今日添加/需复习/学习中/已认识」四项数字从 font-display（Cormorant Garamond 衬线显示字体）改为 font-mono tabular-nums（等宽字体 + 表格数字），解决中文与数字混排时无法对齐的问题",
+      "修复语音播放回退逻辑：Free Dictionary API 音频播放失败时不会回退到有道 TTS。根因是 playUrl 失败时 resolve（不 reject），speakWord 的 try/catch 无法捕获失败。改为 playUrl 返回 boolean，失败时正确回退",
+      "修复混合内容拦截：Free Dictionary API 返回的部分音频 URL 为 http:// 协议，在 HTTPS 生产环境下被浏览器拦截。getFirstAudio 自动将 http:// 升级为 https://",
+    ],
+  },
+  {
     version: "3.3.0",
     date: "2026-07-29",
     items: [

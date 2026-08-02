@@ -137,7 +137,7 @@ export default function Settings() {
           <div className="mt-5 animate-fade-in">
             <div className="eyebrow mb-2 text-ink-light">累计学习时长</div>
             <div className="flex items-baseline gap-3">
-              <div className="font-display text-4xl font-medium tabular-nums text-ink md:text-5xl">
+              <div className="font-mono text-4xl font-medium tabular-nums text-ink md:text-5xl">
                 {formatDuration(totalStudySeconds)}
               </div>
             </div>

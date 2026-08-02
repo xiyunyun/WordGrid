@@ -109,11 +109,14 @@ export function getFirstPhonetic(entry: DictEntry | null): string {
   return "";
 }
 
-/** 获取第一个有效的音频 URL */
+/** 获取第一个有效的音频 URL
+ *  自动将 http:// 升级为 https://，避免 HTTPS 页面下的混合内容拦截 */
 export function getFirstAudio(entry: DictEntry | null): string {
   if (!entry) return "";
   for (const p of entry.phonetics) {
-    if (p.audio) return p.audio;
+    if (p.audio) {
+      return p.audio.replace(/^http:\/\//, "https://");
+    }
   }
   return "";
 }

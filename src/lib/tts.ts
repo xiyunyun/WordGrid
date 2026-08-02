@@ -203,15 +203,16 @@ export async function speak(text: string): Promise<boolean> {
 }
 
 /** 播放音频 URL，返回 Promise 在播放结束时 resolve
- *  音量从 settingsStore 读取，用户可在设置页面调节 */
-function playUrl(url: string): Promise<void> {
+ *  音量从 settingsStore 读取，用户可在设置页面调节
+ *  返回 true 表示播放成功，false 表示播放失败（用于触发回退逻辑） */
+function playUrl(url: string): Promise<boolean> {
   return new Promise((resolve) => {
     const audio = new Audio(url);
     // 从 store 读取音量设置（延迟读取，避免初始化顺序问题）
     audio.volume = getTtsVolume();
-    audio.onended = () => resolve();
-    audio.onerror = () => resolve();
-    audio.play().catch(() => resolve());
+    audio.onended = () => resolve(true);
+    audio.onerror = () => resolve(false);
+    audio.play().catch(() => resolve(false));
   });
 }
 
@@ -254,14 +255,11 @@ export async function speakWord(word: string): Promise<boolean> {
     dictAudioCache.set(lower, audioUrl);
   }
 
-  // 2. 有词典音频 → 直接播放
+  // 2. 有词典音频 → 直接播放，失败则回退到 TTS
   if (audioUrl) {
-    try {
-      await playUrl(audioUrl);
-      return true;
-    } catch {
-      // 播放失败（如 URL 失效），回退到 TTS
-    }
+    const ok = await playUrl(audioUrl);
+    if (ok) return true;
+    // 播放失败（如 URL 失效、混合内容拦截），回退到 TTS
   }
 
   // 3. 无词典音频或播放失败 → 有道 TTS 兜底
