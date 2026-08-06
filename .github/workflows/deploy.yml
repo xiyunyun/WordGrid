@@ -15,9 +15,11 @@ permissions:
   id-token: write
 
 # 同一时间只允许一个部署运行
+# 注意：不要用 cancel-in-progress: true，否则新运行会取消正在 deploy 的 job，
+# 导致 Pages 服务端留下"已创建但被取消"的僵尸部署，后续部署全部卡住。
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
