@@ -13,7 +13,21 @@ export default defineConfig({
   // base 必须设为 /仓库名/ 否则资源路径会 404
   base: `/${REPO_NAME}/`,
   build: {
-    sourcemap: 'hidden',
+    // 生产构建关闭 sourcemap：index.js.map 曾达 4.9MB，
+    // 拉大 artifact 体积，导致 GitHub Pages 部署超时
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        // 代码分割：把大依赖拆成独立 chunk，减小主 bundle 体积
+        // 主 bundle 曾达 1.7MB（gzip 374KB），拆分后首屏加载更快，Pages 部署也更稳
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'state-vendor': ['zustand', 'zustand/middleware'],
+          'supabase-vendor': ['@supabase/supabase-js'],
+          'ui-vendor': ['lucide-react', 'clsx', 'tailwind-merge'],
+        },
+      },
+    },
   },
   plugins: [
     react({
