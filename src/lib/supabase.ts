@@ -107,9 +107,14 @@ import type { Word, ReviewLog, ReviewMode, Essay } from "@/types";
 import type { ArticleArchive } from "@/store/articleStore";
 
 /** 当前登录用户名（作为 RLS 隔离键） */
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, isGuest, isUnlocked } from "@/lib/auth";
 
 export function getCurrentUsername(): string | null {
+  // 游客不参与云同步：返回 null 使所有 push/pull/subscribe 静默跳过，
+  // 避免向数据库写入 username="__guest__" 的脏数据
+  if (isGuest()) return null;
+  // 未解锁的注册用户：云存档不可用，静默跳过所有云同步
+  if (!isUnlocked()) return null;
   return getCurrentUser()?.username ?? null;
 }
 

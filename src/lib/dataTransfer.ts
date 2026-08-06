@@ -15,6 +15,7 @@ const EXPORT_KEYS = [
   "wordgrid-store", // 单词本 + 复习记录
   "wordgrid-article-archive", // 文章归档 + 题目 + 作答
   "wordgrid-essays", // 随笔摘录
+  "wordgrid-date-notes", // 日期备注
   "wordgrid-seeded", // 种子数据标记
 ];
 
@@ -39,9 +40,12 @@ export interface ImportResult {
 }
 
 /**
- * 导出全部用户数据为 JSON 文件并触发下载
+ * 构建 导出 bundle 的 JSON 字符串
+ *
+ * 抽取为独立函数，供 exportAllData（下载）与 getDataStats（统计大小）共用，
+ * 确保界面显示的数据大小与实际下载文件大小完全一致。
  */
-export function exportAllData(): void {
+function buildExportJson(): string {
   const data: Record<string, string> = {};
 
   for (const key of EXPORT_KEYS) {
@@ -58,7 +62,14 @@ export function exportAllData(): void {
     data,
   };
 
-  const json = JSON.stringify(bundle, null, 2);
+  return JSON.stringify(bundle, null, 2);
+}
+
+/**
+ * 导出全部用户数据为 JSON 文件并触发下载
+ */
+export function exportAllData(): void {
+  const json = buildExportJson();
   const date = new Date().toISOString().slice(0, 10);
   const fileName = `wordgrid-backup-${date}.json`;
 
@@ -130,6 +141,9 @@ export async function importAllData(file: File): Promise<ImportResult> {
 
 /**
  * 获取当前数据的简要统计（用于显示在导出按钮旁）
+ *
+ * 数据大小按与导出文件完全相同的方式计算（buildExportJson 的 UTF-8 字节数），
+ * 因此界面显示的大小与实际下载的文件大小一致。
  */
 export function getDataStats(): {
   wordCount: number;
@@ -138,12 +152,10 @@ export function getDataStats(): {
 } {
   let wordCount = 0;
   let articleCount = 0;
-  let totalSize = 0;
 
   try {
     const storeRaw = localStorage.getItem("wordgrid-store");
     if (storeRaw) {
-      totalSize += storeRaw.length;
       const parsed = JSON.parse(storeRaw);
       // Zustand persist 格式：{ state: { words: [...] }, version: N }
       const words = parsed?.state?.words;
@@ -156,7 +168,6 @@ export function getDataStats(): {
   try {
     const archiveRaw = localStorage.getItem("wordgrid-article-archive");
     if (archiveRaw) {
-      totalSize += archiveRaw.length;
       const parsed = JSON.parse(archiveRaw);
       const archives = parsed?.state?.archives;
       if (Array.isArray(archives)) articleCount = archives.length;
@@ -165,10 +176,14 @@ export function getDataStats(): {
     // ignore
   }
 
+  // 用与导出完全相同的 JSON 计算字节数，确保显示大小 = 下载大小
+  const json = buildExportJson();
+  const totalBytes = new TextEncoder().encode(json).length;
+
   return {
     wordCount,
     articleCount,
-    totalSizeKB: Math.round(totalSize / 1024),
+    totalSizeKB: Math.round(totalBytes / 1024),
   };
 }
 

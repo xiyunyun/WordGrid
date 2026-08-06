@@ -19,7 +19,7 @@ import {
   clearAllData,
 } from "@/lib/dataTransfer";
 import { isSupabaseConfigured } from "@/lib/supabase";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, isGuest, isUnlocked } from "@/lib/auth";
 import { CHANGELOG } from "@/lib/changelog";
 
 export default function About() {
@@ -42,6 +42,8 @@ export default function About() {
   const stats = getDataStats();
   const cloudConfigured = isSupabaseConfigured();
   const currentUser = getCurrentUser();
+  const guestMode = isGuest();
+  const unlocked = isUnlocked();
 
   const handleExport = () => {
     setExporting(true);
@@ -250,7 +252,13 @@ export default function About() {
             </div>
             <p className="mt-1 font-body text-sm leading-relaxed text-ink-soft">
               本应用的数据存储在浏览器本地（localStorage）。
-              {cloudConfigured ? (
+              {guestMode ? (
+                <>
+                  当前为<strong className="text-accent-gold">游客模式</strong>，数据仅保存在本地浏览器，
+                  不会同步到云端。清除浏览器缓存、重装系统或更换设备都会导致数据丢失，
+                  请<strong className="text-accent-red">定期导出备份</strong>以防数据丢失。
+                </>
+              ) : cloudConfigured ? (
                 <>
                   已配置云端同步，数据会<strong className="text-ink">自动同步</strong>到云端
                   （基于 Supabase 实时数据库，多设备修改自动同步，无需手动操作）。
@@ -362,7 +370,22 @@ export default function About() {
             导入会<strong className="text-accent-red">覆盖</strong>当前同类型数据。
             导入后页面将自动刷新以应用新数据。语音缓存不会被导入（会在使用时自动重建）。
           </p>
-          {cloudConfigured && currentUser && (
+          {guestMode && (
+            <p className="font-body text-xs text-ink-light">
+              <strong className="text-ink-soft">云同步状态：</strong>
+              当前为游客模式，<strong className="text-accent-gold">未启用云同步</strong>。
+              数据仅保存在本地浏览器，建议定期导出备份。
+            </p>
+          )}
+          {cloudConfigured && currentUser && !guestMode && !unlocked && (
+            <p className="font-body text-xs text-ink-light">
+              <strong className="text-ink-soft">云同步状态：</strong>
+              当前账号 <span className="font-mono text-ink-soft">{currentUser.username}</span>{" "}
+              尚未解锁高级功能，<strong className="text-accent-gold">云同步未启用</strong>。
+              请在设置页面输入密钥解锁后开启云存档。
+            </p>
+          )}
+          {cloudConfigured && currentUser && !guestMode && unlocked && (
             <p className="font-body text-xs text-ink-light">
               <strong className="text-ink-soft">云同步状态：</strong>
               当前账号 <span className="font-mono text-ink-soft">{currentUser.username}</span>{" "}

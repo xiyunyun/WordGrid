@@ -1,4 +1,5 @@
 import type { Word } from "@/types";
+import { isUnlocked } from "@/lib/auth";
 
 const API_KEY = import.meta.env.VITE_DEEPSEEK_API_KEY as string;
 const API_URL = "https://api.deepseek.com/chat/completions";
@@ -113,6 +114,10 @@ async function callDeepSeek(
   temperature: number = 0.8,
   maxTokens: number = 1200,
 ): Promise<string> {
+  // AI 文章生成为高级功能，需解锁后使用（管理员默认已解锁）
+  if (!isUnlocked()) {
+    throw new Error("AI 文章生成需解锁高级功能，请在设置中输入密钥");
+  }
   if (!API_KEY) {
     throw new Error("未配置 DeepSeek API Key，请在 .env.local 中设置 VITE_DEEPSEEK_API_KEY");
   }

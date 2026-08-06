@@ -25,10 +25,11 @@ import { useDateNotesStore } from "@/store/dateNotes";
 import { useEssayStore } from "@/store/essayStore";
 import { useThemeStore } from "@/store/theme";
 import { useSettingsStore } from "@/store/settingsStore";
+import { useUnlockStore } from "@/store/unlock";
 import { __setVolumeGetter } from "@/lib/tts";
 import { buildSeedWords } from "@/store/seedData";
 import { todayKey } from "@/lib/review";
-import { isAuthenticated, logout, getCurrentUser } from "@/lib/auth";
+import { isAuthenticated, logout, getCurrentUser, isGuest, isUnlocked } from "@/lib/auth";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import {
   pullAll,
@@ -125,6 +126,16 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
         "KEY:",
         !!import.meta.env.VITE_SUPABASE_ANON_KEY,
       );
+      return;
+    }
+    // 游客模式：不参与云同步，数据完全本地化
+    if (isGuest()) {
+      console.log("[云同步] 游客模式，跳过云同步");
+      return;
+    }
+    // 未解锁的注册用户：云存档不可用，仅本地使用
+    if (!isUnlocked()) {
+      console.log("[云同步] 未解锁高级功能，跳过云同步");
       return;
     }
     const user = getCurrentUser();
@@ -405,6 +416,12 @@ export default function App() {
   useEffect(() => {
     __setVolumeGetter(() => useSettingsStore.getState().ttsVolume);
   }, []);
+
+  // 同步解锁状态到 store（登录/登出后刷新）
+  const refreshUnlock = useUnlockStore((s) => s.refresh);
+  useEffect(() => {
+    refreshUnlock();
+  }, [authed, refreshUnlock]);
 
   const handleLoginSuccess = () => setAuthed(true);
 
