@@ -295,6 +295,45 @@ export async function deleteEssay(id: string): Promise<CloudSyncResult> {
   return { success: true };
 }
 
+/* ============ 全量删除（「删除所有数据」联动） ============ */
+
+/**
+ * 删除当前用户在云端的全部学习数据
+ *
+ * 与本地 clearAllData 的清除范围保持一致：五张业务表全删，
+ * user_settings（学习时长）保留——本地删除同样不清学习时长。
+ * 删除会触发 Realtime DELETE 事件，同账号其他设备会同步清空。
+ */
+export async function deleteAllCloudData(): Promise<CloudSyncResult> {
+  const supabase = getSupabase();
+  if (!supabase) return { success: false, error: "Supabase 未配置" };
+  const username = getCurrentUsername();
+  if (!username) return { success: false, error: "未登录" };
+
+  try {
+    const [wordsRes, logsRes, articlesRes, notesRes, essaysRes] = await Promise.all([
+      (supabase.from("words") as any).delete().eq("username", username),
+      (supabase.from("review_logs") as any).delete().eq("username", username),
+      (supabase.from("article_archives") as any).delete().eq("username", username),
+      (supabase.from("date_notes") as any).delete().eq("username", username),
+      (supabase.from("essays") as any).delete().eq("username", username),
+    ]);
+
+    const errors = [wordsRes.error, logsRes.error, articlesRes.error, notesRes.error, essaysRes.error].filter(
+      Boolean,
+    );
+    if (errors.length > 0) {
+      console.error("[云同步] deleteAllCloudData 失败:", errors.map((e) => e?.message));
+      return { success: false, error: errors[0]?.message || "云端删除失败" };
+    }
+
+    console.log("[云同步] deleteAllCloudData 成功，用户:", username);
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : "网络错误" };
+  }
+}
+
 /* ============ Realtime 订阅 ============ */
 
 export interface RealtimeCallbacks {

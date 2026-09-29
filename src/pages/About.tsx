@@ -18,7 +18,8 @@ import {
   getDataStats,
   clearAllData,
 } from "@/lib/dataTransfer";
-import { isSupabaseConfigured } from "@/lib/supabase";
+import { isSupabaseConfigured, getCurrentUsername } from "@/lib/supabase";
+import { deleteAllCloudData } from "@/lib/cloudSyncSupabase";
 import { getCurrentUser, isGuest, isUnlocked } from "@/lib/auth";
 import { CHANGELOG } from "@/lib/changelog";
 
@@ -38,12 +39,15 @@ export default function About() {
   const [deleteStep, setDeleteStep] = useState(0);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const stats = getDataStats();
   const cloudConfigured = isSupabaseConfigured();
   const currentUser = getCurrentUser();
   const guestMode = isGuest();
   const unlocked = isUnlocked();
+  // 云同步是否生效（登录 + 解锁 + 非游客）：决定删除时是否联动清空云端
+  const cloudSyncActive = !!getCurrentUsername();
 
   const handleExport = () => {
     setExporting(true);
@@ -117,14 +121,27 @@ export default function About() {
   const handleDeleteExecute = async () => {
     if (deleteConfirmText.trim() !== "确定删除") return;
     setDeleting(true);
+    setDeleteError(null);
     try {
+      // 云同步生效时先删云端：失败则中止，避免"本地已清、云端残留"
+      if (cloudSyncActive) {
+        const res = await deleteAllCloudData();
+        if (!res.success) {
+          setDeleting(false);
+          setDeleteError(
+            `云端数据删除失败：${res.error || "未知错误"}。本地数据未删除，请检查网络后重试。`,
+          );
+          return;
+        }
+      }
       await clearAllData();
       // 刷新页面让 Zustand 重载空状态
       setTimeout(() => {
         window.location.reload();
       }, 500);
-    } catch {
+    } catch (e) {
       setDeleting(false);
+      setDeleteError(e instanceof Error ? e.message : "删除过程出现异常");
     }
   };
 
@@ -408,6 +425,12 @@ export default function About() {
           <div className="flex flex-col items-start gap-3 md:flex-row md:items-center md:justify-between md:gap-4">
             <p className="font-body text-sm text-ink-soft">
               删除所有单词、复习记录、文章归档、题目作答等全部学习数据。
+              {cloudSyncActive && (
+                <>
+                  <br />
+                  当前已启用云同步，<strong className="text-accent-red">云端存档也会一并删除</strong>。
+                </>
+              )}
               此操作<strong className="text-accent-red">不可撤销</strong>，请务必先导出备份。
             </p>
             <button
@@ -434,6 +457,12 @@ export default function About() {
                 <p className="mt-1 font-body text-sm leading-relaxed text-ink-soft">
                   你即将删除<strong className="text-accent-red">所有学习数据</strong>，
                   包括 {stats.wordCount} 个单词、{stats.articleCount} 篇文章归档及全部复习记录。
+                  {cloudSyncActive && (
+                    <>
+                      <br />
+                      云端存档（含其他设备同步的数据）将<strong className="text-accent-red">同时删除</strong>。
+                    </>
+                  )}
                   <br />
                   删除后<strong className="text-accent-red">无法恢复</strong>。
                   如果尚未备份，请先点击「取消」并导出数据。
@@ -480,6 +509,11 @@ export default function About() {
                 className="input-paper font-mono"
                 autoFocus
               />
+              {deleteError && (
+                <p className="mt-2 font-body text-sm text-accent-red">
+                  {deleteError}
+                </p>
+              )}
             </div>
             <div className="flex items-center justify-end gap-3">
               <button
