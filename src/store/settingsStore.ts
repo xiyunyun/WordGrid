@@ -1,9 +1,12 @@
 /**
  * 用户设置 store
  *
- * 包含两项设置：
+ * 包含以下几类设置：
  * 1. TTS 音量（0-1），控制单词朗读的播放音量
  * 2. 学习时长追踪开关 + 累计学习秒数
+ * 3. 语音朗读开关（voiceEnabled）—— 默认关闭，非管理员用户需手动开启
+ * 4. AI 密钥来源（deepseekKeyMode）—— official=官方key / custom=用户自己的key
+ * 5. 用户自己的 DeepSeek API Key（deepseekCustomKey）
  *
  * 云同步：学习时长通过 user_settings 表（username + total_seconds）同步，
  * 多设备累计时取最大值，避免重复计数。
@@ -12,6 +15,9 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { getSupabase } from "@/lib/supabase";
 import { getCurrentUsername } from "@/lib/supabase";
+
+/** DeepSeek 密钥来源（off = 用户显式关闭 AI） */
+export type DeepseekKeyMode = "official" | "custom" | "off";
 
 export interface SettingsState {
   /** TTS 音量 0-1，默认 0.5（50%） */
@@ -25,12 +31,38 @@ export interface SettingsState {
   /** 上次同步到云端的秒数（避免无变化时重复推送） */
   lastSyncedSeconds: number;
 
+  /**
+   * 语音朗读开关。
+   * undefined 表示用户从未显式设置过 —— 由 lib/access 按用户身份决定默认值
+   * （管理员默认开启，其他用户默认关闭）。
+   */
+  voiceEnabled: boolean | undefined;
+
+  /**
+   * DeepSeek 密钥来源。
+   * undefined 表示用户从未显式设置过 —— 由 lib/access 按用户身份决定默认值
+   * （管理员默认 official，其他用户默认不启用 AI）。
+   */
+  deepseekKeyMode: DeepseekKeyMode | undefined;
+
+  /** 用户自己填写的 DeepSeek API Key（仅 deepseekKeyMode=custom 时使用） */
+  deepseekCustomKey: string;
+
   setTtsVolume: (v: number) => void;
   setTrackStudyTime: (v: boolean) => void;
   /** 增加学习时长（秒），仅在 trackStudyTime=true 时生效 */
   addStudySeconds: (s: number) => void;
   /** 更新活动时间戳 */
   touchActivity: () => void;
+
+  /** 语音朗读开关 */
+  setVoiceEnabled: (v: boolean) => void;
+  /** 选择官方 Key（作者私人额度，不稳定） */
+  useOfficialDeepseekKey: () => void;
+  /** 填入并启用用户自己的 Key */
+  useCustomDeepseekKey: (key: string) => void;
+  /** 关闭 AI（清空密钥来源） */
+  disableDeepseek: () => void;
 
   /** 云同步 */
   syncEnabled: boolean;
@@ -48,8 +80,19 @@ export const useSettingsStore = create<SettingsState>()(
       lastActivityAt: Date.now(),
       lastSyncedSeconds: 0,
 
+      // 默认不做显式设置，由 lib/access 按用户身份决定（管理员默认开，其他默认关）
+      voiceEnabled: undefined,
+      deepseekKeyMode: undefined,
+      deepseekCustomKey: "",
+
       setTtsVolume: (v) => set({ ttsVolume: Math.max(0, Math.min(1, v)) }),
       setTrackStudyTime: (v) => set({ trackStudyTime: v }),
+
+      setVoiceEnabled: (v) => set({ voiceEnabled: v }),
+      useOfficialDeepseekKey: () => set({ deepseekKeyMode: "official" }),
+      useCustomDeepseekKey: (key) =>
+        set({ deepseekKeyMode: "custom", deepseekCustomKey: key.trim() }),
+      disableDeepseek: () => set({ deepseekKeyMode: "off" }),
 
       addStudySeconds: (s) => {
         if (!get().trackStudyTime) return;
@@ -96,18 +139,27 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: "wordgrid-settings",
-      version: 2,
+      version: 3,
       // v0→v1: ttsVolume 从 1 迁移到 0.5
       // v1→v2: trackStudyTime 默认改为 true（开启学习时长追踪）
+      // v2→v3: 新增 voiceEnabled / deepseekKeyMode / deepseekCustomKey
+      //        三者默认 undefined 或空串，由 lib/access 按用户身份解析默认值，
+      //        保证老用户升级后不会被强制开启语音/AI
       migrate: (persistedState: any, version: number) => ({
         ttsVolume: version < 1 ? 0.5 : (persistedState?.ttsVolume ?? 0.5),
         trackStudyTime: true,
         totalStudySeconds: persistedState?.totalStudySeconds ?? 0,
+        voiceEnabled: persistedState?.voiceEnabled,
+        deepseekKeyMode: persistedState?.deepseekKeyMode,
+        deepseekCustomKey: persistedState?.deepseekCustomKey ?? "",
       }),
       partialize: (s) => ({
         ttsVolume: s.ttsVolume,
         trackStudyTime: s.trackStudyTime,
         totalStudySeconds: s.totalStudySeconds,
+        voiceEnabled: s.voiceEnabled,
+        deepseekKeyMode: s.deepseekKeyMode,
+        deepseekCustomKey: s.deepseekCustomKey,
       }),
     },
   ),

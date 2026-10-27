@@ -23,6 +23,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.7.0",
+    date: "2026-10-27",
+    items: [
+      "新增自定义 DeepSeek API Key：设置页「AI 与语音功能」可填入自己的 API Key 解锁 AI 文章生成，不再消耗作者私人额度",
+      "新增官方 Key 选择项：可主动选择使用作者私人 Key（不稳定、多数时候欠费），并附风险提示",
+      "语音朗读与 AI 文章生成默认关闭：非管理员账号即便已用密钥解锁，也需在设置中手动开启语音、或填入/选择 Key 后才能使用 AI；管理员账号保持原有默认开启体验",
+      "语音朗读开关：设置页新增「启用语音朗读」开关，关闭时单词发音、试听均不可用",
+    ],
+  },
+  {
     version: "3.5.0",
     date: "2026-08-06",
     items: [

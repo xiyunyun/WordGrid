@@ -10,7 +10,7 @@
  */
 
 import { lookupWord, getFirstAudio } from "@/lib/dictionary";
-import { isUnlocked } from "@/lib/auth";
+import { isVoiceEnabled } from "@/lib/access";
 
 const APP_KEY = import.meta.env.VITE_YOUDAO_APP_KEY as string;
 const APP_SECRET = import.meta.env.VITE_YOUDAO_APP_SECRET as string;
@@ -133,9 +133,9 @@ export async function speak(text: string): Promise<boolean> {
   const cleanText = text.trim();
   if (!cleanText) return false;
 
-  // 语音朗读为高级功能，需解锁后使用（管理员默认已解锁）
-  if (!isUnlocked()) {
-    console.warn("[TTS] 未解锁高级功能，语音朗读不可用");
+  // 语音朗读为高级功能：需解锁 + 用户开启语音开关（管理员默认开启，其他用户默认关闭）
+  if (!isVoiceEnabled()) {
+    console.warn("[TTS] 语音朗读未启用，请在设置中开启");
     return false;
   }
 
@@ -248,10 +248,10 @@ export async function speakWord(word: string): Promise<boolean> {
   const cleanWord = word.trim();
   if (!cleanWord) return false;
 
-  // 语音朗读为高级功能，需解锁后使用（管理员默认已解锁）
-  // 在入口处拦截，未解锁时连免费词典音频也不播放，保持"语音功能需解锁"的一致体验
-  if (!isUnlocked()) {
-    console.warn("[TTS] 未解锁高级功能，语音朗读不可用");
+  // 语音朗读为高级功能：需解锁 + 用户开启语音开关
+  // 在入口处拦截，未启用时连免费词典音频也不播放，保持"语音功能需开启"的一致体验
+  if (!isVoiceEnabled()) {
+    console.warn("[TTS] 语音朗读未启用，请在设置中开启");
     return false;
   }
 

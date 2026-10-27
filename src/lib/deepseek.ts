@@ -1,7 +1,7 @@
 import type { Word } from "@/types";
 import { isUnlocked } from "@/lib/auth";
+import { getDeepseekKey } from "@/lib/access";
 
-const API_KEY = import.meta.env.VITE_DEEPSEEK_API_KEY as string;
 const API_URL = "https://api.deepseek.com/chat/completions";
 
 export type Difficulty = "elementary" | "beginner" | "intermediate" | "advanced";
@@ -118,15 +118,20 @@ async function callDeepSeek(
   if (!isUnlocked()) {
     throw new Error("AI 文章生成需解锁高级功能，请在设置中输入密钥");
   }
-  if (!API_KEY) {
-    throw new Error("未配置 DeepSeek API Key，请在 .env.local 中设置 VITE_DEEPSEEK_API_KEY");
+  // 解锁后仍需在设置中选择密钥来源（官方 Key 或自己的 Key），
+  // 非管理员用户默认不启用 AI，避免消耗作者私人额度
+  const apiKey = getDeepseekKey();
+  if (!apiKey) {
+    throw new Error(
+      "AI 功能未启用，请前往「设置 → AI 与语音功能」填入你自己的 DeepSeek API Key，或选择使用官方 Key",
+    );
   }
 
   const res = await fetch(API_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
       model: "deepseek-v4-flash",
