@@ -578,15 +578,163 @@ export function subscribeUserSettings(
 
 /* ============ 首次迁移：本地数据 → Supabase ============ */
 
-/** localStorage 标记：是否已完成本地 → Supabase 迁移 */
-const MIGRATION_KEY = "wordgrid-supabase-migrated";
+/**
+ * localStorage 标记：是否已完成本地 → Supabase 迁移
+ *
+ * 按用户名区分，避免同一浏览器先后登录多个账号时互相污染。
+ * （旧实现是浏览器级全局标记，导致管理员用过的浏览器上新注册用户永远不会回填数据）
+ */
+const MIGRATION_KEY_PREFIX = "wordgrid-supabase-migrated:";
 
-export function isMigratedToSupabase(): boolean {
-  return localStorage.getItem(MIGRATION_KEY) === "1";
+function migrationKey(username: string): string {
+  return `${MIGRATION_KEY_PREFIX}${username}`;
 }
 
-export function setMigratedToSupabase() {
-  localStorage.setItem(MIGRATION_KEY, "1");
+export function isMigratedToSupabase(username?: string): boolean {
+  const u = username ?? getCurrentUsername();
+  if (!u) return false;
+  return localStorage.getItem(migrationKey(u)) === "1";
+}
+
+export function setMigratedToSupabase(username?: string) {
+  const u = username ?? getCurrentUsername();
+  if (!u) return;
+  localStorage.setItem(migrationKey(u), "1");
+}
+
+/** 仅存在于本地的数据（云端不存在对应 id/日期） */
+export interface LocalOnlyData {
+  words: Word[];
+  logs: ReviewLog[];
+  articles: ArticleArchive[];
+  dateNotes: Record<string, string>;
+  essays: Essay[];
+}
+
+export interface MergeResult {
+  /** 云端 ∪ 本地独有 的合并结果，用于 hydrate 到本地，保证本地数据不被冲掉 */
+  data: PulledData;
+  /** 仅存在于本地的部分，需回填上传到云端 */
+  localOnly: LocalOnlyData;
+  /** 是否存在需要回填的本地独有数据 */
+  hasLocalOnly: boolean;
+}
+
+/**
+ * 合并云端数据与本地数据
+ *
+ * 语义：云端为准（覆盖本地），但**本地独有的条目一律保留**。
+ * 用于「注册后未解锁期间产生的数据」在解锁后首次连接云端时不被云端数据冲掉，
+ * 从而可以通过 uploadLocalOnly 回填到云端。
+ */
+export function mergeCloudWithLocal(
+  cloud: PulledData,
+  local: PulledData,
+): MergeResult {
+  const cloudWordIds = new Set(cloud.words.map((w) => w.id));
+  const cloudLogIds = new Set(cloud.logs.map((l) => l.id));
+  const cloudArticleIds = new Set(cloud.articles.map((a) => a.id));
+  const cloudEssayIds = new Set(cloud.essays.map((e) => e.id));
+
+  const localOnlyWords = local.words.filter((w) => !cloudWordIds.has(w.id));
+  const localOnlyLogs = local.logs.filter((l) => !cloudLogIds.has(l.id));
+  const localOnlyArticles = local.articles.filter((a) => !cloudArticleIds.has(a.id));
+  const localOnlyEssays = local.essays.filter((e) => !cloudEssayIds.has(e.id));
+
+  const localOnlyDateNotes: Record<string, string> = {};
+  for (const [date, note] of Object.entries(local.dateNotes)) {
+    if (!note) continue;
+    if (!(date in cloud.dateNotes)) localOnlyDateNotes[date] = note;
+  }
+
+  const hasLocalOnly =
+    localOnlyWords.length +
+      localOnlyLogs.length +
+      localOnlyArticles.length +
+      localOnlyEssays.length +
+      Object.keys(localOnlyDateNotes).length >
+    0;
+
+  return {
+    data: {
+      words: [...cloud.words, ...localOnlyWords],
+      logs: [...cloud.logs, ...localOnlyLogs],
+      articles: [...cloud.articles, ...localOnlyArticles],
+      dateNotes: { ...cloud.dateNotes, ...localOnlyDateNotes },
+      essays: [...cloud.essays, ...localOnlyEssays],
+    },
+    localOnly: {
+      words: localOnlyWords,
+      logs: localOnlyLogs,
+      articles: localOnlyArticles,
+      dateNotes: localOnlyDateNotes,
+      essays: localOnlyEssays,
+    },
+    hasLocalOnly,
+  };
+}
+
+/**
+ * 把「仅存在于本地」的数据回填上传到云端（upsert，按 id 去重）
+ *
+ * 用于解锁后首次连接云端时补传注册/未解锁期间产生的数据。
+ */
+export async function uploadLocalOnly(
+  localOnly: LocalOnlyData,
+): Promise<CloudSyncResult> {
+  const supabase = getSupabase();
+  if (!supabase) return { success: false, error: "Supabase 未配置" };
+  const username = getCurrentUsername();
+  if (!username) return { success: false, error: "未登录" };
+
+  try {
+    if (localOnly.words.length > 0) {
+      const rows = localOnly.words.map((w) => toWordRow(w, username));
+      const { error } = await (supabase.from("words") as any).upsert(rows, { onConflict: "id" });
+      if (error) throw new Error(`words: ${error.message}`);
+    }
+    if (localOnly.logs.length > 0) {
+      const rows = localOnly.logs.map((l) => toReviewLogRow(l, username));
+      const { error } = await (supabase.from("review_logs") as any).upsert(rows, { onConflict: "id" });
+      if (error) throw new Error(`logs: ${error.message}`);
+    }
+    if (localOnly.articles.length > 0) {
+      const rows = localOnly.articles.map((a) => toArticleArchiveRow(a, username));
+      const { error } = await (supabase.from("article_archives") as any).upsert(rows, { onConflict: "id" });
+      if (error) throw new Error(`articles: ${error.message}`);
+    }
+    const noteEntries = Object.entries(localOnly.dateNotes);
+    if (noteEntries.length > 0) {
+      const rows: DateNoteRow[] = noteEntries.map(([date, note]) => ({
+        username,
+        date,
+        note,
+        updated_at: new Date().toISOString(),
+      }));
+      const { error } = await (supabase.from("date_notes") as any).upsert(rows, {
+        onConflict: "username,date",
+      });
+      if (error) throw new Error(`notes: ${error.message}`);
+    }
+    if (localOnly.essays.length > 0) {
+      const rows = localOnly.essays.map((e) => toEssayRow(e, username));
+      const { error } = await (supabase.from("essays") as any).upsert(rows, { onConflict: "id" });
+      if (error) throw new Error(`essays: ${error.message}`);
+    }
+
+    const count =
+      localOnly.words.length +
+      localOnly.logs.length +
+      localOnly.articles.length +
+      noteEntries.length +
+      localOnly.essays.length;
+    console.log("[云同步] uploadLocalOnly 成功，回填条目数:", count);
+    return { success: true, count };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "上传失败";
+    console.error("[云同步] uploadLocalOnly 失败:", msg);
+    return { success: false, error: msg };
+  }
 }
 
 /**

@@ -38,6 +38,9 @@ import {
   subscribeUserSettings,
   migrateFromLocal,
   setMigratedToSupabase,
+  isMigratedToSupabase,
+  mergeCloudWithLocal,
+  uploadLocalOnly,
 } from "@/lib/cloudSyncSupabase";
 import type { Word } from "@/types";
 
@@ -86,6 +89,9 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
 
   const words = useWordStore((s) => s.words);
   const hydrated = useWordStore((s) => s.hydrated);
+  // 解锁状态：用户在设置页输入密钥解锁后需要重新初始化云同步
+  // （注册账号默认未解锁，解锁前不参与云同步；解锁必须触发一次 pull + 回填）
+  const unlocked = useUnlockStore((s) => s.unlocked);
 
   // 主题应用：监听 themeId 和 customHue 变化，写入 CSS 变量
   const themeId = useThemeStore((s) => s.themeId);
@@ -134,7 +140,8 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
       return;
     }
     // 未解锁的注册用户：云存档不可用，仅本地使用
-    if (!isUnlocked()) {
+    // 依赖数组含 unlocked，解锁后会重新执行本 effect，触发拉取 + 回填
+    if (!unlocked || !isUnlocked()) {
       console.log("[云同步] 未解锁高级功能，跳过云同步");
       return;
     }
@@ -186,8 +193,35 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
       }
 
       if (pullRes.success && pullRes.data && (pullRes.count ?? 0) > 0) {
-        // 云端已有数据：用云端数据覆盖本地（云端是 source of truth）
-        const { words, logs, articles, dateNotes, essays } = pullRes.data;
+        // 云端已有数据：以云端为准覆盖本地
+        let target = pullRes.data;
+
+        // 首次连接该账号（尚未迁移过）：本地可能存有「注册后、解锁前」产生的数据
+        // 此时云端从未收到过这些数据，直接覆盖会导致永久丢失。
+        // 因此取「云端 ∪ 本地独有」，并把这些本地独有数据回填上传到云端。
+        if (!isMigratedToSupabase(user.username)) {
+          const local = {
+            words: useWordStore.getState().words,
+            logs: useWordStore.getState().logs,
+            articles: useArticleStore.getState().archives,
+            dateNotes: useDateNotesStore.getState().notes,
+            essays: useEssayStore.getState().essays,
+          };
+          const merged = mergeCloudWithLocal(pullRes.data, local);
+          if (merged.hasLocalOnly) {
+            console.log("[云同步] 检测到本地独有数据，开始回填上传");
+            const up = await uploadLocalOnly(merged.localOnly);
+            if (cancelled) return;
+            if (up.success) {
+              console.log("[云同步] 回填成功，条目数:", up.count);
+            } else {
+              console.error("[云同步] 回填失败:", up.error);
+            }
+          }
+          target = merged.data;
+        }
+
+        const { words, logs, articles, dateNotes, essays } = target;
         useWordStore.getState().setSyncEnabled(false);
         useArticleStore.getState().setSyncEnabled(false);
         useDateNotesStore.getState().setSyncEnabled(false);
@@ -204,7 +238,7 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
           useEssayStore.getState().setSyncEnabled(true);
         }
         // 标记为已迁移（云端已有数据，本地已同步）
-        setMigratedToSupabase();
+        setMigratedToSupabase(user.username);
         console.log(`[云同步] 已从云端拉取 ${pullRes.count} 条数据`);
       } else {
         // 云端无数据：执行首次迁移，把本地数据上传到 Supabase
@@ -259,7 +293,7 @@ function AppContent({ onLogout }: { onLogout: () => void }) {
       if (unsubscribeRealtime) unsubscribeRealtime();
       if (unsubscribeSettings) unsubscribeSettings();
     };
-  }, [hydrated]);
+  }, [hydrated, unlocked]);
 
   const openDrawer = useCallback((date?: string) => {
     setEditWord(null);

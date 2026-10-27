@@ -25,10 +25,14 @@ interface UnlockState {
   unlock: (key: string) => Promise<{ success: boolean; error?: string }>;
 }
 
+// 初始值直接从 localStorage 读取，保证首屏渲染即为真实解锁状态，
+// 避免 App.tsx 的云同步 effect 以 unlocked=false 先跑一次空转（解锁后还要重跑）
+const initialUser = getCurrentUser();
+
 export const useUnlockStore = create<UnlockState>((set) => ({
-  unlocked: false,
-  isGuest: false,
-  authed: false,
+  unlocked: isUnlocked(),
+  isGuest: initialUser?.isGuest ?? false,
+  authed: !!initialUser,
 
   refresh: () => {
     const user = getCurrentUser();
